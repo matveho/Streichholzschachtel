@@ -1,4 +1,5 @@
 import type { ReportBlock } from './QueryReport'
+import { additionalExamples, additionalReferences } from './additionalExamples'
 
 export const documents = {
   guidelines: {
@@ -325,6 +326,9 @@ export const queryCases: QueryCase[] = [
     report: infillReport,
   },
 ]
+
+references.push(...additionalReferences)
+queryCases.push(...additionalExamples)
 
 export const referenceSets: Record<string, Reference[]> = Object.fromEntries(
   queryCases.map((c) => [

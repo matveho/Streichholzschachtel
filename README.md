@@ -72,7 +72,7 @@ These editions are linked from [EPCOR's guides and standards directory](https://
 
 ## Query history and source comparison
 
-The root URL opens the original storm-sewer workspace. The Home icon opens `#home`, with filterable previous queries. The two prepared cases have separate prompts, reports, source documents, and citation sets. Submitted queries persist in this browser's local storage; unknown queries retain an explicit unconnected-search state when reopened. History does not imply that arbitrary queries have been processed.
+The root URL opens the original storm-sewer workspace. The Home icon opens `#home`, with filterable previous queries. The five prepared cases have separate prompts, reports, source selections, and citation sets. Submitted queries persist in this browser's local storage; unknown queries retain an explicit unconnected-search state when reopened. History does not imply that arbitrary queries have been processed.
 
 The corner-lot LID example uses three different local PDFs. Document tabs scroll when needed. Compare mode keeps two readable panes and provides a selector for the companion source; clicking a tab replaces the focused pane when necessary. Citations automatically reveal their documents, including sources not yet opened. Each document retains its viewer state while switching within a query; PDFs and minimap thumbnails load on demand and are cached.
 
@@ -85,3 +85,9 @@ Additional original sources:
 The second report identifies the different editions and scopes explicitly. Its recommendation to confirm the servicing arrangement is a synthesis of the guides, not a determination of project approval. The PDFs are stored unchanged under `public/documents/`.
 
 Run `npm run test:ui` against the development server on port 5173 with Google Chrome installed. It checks both the original workspace and history, persistence, source isolation, three-source navigation, citation highlighting, and mobile overflow.
+
+## Team demo examples
+
+Three decision-focused examples cover shallow sewer cover, drainage capacity after expansion, and LID infiltration acceptance. Open Home to access all five examples. See [DEMO.md](DEMO.md) for a presentation sequence, the potential practical impact, and a proposed engineer validation approach. Project figures are illustrative inputs; the reports distinguish direct requirements, calculated comparisons, scope differences, and decisions needing confirmation.
+
+Additional source passages are in Volume 3-03 printed page 5; Volume 3-02 printed pages 12–13 and 97; the connection guide printed pages 3–4; and the corner-lot guide printed page 30. The existing local PDFs are reused unchanged. `npm run test:ui` includes all example citation paths and numerical conclusions.

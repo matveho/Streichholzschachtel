@@ -31,7 +31,9 @@ export function PdfPane({
   sourceReferences: Reference[]
 }) {
   const doc = documents[id]
-  const [page, setPage] = useState<number>(doc.initialPage)
+  const [page, setPage] = useState<number>(
+    () => active.find((r) => r.doc === id)?.page ?? doc.initialPage,
+  )
   const [zoom, setZoom] = useState(1)
   const [width, setWidth] = useState(650)
   const [status, setStatus] = useState('Loading document…')

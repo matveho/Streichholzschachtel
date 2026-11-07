@@ -15,10 +15,12 @@ try {
   await page
     .getByRole('heading', { name: 'Previous queries', exact: true })
     .waitFor()
-  assert.equal(await page.locator('.history-entry').count(), 2)
+  assert.equal(await page.locator('.history-entry').count(), 5)
   await mkdir('test-results', { recursive: true })
   await page.screenshot({ path: 'test-results/home.png' })
-  await page.getByRole('textbox', { name: 'Filter queries' }).fill('corner')
+  await page
+    .getByRole('textbox', { name: 'Filter queries' })
+    .fill('Corner-lot LID and servicing')
   assert.equal(await page.locator('.history-entry').count(), 1)
   await page.getByRole('link', { name: /Corner-lot LID and servicing/ }).click()
   await page.getByRole('article', { name: 'Query report' }).waitFor()
@@ -84,7 +86,7 @@ try {
     .getByText('Search processing is not connected.', { exact: false })
     .waitFor()
   await page.getByRole('link', { name: 'Home', exact: true }).click()
-  assert.equal(await page.locator('.history-entry').count(), 3)
+  assert.equal(await page.locator('.history-entry').count(), 6)
   await page.reload()
   await page
     .getByRole('link', { name: /Check the foundation drainage requirements/ })
