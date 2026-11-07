@@ -30,6 +30,8 @@ dist-ssr
 
 # Generated files
 coverage/
+test-results/
+playwright-report/
 *.tsbuildinfo
 
 # Local project documents (may contain confidential material)
