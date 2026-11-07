@@ -491,20 +491,10 @@ function subscribeRoute(update: () => void) {
   return () => window.removeEventListener('hashchange', update)
 }
 export default function App() {
-  const [settings, setSettings] = useState(readSettings)
+  const [settings] = useState(readSettings)
   const [history, setHistory] = useState(readHistory)
   const route = useSyncExternalStore(subscribeRoute, routeId, () => 'storm')
   const [draftCase, setDraftCase] = useState('storm')
-  useEffect(() => {
-    const connect = () => {
-      if (!location.hash.startsWith('#connect?')) return
-      setSettings(readSettings())
-      if (!location.hash.startsWith('#connect?'))
-        window.dispatchEvent(new HashChangeEvent('hashchange'))
-    }
-    window.addEventListener('hashchange', connect)
-    return () => window.removeEventListener('hashchange', connect)
-  }, [])
   function newQuery(caseId = 'storm') {
     setDraftCase(caseId)
     navigate('new')
