@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react'
-import { documents, references } from './data'
+import { documents } from './data'
 import type { DocId, Reference } from './data'
 import { loadPdf } from './pdf'
 
@@ -16,6 +16,7 @@ const MiniPage = memo(function MiniPage({
   viewport,
   root,
   onNavigate,
+  sourceReferences,
 }: {
   id: DocId
   page: number
@@ -24,12 +25,15 @@ const MiniPage = memo(function MiniPage({
   viewport: { top: number; height: number }
   root: React.RefObject<HTMLDivElement | null>
   onNavigate: (page: number, fraction: number) => void
+  sourceReferences: Reference[]
 }) {
   const button = useRef<HTMLButtonElement>(null)
   const key = `${id}:${page}`
   const [image, setImage] = useState(thumbnails.get(key))
   const [failed, setFailed] = useState(false)
-  const markers = references.filter((r) => r.doc === id && r.page === page)
+  const markers = sourceReferences.filter(
+    (r) => r.doc === id && r.page === page,
+  )
   useEffect(() => {
     if (image) return
     let cancelled = false
@@ -129,6 +133,7 @@ export function DocumentMinimap({
   viewport,
   onNavigate,
   onSelectReferences,
+  sourceReferences,
 }: {
   id: DocId
   page: number
@@ -136,10 +141,11 @@ export function DocumentMinimap({
   viewport: { top: number; height: number }
   onNavigate: (page: number, fraction: number) => void
   onSelectReferences: (ids: string[]) => void
+  sourceReferences: Reference[]
 }) {
   const root = useRef<HTMLDivElement>(null)
   const total = documents[id].pages
-  const markers = references.filter((r) => r.doc === id)
+  const markers = sourceReferences.filter((r) => r.doc === id)
   const groups = [...new Set(markers.map((r) => r.page))].map((page) => ({
     page,
     refs: markers.filter((r) => r.page === page),
@@ -203,6 +209,7 @@ export function DocumentMinimap({
               viewport={page === i + 1 ? viewport : wholePageViewport}
               root={root}
               onNavigate={onNavigate}
+              sourceReferences={sourceReferences}
             />
           ))}
         </div>

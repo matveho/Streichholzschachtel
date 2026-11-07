@@ -887,3 +887,159 @@ button {
     font-size: 12px;
   }
 }
+
+.home-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 29px;
+  height: 27px;
+  margin-left: 10px;
+  border-left: 1px solid #3d444c;
+  text-decoration: none;
+  color: #9eaab6;
+}
+.home-link:hover,
+.home-link.active {
+  color: #b4e2db;
+  background: #ffffff0a;
+}
+.query-history {
+  width: min(1040px, 100%);
+  margin: 0 auto;
+  padding: 54px 28px;
+  overflow: auto;
+}
+.history-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 25px;
+}
+.history-toolbar h1 {
+  font-size: 18px;
+  font-weight: 500;
+  margin: 0;
+  color: #e0e6eb;
+}
+.history-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #444d57;
+  padding: 7px 10px;
+  color: #8b99a7;
+}
+.history-filter input {
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font-size: 12px;
+  width: 190px;
+}
+.history-filter:focus-within {
+  border-color: #8ac7bf;
+}
+.history-list {
+  border-top: 1px solid #414a54;
+}
+.history-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px 12px;
+  border-bottom: 1px solid #39424c;
+  text-decoration: none;
+}
+.history-entry:hover {
+  background: #ffffff04;
+}
+.history-entry h2 {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0 0 6px;
+  color: #dce3ea;
+}
+.history-entry p {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #9eabb8;
+  margin: 0 0 9px;
+  overflow-wrap: anywhere;
+}
+.history-entry > svg {
+  flex-shrink: 0;
+  color: #8ac7bf;
+}
+.history-sources {
+  font:
+    10px 'IBM Plex Mono',
+    monospace;
+  color: #718492;
+}
+.history-empty {
+  color: #9eabb8;
+  padding: 20px 12px;
+}
+.document-tabs > .tab-list {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #65717b #1c2024;
+  flex: 1;
+}
+.document-tab {
+  flex-shrink: 0;
+}
+.document-tab.has-source > svg {
+  color: #dec174;
+}
+.document-tab .tab-title {
+  max-width: 230px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.layout-controls {
+  flex-shrink: 0;
+}
+.compare-select {
+  max-width: 200px;
+  border: 1px solid #4e5a65;
+  background: #282f36;
+  color: #b8c8d1;
+  padding: 3px 7px;
+  font: inherit;
+  font-size: 10px;
+  border-radius: 2px;
+}
+.compare-select:focus-visible {
+  outline: 1px solid #8ac7bf;
+}
+@media (max-width: 1000px) {
+  .compare-select {
+    max-width: 150px;
+  }
+}
+@media (max-width: 650px) {
+  .query-history {
+    padding: 30px 18px;
+  }
+  .history-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .history-filter input {
+    width: 100%;
+  }
+  .history-entry {
+    padding: 20px 4px;
+  }
+  .compare-select {
+    max-width: 92px;
+  }
+  .document-tab {
+    flex: 0 0 auto;
+  }
+}

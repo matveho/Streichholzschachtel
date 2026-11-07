@@ -3,7 +3,6 @@ import {
   Search,
   Columns2,
   PanelTop,
-  Plus,
   ArrowUpRight,
   Copy,
   Check,
@@ -13,18 +12,40 @@ import {
   Minimize2,
   CornerDownLeft,
 } from 'lucide-react'
-import { documents, exampleQuery, report, references } from './data'
+import { documents, referenceSets, queryCases } from './data'
 import type { DocId } from './data'
 import { PdfPane } from './PdfPane'
 import { QueryReport } from './QueryReport'
+import { QueryHome } from './QueryHome'
+import { AppHeader } from './AppHeader'
+import { readHistory, saveHistory } from './history'
+import type { HistoryEntry } from './history'
 
-export default function App() {
-  const [query, setQuery] = useState(exampleQuery)
-  const [submitted, setSubmitted] = useState(exampleQuery)
+function QueryWorkspace({
+  entry,
+  onRun,
+  onNew,
+}: {
+  entry: HistoryEntry
+  onRun: (prompt: string, caseId: string) => void
+  onNew: () => void
+}) {
+  const queryCase = queryCases.find((c) => c.id === entry.caseId)!
+  const exampleQuery = queryCase.prompt
+  const report = queryCase.report
+  const references = referenceSets[entry.caseId]
+  const sourceIds = queryCase.documentIds
+  const [query, setQuery] = useState(entry.prompt)
+  const [submitted, setSubmitted] = useState(entry.prompt)
   const [layout, setLayout] = useState<'split' | 'tabs'>('split')
-  const [tab, setTab] = useState<DocId>('guidelines')
+  const [tab, setTab] = useState<DocId>(sourceIds[0])
+  const [comparison, setComparison] = useState<DocId[]>(sourceIds.slice(0, 2))
+  const [opened, setOpened] = useState<DocId[]>(sourceIds.slice(0, 2))
+  const [focusedPane, setFocusedPane] = useState(0)
   const [hover, setHover] = useState<string[] | null>(null)
-  const [pinned, setPinned] = useState<string[]>(['1', '2'])
+  const [pinned, setPinned] = useState<string[]>(
+    entry.prompt === exampleQuery ? queryCase.initialReferences : [],
+  )
   const [navigationKey, setNavigationKey] = useState(0)
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -34,7 +55,10 @@ export default function App() {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const ids = hover ?? pinned
   const active = references.filter((r) => ids.includes(r.id))
-  const supported = submitted === exampleQuery
+  const isPrepared = (text: string) =>
+    text.toLowerCase().replace(/\s+/g, ' ') ===
+    exampleQuery.toLowerCase().replace(/\s+/g, ' ')
+  const supported = isPrepared(submitted)
   useEffect(() => () => clearTimeout(timer.current), [])
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
@@ -51,13 +75,39 @@ export default function App() {
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
   }, [])
+  function selectDocument(id: DocId) {
+    setTab(id)
+    setOpened((prev) => (prev.includes(id) ? prev : [...prev, id]))
+    setComparison((prev) =>
+      prev.includes(id)
+        ? prev
+        : prev.map((doc, i) => (i === focusedPane ? id : doc)),
+    )
+  }
   function reveal(refs: string[], pin = false) {
     if (pin) {
       setPinned(refs)
       setNavigationKey((k) => k + 1)
     } else setHover(refs)
     const first = references.find((r) => r.id === refs[0])
-    if (first) setTab(first.doc)
+    if (first) {
+      const citedDocs = [
+        ...new Set(
+          refs
+            .map((ref) => references.find((r) => r.id === ref)?.doc)
+            .filter((id): id is DocId => !!id),
+        ),
+      ]
+      setTab(first.doc)
+      setOpened((prev) => [...new Set([...prev, ...citedDocs.slice(0, 2)])])
+      setComparison((prev) =>
+        citedDocs.length > 1
+          ? citedDocs.slice(0, 2)
+          : prev.includes(first.doc)
+            ? prev
+            : prev.map((doc, i) => (i === focusedPane ? first.doc : doc)),
+      )
+    }
   }
   function search() {
     if (!query.trim() || busy) return
@@ -65,7 +115,8 @@ export default function App() {
     timer.current = setTimeout(() => {
       setSubmitted(query.trim())
       setBusy(false)
-      setPinned(query.trim() === exampleQuery ? ['1', '2'] : [])
+      setPinned(isPrepared(query.trim()) ? queryCase.initialReferences : [])
+      onRun(query.trim(), entry.caseId)
       setHover(null)
       setNavigationKey((k) => k + 1)
     }, 500)
@@ -79,11 +130,12 @@ export default function App() {
     setPinned([])
     setHover(null)
     input.current?.focus()
+    onNew()
   }
   async function copy() {
     try {
       await navigator.clipboard.writeText(
-        `${submitted}\n\n${report.map((block) => [block.heading, block.sentences.map((s) => `${s.text}${s.refs?.length ? ` [${s.refs.join(', ')}]` : ''}`).join(' ')].filter(Boolean).join('\n')).join('\n\n')}\n\n${references.map((r) => `[${r.id}] Vol. ${documents[r.doc].code}, ${r.label}. ${documents[r.doc].source}`).join('\n')}`,
+        `${submitted}\n\n${report.map((block) => [block.heading, block.sentences.map((s) => `${s.text}${s.refs?.length ? ` [${s.refs.join(', ')}]` : ''}`).join(' ')].filter(Boolean).join('\n')).join('\n\n')}\n\n${references.map((r) => `[${r.id}] ${documents[r.doc].label}, ${r.label}. ${documents[r.doc].source}`).join('\n')}`,
       )
       setCopied(true)
       setTimeout(() => setCopied(false), 1800)
@@ -117,20 +169,7 @@ export default function App() {
       className={`workspace ${expanded ? 'report-expanded' : ''}`}
       style={{ '--result-height': `${resultHeight}px` } as React.CSSProperties}
     >
-      <header className="app-header">
-        <img
-          className="brand-mark"
-          src="/basis.svg"
-          alt=""
-          width="26"
-          height="26"
-        />
-        <strong>Basis</strong>
-        <button className="new-query" onClick={newQuery}>
-          <Plus size={14} />
-          New query
-        </button>
-      </header>
+      <AppHeader onNew={newQuery} />
       <form
         className="query-bar"
         onSubmit={(e) => {
@@ -179,25 +218,45 @@ export default function App() {
             role="tablist"
             aria-label="Source documents"
           >
-            {(Object.keys(documents) as DocId[]).map((id) => (
+            {sourceIds.map((id) => (
               <button
                 key={id}
                 role="tab"
                 aria-selected={tab === id}
-                className={`document-tab ${tab === id ? 'selected' : ''}`}
-                onClick={() => setTab(id)}
+                className={`document-tab ${tab === id ? 'selected' : ''} ${active.some((r) => r.doc === id) ? 'has-source' : ''}`}
+                title={documents[id].title}
+                onClick={() => selectDocument(id)}
               >
                 <FileText size={14} />
-                <span>Vol. {documents[id].code}</span>
-                <span className="tab-title">
-                  {id === 'guidelines'
-                    ? 'Design Guidelines'
-                    : 'Stormwater Management'}
-                </span>
+                <span>{documents[id].label}</span>
+                <span className="tab-title">{documents[id].title}</span>
               </button>
             ))}
           </div>
           <div className="layout-controls">
+            {layout === 'split' && sourceIds.length > 2 && (
+              <select
+                className="compare-select"
+                aria-label="Compare document"
+                value={comparison[1]}
+                onChange={(e) => {
+                  const id = e.target.value as DocId
+                  setComparison((prev) => [prev[0], id])
+                  setOpened((prev) =>
+                    prev.includes(id) ? prev : [...prev, id],
+                  )
+                  setTab(id)
+                }}
+              >
+                {sourceIds
+                  .filter((id) => id !== comparison[0])
+                  .map((id) => (
+                    <option key={id} value={id}>
+                      {documents[id].title}
+                    </option>
+                  ))}
+              </select>
+            )}
             <button
               className={layout === 'tabs' ? 'active' : ''}
               aria-label="Single document view"
@@ -219,17 +278,25 @@ export default function App() {
           </div>
         </div>
         <div className={`document-panes ${layout}`}>
-          {(Object.keys(documents) as DocId[]).map((id) => (
+          {sourceIds.map((id) => (
             <div
-              className={`pane-slot ${layout === 'tabs' && tab !== id ? 'hidden' : ''}`}
+              className={`pane-slot ${(layout === 'tabs' ? tab !== id : !comparison.includes(id)) ? 'hidden' : ''}`}
+              style={{ order: comparison.indexOf(id) }}
+              onPointerDown={() => setFocusedPane(comparison.indexOf(id))}
+              onFocusCapture={() =>
+                setFocusedPane(Math.max(0, comparison.indexOf(id)))
+              }
               key={id}
             >
-              <PdfPane
-                id={id}
-                active={active}
-                navigationKey={navigationKey}
-                onSelectReferences={(refIds) => reveal(refIds, true)}
-              />
+              {opened.includes(id) && (
+                <PdfPane
+                  id={id}
+                  active={active}
+                  navigationKey={navigationKey}
+                  onSelectReferences={(refIds) => reveal(refIds, true)}
+                  sourceReferences={references}
+                />
+              )}
             </div>
           ))}
         </div>
@@ -304,7 +371,7 @@ export default function App() {
                 onClick={() => {
                   setQuery(exampleQuery)
                   setSubmitted(exampleQuery)
-                  setPinned(['1', '2'])
+                  setPinned(queryCase.initialReferences)
                 }}
               >
                 Load example
@@ -315,14 +382,14 @@ export default function App() {
             <div className="empty-result">
               <Search size={20} />
               <span>
-                This frontend contains one prepared query. Search processing is
-                not connected.
+                Search processing is not connected. Open a previous query to
+                inspect a prepared result.
               </span>
               <button
                 onClick={() => {
                   setQuery(exampleQuery)
                   setSubmitted(exampleQuery)
-                  setPinned(['1', '2'])
+                  setPinned(queryCase.initialReferences)
                 }}
               >
                 Load example
@@ -332,6 +399,7 @@ export default function App() {
           ) : (
             <QueryReport
               blocks={report}
+              sourceReferences={references}
               selected={ids}
               onPreview={(refs) => (refs ? reveal(refs) : setHover(null))}
               onSelect={(refs) => reveal(refs, true)}
@@ -340,5 +408,75 @@ export default function App() {
         </div>
       </section>
     </main>
+  )
+}
+
+function routeId() {
+  if (location.hash === '#home') return 'home'
+  if (location.hash === '#new') return 'new'
+  try {
+    return location.hash.startsWith('#query/')
+      ? decodeURIComponent(location.hash.slice(7))
+      : 'storm'
+  } catch {
+    return 'storm'
+  }
+}
+export default function App() {
+  const [history, setHistory] = useState(readHistory)
+  const [route, setRoute] = useState(routeId)
+  const [draftCase, setDraftCase] = useState('storm')
+  useEffect(() => {
+    const update = () => setRoute(routeId())
+    window.addEventListener('hashchange', update)
+    return () => window.removeEventListener('hashchange', update)
+  }, [])
+  function newQuery(caseId = 'storm') {
+    setDraftCase(caseId)
+    location.hash = 'new'
+  }
+  function runQuery(prompt: string, caseId: string) {
+    const known = queryCases.find(
+      (c) =>
+        c.prompt.toLowerCase().replace(/\s+/g, ' ') ===
+        prompt.toLowerCase().replace(/\s+/g, ' '),
+    )
+    const previous = history.find(
+      (entry) => entry.prompt === prompt && entry.caseId === caseId,
+    )
+    const entry: HistoryEntry = known
+      ? {
+          id: known.id,
+          title: known.title,
+          prompt: known.prompt,
+          caseId: known.id,
+        }
+      : {
+          id: previous?.id ?? crypto.randomUUID(),
+          title: prompt,
+          prompt,
+          caseId,
+        }
+    setHistory((prev) => {
+      const next = [entry, ...prev.filter((item) => item.id !== entry.id)]
+      saveHistory(next)
+      return next
+    })
+    location.hash = 'query/' + encodeURIComponent(entry.id)
+  }
+  if (route === 'home')
+    return <QueryHome entries={history} onNew={() => newQuery()} />
+  const entry =
+    route === 'new'
+      ? { id: 'new', title: '', prompt: '', caseId: draftCase }
+      : (history.find((entry) => entry.id === route) ??
+        history.find((entry) => entry.id === 'storm')!)
+  return (
+    <QueryWorkspace
+      key={entry.id + entry.caseId}
+      entry={entry}
+      onRun={runQuery}
+      onNew={() => newQuery(entry.caseId)}
+    />
   )
 }

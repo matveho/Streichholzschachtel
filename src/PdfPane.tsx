@@ -22,11 +22,13 @@ export function PdfPane({
   active,
   navigationKey,
   onSelectReferences,
+  sourceReferences,
 }: {
   id: DocId
   active: Reference[]
   navigationKey: number
   onSelectReferences: (ids: string[]) => void
+  sourceReferences: Reference[]
 }) {
   const doc = documents[id]
   const [page, setPage] = useState<number>(doc.initialPage)
@@ -157,7 +159,7 @@ export function PdfPane({
     <section className="pdf-pane" aria-label={doc.title}>
       <div className="pane-title">
         <FileText size={14} />
-        <strong>VOL. {doc.code}</strong>
+        <strong>{doc.label}</strong>
         <span>{doc.title}</span>
         <span className="edition">{doc.edition}</span>
       </div>
@@ -297,6 +299,7 @@ export function PdfPane({
             viewport={viewport}
             onNavigate={navigate}
             onSelectReferences={onSelectReferences}
+            sourceReferences={sourceReferences}
           />
         )}
       </div>

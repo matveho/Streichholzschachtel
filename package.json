@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test:ui": "node scripts/verify-workspace.mjs",
+    "test:ui": "node scripts/verify-workspace.mjs && node scripts/verify-history.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

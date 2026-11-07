@@ -230,7 +230,7 @@ try {
   await page.locator('#query').fill('Another question')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await page
-    .getByText('This frontend contains one prepared query.', { exact: false })
+    .getByText('Search processing is not connected.', { exact: false })
     .waitFor()
   assert.equal(await page.locator('.source-highlight').count(), 0)
   await page.getByRole('button', { name: 'Load example' }).click()
@@ -261,7 +261,7 @@ try {
       body: `${await response.text()}\nreport.splice(0, report.length, ...${JSON.stringify(variableReport)});\n`,
     })
   })
-  await page.reload()
+  await page.goto('http://127.0.0.1:5173/')
   await page.waitForFunction(
     () => document.querySelectorAll('.query-report section').length === 12,
   )

@@ -1,4 +1,5 @@
 import { documents, references } from './data'
+import type { Reference } from './data'
 
 export type ReportBlock = {
   heading?: string
@@ -10,11 +11,13 @@ export function QueryReport({
   selected,
   onPreview,
   onSelect,
+  sourceReferences = references,
 }: {
   blocks: ReportBlock[]
   selected: string[]
   onPreview: (refs: string[] | null) => void
   onSelect: (refs: string[]) => void
+  sourceReferences?: Reference[]
 }) {
   return (
     <article className="query-report" aria-label="Query report">
@@ -46,14 +49,14 @@ export function QueryReport({
                     </span>
                     <sup className="citations">
                       {sentence.refs.map((id) => {
-                        const ref = references.find((r) => r.id === id)
+                        const ref = sourceReferences.find((r) => r.id === id)
                         if (!ref) return null
                         return (
                           <button
                             key={id}
                             className={selected.includes(id) ? 'active' : ''}
-                            title={`Vol. ${documents[ref.doc].code} · ${ref.label} (PDF page ${ref.page})`}
-                            aria-label={`Source ${id}: Vol. ${documents[ref.doc].code}, ${ref.label}`}
+                            title={`${documents[ref.doc].label} · ${ref.label} (PDF page ${ref.page})`}
+                            aria-label={`Source ${id}: ${documents[ref.doc].label}, ${ref.label}`}
                             onMouseEnter={() => onPreview([id])}
                             onMouseLeave={() => onPreview(null)}
                             onFocus={() => onPreview([id])}

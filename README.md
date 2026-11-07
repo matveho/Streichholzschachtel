@@ -69,3 +69,19 @@ Original EPCOR PDFs downloaded on November 6, 2026 and stored unchanged in `publ
 - [Volume 3-02: Stormwater Management and Design Manual, April 2025](https://www.epcor.com/content/dam/epcor/documents/supporting-documents/volume-3-02-stormwater-management-and-design-manual.pdf). Example references use printed/PDF pages 12 and 13.
 
 These editions are linked from [EPCOR's guides and standards directory](https://www.epcor.com/ca/en/ab/edmonton/operations/service-connections/guides-checklists-forms.html) as effective August 1, 2025. Source documents remain the property of their publishers.
+
+## Query history and source comparison
+
+The root URL opens the original storm-sewer workspace. The Home icon opens `#home`, with filterable previous queries. The two prepared cases have separate prompts, reports, source documents, and citation sets. Submitted queries persist in this browser's local storage; unknown queries retain an explicit unconnected-search state when reopened. History does not imply that arbitrary queries have been processed.
+
+The corner-lot LID example uses three different local PDFs. Document tabs scroll when needed. Compare mode keeps two readable panes and provides a selector for the companion source; clicking a tab replaces the focused pane when necessary. Citations automatically reveal their documents, including sources not yet opened. Each document retains its viewer state while switching within a query; PDFs and minimap thumbnails load on demand and are cached.
+
+Additional original sources:
+
+- [Corner Lot Infill LID Guidelines, May 2024](https://www.edmonton.ca/sites/default/files/public-files/LID-Guidelines-for-Corner-Lot-Infill-Developments.pdf), PDF/printed pages 2 and 18.
+- [Drainage Customer Connection Guide, May 2023](https://www.epcor.com/content/dam/epcor/documents/supporting-documents/water-drainage_customer-connection-guide.pdf), PDF page 6 / printed page 5.
+- [LID Construction, Inspection & Maintenance Guide, May 2016](https://www.edmonton.ca/sites/default/files/public-files/assets/LID%20CIM%20Guide.pdf), PDF pages 24–25 / printed pages 16–17.
+
+The second report identifies the different editions and scopes explicitly. Its recommendation to confirm the servicing arrangement is a synthesis of the guides, not a determination of project approval. The PDFs are stored unchanged under `public/documents/`.
+
+Run `npm run test:ui` against the development server on port 5173 with Google Chrome installed. It checks both the original workspace and history, persistence, source isolation, three-source navigation, citation highlighting, and mobile overflow.
