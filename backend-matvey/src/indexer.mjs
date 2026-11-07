@@ -24,13 +24,23 @@ const compactText = (text) =>
     .toLowerCase()
     .replace(/⁄/g, '/')
     .replace(/[^\p{L}\d.%/+*<>=≤≥-]/gu, '')
+export function normalizeMeasurements(text) {
+  return normalize(text)
+    .replace(/\/hr\b/g, '/h')
+    .replace(/\bm\s*\^\s*([23])\b/g, 'm$1')
+    .replace(/\bsquare\s+met(?:re|er)s?\b/gi, 'm2')
+    .replace(/\bcubic\s+met(?:re|er)s?\b/gi, 'm3')
+    .replace(/\bmillimet(?:re|er)s?\b/gi, 'mm')
+    .replace(/\bhectares?\b/gi, 'ha')
+}
 export function quantityUnits(text, dense = false) {
-  const known = /^(?:mm|cm|km|m|m2|m3|ha|MPa|kPa|Pa|mPa|kN|N|kg|g|L|l|s|%)$/i
+  const known =
+    /^(?:mm|cm|km|m|m2|m3|ha|MPa|kPa|Pa|mPa|kN|N|kg|g|L|l|s|%|m3\/s|L\/s|m\/s|mm\/h)$/i
   return [
-    ...normalize(text).matchAll(
+    ...normalizeMeasurements(text).matchAll(
       dense
-        ? /(?<![\d.])(\d+(?:\.\d+)?)\s*(MPa|kPa|mPa|Pa|mm|cm|km|m2|m3|ha|kN|N|kg|g|L|l|s|%|m)/giu
-        : /(?<![\d.])(\d+(?:\.\d+)?)\s*([\p{L}%]+[23]?)/gu,
+        ? /(?<![\d.])(\d+(?:\.\d+)?)\s*(m3\/s|L\/s|m\/s|mm\/h|MPa|kPa|mPa|Pa|mm|cm|km|m2|m3|ha|kN|N|kg|g|L|l|s|%|m)/giu
+        : /(?<![\d.])(\d+(?:\.\d+)?)\s*([\p{L}%]+[23]?(?:\/[\p{L}]+)?)/gu,
     ),
   ]
     .filter((m) => known.test(m[2]))
@@ -191,8 +201,11 @@ export async function buildIndex(progress = () => {}) {
         if (
           /TABLE OF CONTENTS|LIST OF REVISIONS|^REFERENCES\b/im.test(text) ||
           text.match(/\.{5,}/g)?.length > 3 ||
-          (text.match(/\b(?:Added|Revised|Deleted|Updated)\b/g)?.length || 0) >
-            3
+          (text.match(/\b(?:Added|Revised|Deleted|Updated|Removed)\b/g)
+            ?.length || 0) > 2 ||
+          /(?:^|\n)\s*(?:Removed|Added|Revised|Deleted|Updated)\s+(?:from|to|Section|Table|Figure|["“])/im.test(
+            text,
+          )
         )
           continue
         let section = ''

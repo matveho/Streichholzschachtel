@@ -26,6 +26,12 @@ const engineVersion = createHash('sha256')
       'config.mjs',
       'model.mjs',
       'local-evidence.mjs',
+      'local-synthesis.mjs',
+      'evidence-units.mjs',
+      'applicability.mjs',
+      'retrieval-plan.mjs',
+      'calculations.mjs',
+      'source-lookup.mjs',
       '../extract.py',
     ]
       .map((file) => readFileSync(new URL(file, import.meta.url), 'utf8'))
@@ -33,7 +39,8 @@ const engineVersion = createHash('sha256')
       config.provider +
       config.model +
       config.gatewayModel +
-      config.extractiveOnly,
+      config.extractiveOnly +
+      config.localSynthesis,
   )
   .digest('hex')
 const corpusVersion = () =>

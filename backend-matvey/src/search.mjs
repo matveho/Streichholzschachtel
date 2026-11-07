@@ -13,7 +13,9 @@ function stem(word) {
     .replace(/(?:ctions|ction)$/, 'ct')
     .replace(/ies$/, 'y')
     .replace(/(?:ments|ment)$/, '')
-    .replace(/(?:ings|ing|ed)$/, '')
+    .replace(/([a-z]{3,})(?:ings|ing|ed)$/, (whole, base) =>
+      /[aeiouy]/.test(base) ? base : whole,
+    )
     .replace(/s$/, '')
     .replace(/e$/, '')
 }
@@ -26,7 +28,9 @@ export function tokens(text) {
       .replace(/\bm[²2]\b/g, 'squaremetres')
       .match(/[\p{L}][\p{L}\d-]{1,}|\d+(?:\.\d+)?/gu)
       ?.filter((t) => !stop.has(t))
-      .map((t) => (t.length > 4 ? stem(t) : t)) ?? []
+      .map((t) =>
+        t.length > 4 ? stem(t) : t.length === 4 ? t.replace(/e$/, '') : t,
+      ) ?? []
   )
 }
 const concepts = [
@@ -44,6 +48,33 @@ const concepts = [
   ['construction', 'constructed', 'constructing'],
   ['frequency', 'weekly', 'daily', 'monthly'],
 ]
+
+// Rank immutable provisions before presenting them to the selector. This only
+// changes reading order; it neither adds evidence nor decides applicability.
+export function rankProvisions(units, question) {
+  const original = new Set(tokens(question))
+  const terms = new Map([...original].map((t) => [t, /^\d/.test(t) ? 0.1 : 1]))
+  const lowered = question.toLowerCase()
+  for (const group of concepts)
+    if (group.some((word) => lowered.includes(word)))
+      for (const word of group)
+        for (const t of tokens(word)) if (!terms.has(t)) terms.set(t, 0.35)
+  const bodies = units.map((u) => new Set(tokens(u.excerpt)))
+  const frequencies = new Map()
+  for (const words of bodies)
+    for (const word of words)
+      frequencies.set(word, (frequencies.get(word) || 0) + 1)
+  return units
+    .map((unit, i) => {
+      let score = 0
+      for (const [term, weight] of terms)
+        if (bodies[i].has(term))
+          score += weight * Math.log(1 + units.length / frequencies.get(term))
+      return { unit, score, i }
+    })
+    .sort((a, b) => b.score - a.score || a.i - b.i)
+    .map(({ unit }) => unit)
+}
 
 export class SearchIndex {
   constructor(corpus) {

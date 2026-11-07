@@ -1,6 +1,13 @@
 import { config } from './config.mjs'
 
-export async function generate(system, input, format, signal, limit = 1800) {
+export async function generate(
+  system,
+  input,
+  format,
+  signal,
+  limit = 1800,
+  options = {},
+) {
   if (config.provider === 'gateway') {
     if (!process.env.AI_GATEWAY_API_KEY)
       throw new Error(
@@ -41,7 +48,12 @@ export async function generate(system, input, format, signal, limit = 1800) {
         think: false,
         format,
         ...(raw ? { raw: true, prompt } : { messages }),
-        options: { temperature: 0, num_ctx: 8192, num_predict: limit },
+        options: {
+          temperature: 0,
+          num_ctx: 8192,
+          num_predict: limit,
+          ...options,
+        },
         keep_alive: '10m',
       }),
       signal: AbortSignal.any([signal, AbortSignal.timeout(150000)]),

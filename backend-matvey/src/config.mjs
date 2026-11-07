@@ -28,6 +28,7 @@ export const config = {
   provider: process.env.GENERATION_PROVIDER || 'ollama',
   gatewayModel: process.env.AI_GATEWAY_MODEL || 'google/gemini-4-argon',
   extractiveOnly: process.env.EXTRACTIVE_ONLY === '1',
+  localSynthesis: process.env.LOCAL_SYNTHESIS === '1',
   frontendUrl:
     process.env.FRONTEND_URL || 'https://streichholzschachtel.vercel.app',
   extraOrigins: (process.env.ALLOWED_ORIGINS || '')

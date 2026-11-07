@@ -1,10 +1,12 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { engineeringScenarios } from './engineering-scenarios.mjs'
 const key = readFileSync('state/session-token.txt', 'utf8').trim(),
+  testBase = process.env.BASIS_TEST_URL || 'http://127.0.0.1:8787',
   headers = {
     Authorization: 'Bearer ' + key,
     'Content-Type': 'application/json',
   }
-const cases = [
+const smokeCases = [
   {
     question:
       'What inspection frequency is required for erosion and sediment control while LID is being constructed?',
@@ -36,19 +38,25 @@ const cases = [
   {
     question:
       'What minimum vertical clearance is required when sewer mains cross?',
+    allowLookup: true,
     terms: [/300\s*mm/, /when sewer crossing each other/i],
   },
   {
     question: 'What is the minimum slope for catch basin leads?',
+    allowLookup: true,
     terms: [/1(?:\.0)?\s*%/],
   },
 ]
+const cases =
+  process.env.BASIS_QUALITY_SUITE === 'engineering'
+    ? engineeringScenarios
+    : smokeCases
 mkdirSync('test-results', { recursive: true })
 const outputs = []
 for (const c of cases) {
   const start = Date.now()
   let job = await (
-    await fetch('http://127.0.0.1:8787/v1/queries', {
+    await fetch(testBase + '/v1/queries', {
       method: 'POST',
       headers,
       body: JSON.stringify({ question: c.question }),
@@ -57,7 +65,7 @@ for (const c of cases) {
   for (let i = 0; i < 200 && ['queued', 'running'].includes(job.state); i++) {
     await new Promise((r) => setTimeout(r, 1000))
     job = await (
-      await fetch('http://127.0.0.1:8787/v1/queries/' + job.id, { headers })
+      await fetch(testBase + '/v1/queries/' + job.id, { headers })
     ).json()
   }
   const text = JSON.stringify(job.result?.report),
@@ -65,17 +73,23 @@ for (const c of cases) {
       job.state === 'completed' &&
       (c.noAnswer
         ? ['no_evidence', 'insufficient_evidence'].includes(job.result?.mode)
-        : c.terms.every((t) => t.test(text))),
+        : c.terms.every((t) => t.test(text)) &&
+          !(c.forbidden || []).some((t) => t.test(text)) &&
+          new Set(job.result?.references.map((r) => r.doc)).size >=
+            (c.minSources || 1)),
     passed =
       evidenceChecksPassed &&
       (c.noAnswer ||
-        ['local_synthesis', 'cited_synthesis'].includes(job.result?.mode))
+        ['local_synthesis', 'cited_synthesis'].includes(job.result?.mode) ||
+        (c.allowLookup && job.result?.mode === 'source_lookup'))
   outputs.push({
     question: c.question,
     passed,
     evidenceChecksPassed,
     seconds: Math.round((Date.now() - start) / 1000),
     mode: job.result?.mode,
+    engineVersion: job.engineVersion,
+    corpusVersion: job.corpusVersion,
     report: job.result?.report,
     notes: job.result?.notes,
     references: job.result?.references,
@@ -90,5 +104,8 @@ for (const c of cases) {
     }),
   )
 }
-writeFileSync('test-results/quality.json', JSON.stringify(outputs, null, 2))
+writeFileSync(
+  `test-results/quality${process.env.BASIS_QUALITY_SUITE === 'engineering' ? '-engineering' : ''}.json`,
+  JSON.stringify(outputs, null, 2),
+)
 if (outputs.some((o) => !o.passed)) process.exitCode = 1

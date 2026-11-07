@@ -1,11 +1,25 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { buildIndex, locateQuote } from '../src/indexer.mjs'
-import { SearchIndex } from '../src/search.mjs'
+import { SearchIndex, tokens } from '../src/search.mjs'
 import { answer, validateSynthesis } from '../src/answer.mjs'
 import { config } from '../src/config.mjs'
 const corpus = await buildIndex(),
   search = new SearchIndex(corpus)
+
+test('short engineering nouns normalize consistently with their plural and inflected forms', () => {
+  for (const group of [
+    ['pipe', 'pipes'],
+    ['size', 'sizing'],
+    ['rate', 'rates'],
+    ['time', 'times'],
+    ['line', 'lines'],
+    ['feed', 'feeding'],
+    ['ring', 'rings'],
+  ]) {
+    assert.equal(tokens(group[0])[0], tokens(group[1])[0], group.join(' / '))
+  }
+})
 test('indexes all supplied original PDFs with usable anchors', () => {
   assert.equal(corpus.documents.length, 5)
   assert.equal(corpus.failures.length, 0)
@@ -208,7 +222,7 @@ test('engineering unit capitalization cannot be silently changed', () => {
                 {
                   passageId: p.id,
                   quote:
-                    'The minimum vertical clearance when sewers cross each other shall be 300 mm.',
+                    'The minimum vertical clearance when sewer crossing each other shall be 300 mm.',
                 },
               ],
             },
@@ -220,6 +234,38 @@ test('engineering unit capitalization cannot be silently changed', () => {
     'What clearance is required?',
   )
   assert.equal(checked.sections.length, 0)
+})
+
+test('independent findings preserve a supported result while rejecting invented quantities', () => {
+  const quote =
+    'The minimum vertical clearance when sewer crossing each other shall be 300 mm.'
+  const p = search
+    .search(
+      'What minimum vertical clearance is required when sewer mains cross?',
+    )
+    .find((p) => p.text.includes(quote))
+  const checked = validateSynthesis(
+    {
+      sections: [
+        {
+          heading: '',
+          claims: [
+            { text: quote, evidence: [{ passageId: p.id, quote }] },
+            {
+              text: 'The minimum vertical clearance shall be 999 mm.',
+              evidence: [{ passageId: p.id, quote }],
+            },
+          ],
+        },
+      ],
+    },
+    [p],
+    'What clearance is required?',
+  )
+  assert.equal(checked.rejected, 1)
+  assert.equal(checked.sections[0].claims.length, 1)
+  assert.equal(checked.sections[0].claims[0].text, quote)
+  assert.equal(checked.sections[0].claims[0].evidence[0].excerpt, quote)
 })
 
 test('multi-part hyphenated questions retain context from at least three sources', () => {
