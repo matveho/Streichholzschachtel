@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import {
   Search,
   Columns2,
@@ -12,7 +12,11 @@ import {
   Minimize2,
   CornerDownLeft,
 } from 'lucide-react'
-import { documents, referenceSets, queryCases } from './data'
+import { documents as staticDocuments, referenceSets, queryCases } from './data'
+import { DocumentContext } from './DocumentContext'
+import { readSettings, saveSettings, useLiveQuery } from './backend'
+import type { BackendSettings } from './backend'
+import { navigate } from './navigation'
 import type { DocId } from './data'
 import { PdfPane } from './PdfPane'
 import { QueryReport } from './QueryReport'
@@ -24,21 +28,35 @@ import type { HistoryEntry } from './history'
 function QueryWorkspace({
   entry,
   onRun,
+  settings,
   onNew,
 }: {
   entry: HistoryEntry
+  settings: BackendSettings
   onRun: (prompt: string, caseId: string) => void
   onNew: () => void
 }) {
   const queryCase = queryCases.find((c) => c.id === entry.caseId)!
   const exampleQuery = queryCase.prompt
-  const report = queryCase.report
-  const references = referenceSets[entry.caseId]
-  const sourceIds = queryCase.documentIds
   const [query, setQuery] = useState(entry.prompt)
   const [submitted, setSubmitted] = useState(entry.prompt)
+  const [retry, setRetry] = useState(0)
+  const live = useLiveQuery(settings, submitted, retry)
+  const documents =
+    settings.mode === 'static' ? staticDocuments : (live.data?.documents ?? {})
+  const report =
+    settings.mode === 'static' ? queryCase.report : (live.data?.report ?? [])
+  const references =
+    settings.mode === 'static'
+      ? referenceSets[entry.caseId]
+      : (live.data?.references ?? [])
+  const sourceIds =
+    settings.mode === 'static' ? queryCase.documentIds : Object.keys(documents)
+  const datasetKey =
+    settings.mode === 'static' ? entry.caseId : (live.data?.id ?? 'pending')
+
   const [layout, setLayout] = useState<'split' | 'tabs'>('split')
-  const [tab, setTab] = useState<DocId>(sourceIds[0])
+  const [tab, setTab] = useState<DocId>(sourceIds[0] ?? '')
   const [comparison, setComparison] = useState<DocId[]>(sourceIds.slice(0, 2))
   const [opened, setOpened] = useState<DocId[]>(sourceIds.slice(0, 2))
   const [focusedPane, setFocusedPane] = useState(0)
@@ -53,12 +71,22 @@ function QueryWorkspace({
   const [expanded, setExpanded] = useState(false)
   const input = useRef<HTMLTextAreaElement>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const [previousDataset, setPreviousDataset] = useState(datasetKey)
+  if (datasetKey !== previousDataset) {
+    setPreviousDataset(datasetKey)
+    setTab(sourceIds[0] ?? '')
+    setComparison(sourceIds.slice(0, 2))
+    setOpened(sourceIds.slice(0, 2))
+    setPinned(references.slice(0, 2).map((r) => r.id))
+    setHover(null)
+  }
   const ids = hover ?? pinned
   const active = references.filter((r) => ids.includes(r.id))
   const isPrepared = (text: string) =>
     text.toLowerCase().replace(/\s+/g, ' ') ===
     exampleQuery.toLowerCase().replace(/\s+/g, ' ')
-  const supported = isPrepared(submitted)
+  const supported =
+    settings.mode === 'static' ? isPrepared(submitted) : !!live.data
   useEffect(() => () => clearTimeout(timer.current), [])
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
@@ -113,7 +141,10 @@ function QueryWorkspace({
     if (!query.trim() || busy) return
     setBusy(true)
     timer.current = setTimeout(() => {
-      setSubmitted(query.trim())
+      if (query.trim() === entry.prompt) {
+        setSubmitted(query.trim())
+        setRetry((r) => r + 1)
+      }
       setBusy(false)
       setPinned(isPrepared(query.trim()) ? queryCase.initialReferences : [])
       onRun(query.trim(), entry.caseId)
@@ -165,249 +196,278 @@ function QueryWorkspace({
     el.addEventListener('pointercancel', end)
   }
   return (
-    <main
-      className={`workspace ${expanded ? 'report-expanded' : ''}`}
-      style={{ '--result-height': `${resultHeight}px` } as React.CSSProperties}
-    >
-      <AppHeader onNew={newQuery} />
-      <form
-        className="query-bar"
-        onSubmit={(e) => {
-          e.preventDefault()
-          search()
-        }}
+    <DocumentContext.Provider value={documents}>
+      <main
+        className={`workspace ${expanded ? 'report-expanded' : ''}`}
+        style={
+          { '--result-height': `${resultHeight}px` } as React.CSSProperties
+        }
       >
-        <label className="sr-only" htmlFor="query">
-          Query
-        </label>
-        <div className="query-field">
-          <Search size={19} />
-          <textarea
-            ref={input}
-            id="query"
-            rows={2}
-            value={query}
-            placeholder="Enter a query…"
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                search()
-              }
-            }}
-          />
-          <kbd>Ctrl K</kbd>
-        </div>
-        <button
-          className="run-query"
-          disabled={!query.trim() || busy}
-          type="submit"
+        <AppHeader onNew={newQuery} />
+        <form
+          className="query-bar"
+          onSubmit={(e) => {
+            e.preventDefault()
+            search()
+          }}
         >
-          {busy ? 'Searching…' : 'Search'}
-          <CornerDownLeft size={15} />
-        </button>
-      </form>
-      <section className="document-workspace" aria-label="Document workspace">
-        <div
-          className="document-tabs"
-          role="toolbar"
-          aria-label="Document layout"
-        >
-          <div
-            className="tab-list"
-            role="tablist"
-            aria-label="Source documents"
+          <label className="sr-only" htmlFor="query">
+            Query
+          </label>
+          <div className="query-field">
+            <Search size={19} />
+            <textarea
+              ref={input}
+              id="query"
+              rows={2}
+              value={query}
+              placeholder="Enter a query…"
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  search()
+                }
+              }}
+            />
+            <kbd>Ctrl K</kbd>
+          </div>
+          <button
+            className="run-query"
+            disabled={!query.trim() || busy}
+            type="submit"
           >
-            {sourceIds.map((id) => (
+            {busy || live.busy ? 'Searching…' : 'Search'}
+            <CornerDownLeft size={15} />
+          </button>
+        </form>
+        <section className="document-workspace" aria-label="Document workspace">
+          <div
+            className="document-tabs"
+            role="toolbar"
+            aria-label="Document layout"
+          >
+            <div
+              className="tab-list"
+              role="tablist"
+              aria-label="Source documents"
+            >
+              {sourceIds.map((id) => (
+                <button
+                  key={id}
+                  role="tab"
+                  aria-selected={tab === id}
+                  className={`document-tab ${tab === id ? 'selected' : ''} ${active.some((r) => r.doc === id) ? 'has-source' : ''}`}
+                  title={documents[id].title}
+                  onClick={() => selectDocument(id)}
+                >
+                  <FileText size={14} />
+                  <span>{documents[id].label}</span>
+                  <span className="tab-title">{documents[id].title}</span>
+                </button>
+              ))}
+            </div>
+            <div className="layout-controls">
+              {layout === 'split' && sourceIds.length > 2 && (
+                <select
+                  className="compare-select"
+                  aria-label="Compare document"
+                  value={comparison[1]}
+                  onChange={(e) => {
+                    const id = e.target.value as DocId
+                    setComparison((prev) => [prev[0], id])
+                    setOpened((prev) =>
+                      prev.includes(id) ? prev : [...prev, id],
+                    )
+                    setTab(id)
+                  }}
+                >
+                  {sourceIds
+                    .filter((id) => id !== comparison[0])
+                    .map((id) => (
+                      <option key={id} value={id}>
+                        {documents[id].title}
+                      </option>
+                    ))}
+                </select>
+              )}
               <button
-                key={id}
-                role="tab"
-                aria-selected={tab === id}
-                className={`document-tab ${tab === id ? 'selected' : ''} ${active.some((r) => r.doc === id) ? 'has-source' : ''}`}
-                title={documents[id].title}
-                onClick={() => selectDocument(id)}
+                className={layout === 'tabs' ? 'active' : ''}
+                aria-label="Single document view"
+                aria-pressed={layout === 'tabs'}
+                title="Single document"
+                onClick={() => setLayout('tabs')}
               >
-                <FileText size={14} />
-                <span>{documents[id].label}</span>
-                <span className="tab-title">{documents[id].title}</span>
+                <PanelTop size={15} />
               </button>
+              <button
+                className={layout === 'split' ? 'active' : ''}
+                aria-label="Side-by-side view"
+                aria-pressed={layout === 'split'}
+                title="Side by side"
+                onClick={() => setLayout('split')}
+              >
+                <Columns2 size={15} />
+              </button>
+            </div>
+          </div>
+          <div className={`document-panes ${layout}`}>
+            {sourceIds.map((id) => (
+              <div
+                className={`pane-slot ${(layout === 'tabs' ? tab !== id : !comparison.includes(id)) ? 'hidden' : ''}`}
+                style={{ order: comparison.indexOf(id) }}
+                onPointerDown={() => setFocusedPane(comparison.indexOf(id))}
+                onFocusCapture={() =>
+                  setFocusedPane(Math.max(0, comparison.indexOf(id)))
+                }
+                key={id}
+              >
+                {opened.includes(id) && (
+                  <PdfPane
+                    id={id}
+                    active={active}
+                    navigationKey={navigationKey}
+                    onSelectReferences={(refIds) => reveal(refIds, true)}
+                    sourceReferences={references}
+                  />
+                )}
+              </div>
             ))}
           </div>
-          <div className="layout-controls">
-            {layout === 'split' && sourceIds.length > 2 && (
-              <select
-                className="compare-select"
-                aria-label="Compare document"
-                value={comparison[1]}
-                onChange={(e) => {
-                  const id = e.target.value as DocId
-                  setComparison((prev) => [prev[0], id])
-                  setOpened((prev) =>
-                    prev.includes(id) ? prev : [...prev, id],
-                  )
-                  setTab(id)
-                }}
-              >
-                {sourceIds
-                  .filter((id) => id !== comparison[0])
-                  .map((id) => (
-                    <option key={id} value={id}>
-                      {documents[id].title}
-                    </option>
-                  ))}
-              </select>
-            )}
-            <button
-              className={layout === 'tabs' ? 'active' : ''}
-              aria-label="Single document view"
-              aria-pressed={layout === 'tabs'}
-              title="Single document"
-              onClick={() => setLayout('tabs')}
-            >
-              <PanelTop size={15} />
-            </button>
-            <button
-              className={layout === 'split' ? 'active' : ''}
-              aria-label="Side-by-side view"
-              aria-pressed={layout === 'split'}
-              title="Side by side"
-              onClick={() => setLayout('split')}
-            >
-              <Columns2 size={15} />
-            </button>
-          </div>
-        </div>
-        <div className={`document-panes ${layout}`}>
-          {sourceIds.map((id) => (
-            <div
-              className={`pane-slot ${(layout === 'tabs' ? tab !== id : !comparison.includes(id)) ? 'hidden' : ''}`}
-              style={{ order: comparison.indexOf(id) }}
-              onPointerDown={() => setFocusedPane(comparison.indexOf(id))}
-              onFocusCapture={() =>
-                setFocusedPane(Math.max(0, comparison.indexOf(id)))
-              }
-              key={id}
-            >
-              {opened.includes(id) && (
-                <PdfPane
-                  id={id}
-                  active={active}
-                  navigationKey={navigationKey}
-                  onSelectReferences={(refIds) => reveal(refIds, true)}
-                  sourceReferences={references}
-                />
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
-      <div
-        className="resize-handle"
-        role="separator"
-        aria-label="Resize consolidated result"
-        aria-orientation="horizontal"
-        aria-valuenow={resultHeight}
-        tabIndex={0}
-        onPointerDown={resize}
-        onKeyDown={(e) => {
-          if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-            e.preventDefault()
-            setResultHeight((h) =>
-              Math.max(
-                160,
-                Math.min(
-                  window.innerHeight * 0.6,
-                  h + (e.key === 'ArrowUp' ? 24 : -24),
-                ),
-              ),
-            )
-          }
-        }}
-      >
-        <span />
-      </div>
-      <section className="result-panel" aria-label="Consolidated query result">
-        <div className="result-header">
-          <h1>Query result</h1>
-          <div className="result-actions">
-            {pinned.length > 0 && (
-              <button
-                onClick={() => {
-                  setPinned([])
-                  setHover(null)
-                }}
-                title="Clear selected sources"
-              >
-                <X size={13} />
-                Clear selection
-              </button>
-            )}
-            {supported && (
-              <button onClick={copy} title="Copy result with source references">
-                {copied ? <Check size={14} /> : <Copy size={14} />}
-                {copied ? 'Copied' : 'Copy'}
-              </button>
-            )}
-            <button
-              onClick={() => setExpanded((v) => !v)}
-              aria-label={
-                expanded ? 'Restore result panel' : 'Expand result panel'
-              }
-              title={expanded ? 'Restore panel' : 'Expand panel'}
-            >
-              {expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-            </button>
-          </div>
-        </div>
+        </section>
         <div
-          className={`result-content ${busy ? 'is-loading' : ''}`}
-          aria-busy={busy}
+          className="resize-handle"
+          role="separator"
+          aria-label="Resize consolidated result"
+          aria-orientation="horizontal"
+          aria-valuenow={resultHeight}
+          tabIndex={0}
+          onPointerDown={resize}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+              e.preventDefault()
+              setResultHeight((h) =>
+                Math.max(
+                  160,
+                  Math.min(
+                    window.innerHeight * 0.6,
+                    h + (e.key === 'ArrowUp' ? 24 : -24),
+                  ),
+                ),
+              )
+            }
+          }}
         >
-          {!submitted ? (
-            <div className="empty-result">
-              <Search size={20} />
-              <span>Enter a query to inspect the local documents.</span>
-              <button
-                onClick={() => {
-                  setQuery(exampleQuery)
-                  setSubmitted(exampleQuery)
-                  setPinned(queryCase.initialReferences)
-                }}
-              >
-                Load example
-                <ArrowUpRight size={14} />
-              </button>
-            </div>
-          ) : !supported ? (
-            <div className="empty-result">
-              <Search size={20} />
-              <span>
-                Search processing is not connected. Open a previous query to
-                inspect a prepared result.
-              </span>
-              <button
-                onClick={() => {
-                  setQuery(exampleQuery)
-                  setSubmitted(exampleQuery)
-                  setPinned(queryCase.initialReferences)
-                }}
-              >
-                Load example
-                <ArrowUpRight size={14} />
-              </button>
-            </div>
-          ) : (
-            <QueryReport
-              blocks={report}
-              sourceReferences={references}
-              selected={ids}
-              onPreview={(refs) => (refs ? reveal(refs) : setHover(null))}
-              onSelect={(refs) => reveal(refs, true)}
-            />
-          )}
+          <span />
         </div>
-      </section>
-    </main>
+        <section
+          className="result-panel"
+          aria-label="Consolidated query result"
+        >
+          <div className="result-header">
+            <h1>Query result</h1>
+            {settings.mode !== 'static' && (
+              <span className="live-mode">
+                {settings.mode === 'matvey'
+                  ? 'Matvey’s backend'
+                  : 'Backend (main)'}
+                {live.data ? ' · ' + live.data.mode.replaceAll('_', ' ') : ''}
+              </span>
+            )}
+            <div className="result-actions">
+              {pinned.length > 0 && (
+                <button
+                  onClick={() => {
+                    setPinned([])
+                    setHover(null)
+                  }}
+                  title="Clear selected sources"
+                >
+                  <X size={13} />
+                  Clear selection
+                </button>
+              )}
+              {supported && (
+                <button
+                  onClick={copy}
+                  title="Copy result with source references"
+                >
+                  {copied ? <Check size={14} /> : <Copy size={14} />}
+                  {copied ? 'Copied' : 'Copy'}
+                </button>
+              )}
+              <button
+                onClick={() => setExpanded((v) => !v)}
+                aria-label={
+                  expanded ? 'Restore result panel' : 'Expand result panel'
+                }
+                title={expanded ? 'Restore panel' : 'Expand panel'}
+              >
+                {expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+              </button>
+            </div>
+          </div>
+          <div
+            className={`result-content ${busy ? 'is-loading' : ''}`}
+            aria-busy={busy || live.busy}
+          >
+            {settings.mode !== 'static' && submitted && !live.data ? (
+              <div className="empty-result" role="status">
+                <span>{live.error || live.phase}</span>
+                {live.busy && <button onClick={live.cancel}>Cancel</button>}
+                {live.error && (
+                  <button onClick={() => setRetry((r) => r + 1)}>Retry</button>
+                )}
+              </div>
+            ) : !submitted ? (
+              <div className="empty-result">
+                <Search size={20} />
+                <span>Enter a query to inspect the local documents.</span>
+                <button
+                  onClick={() => {
+                    setQuery(exampleQuery)
+                    setSubmitted(exampleQuery)
+                    setPinned(queryCase.initialReferences)
+                  }}
+                >
+                  Load example
+                  <ArrowUpRight size={14} />
+                </button>
+              </div>
+            ) : !supported ? (
+              <div className="empty-result">
+                <Search size={20} />
+                <span>
+                  Search processing is not connected. Open a previous query to
+                  inspect a prepared result.
+                </span>
+                <button
+                  onClick={() => {
+                    setQuery(exampleQuery)
+                    setSubmitted(exampleQuery)
+                    setPinned(queryCase.initialReferences)
+                  }}
+                >
+                  Load example
+                  <ArrowUpRight size={14} />
+                </button>
+              </div>
+            ) : (
+              <QueryReport
+                blocks={report}
+                sourceReferences={references}
+                selected={ids}
+                onPreview={(refs) => (refs ? reveal(refs) : setHover(null))}
+                onSelect={(refs) => reveal(refs, true)}
+              />
+            )}
+            {live.data?.notes?.length ? (
+              <p className="result-notes">{live.data.notes.join(' ')}</p>
+            ) : null}
+          </div>
+        </section>
+      </main>
+    </DocumentContext.Provider>
   )
 }
 
@@ -422,18 +482,18 @@ function routeId() {
     return 'storm'
   }
 }
+function subscribeRoute(update: () => void) {
+  window.addEventListener('hashchange', update)
+  return () => window.removeEventListener('hashchange', update)
+}
 export default function App() {
+  const [settings, setSettings] = useState(readSettings)
   const [history, setHistory] = useState(readHistory)
-  const [route, setRoute] = useState(routeId)
+  const route = useSyncExternalStore(subscribeRoute, routeId, () => 'storm')
   const [draftCase, setDraftCase] = useState('storm')
-  useEffect(() => {
-    const update = () => setRoute(routeId())
-    window.addEventListener('hashchange', update)
-    return () => window.removeEventListener('hashchange', update)
-  }, [])
   function newQuery(caseId = 'storm') {
     setDraftCase(caseId)
-    location.hash = 'new'
+    navigate('new')
   }
   function runQuery(prompt: string, caseId: string) {
     const known = queryCases.find(
@@ -462,10 +522,20 @@ export default function App() {
       saveHistory(next)
       return next
     })
-    location.hash = 'query/' + encodeURIComponent(entry.id)
+    navigate('query/' + encodeURIComponent(entry.id))
   }
   if (route === 'home')
-    return <QueryHome entries={history} onNew={() => newQuery()} />
+    return (
+      <QueryHome
+        entries={history}
+        onNew={() => newQuery()}
+        settings={settings}
+        onSettings={(value) => {
+          saveSettings(value)
+          setSettings(value)
+        }}
+      />
+    )
   const entry =
     route === 'new'
       ? { id: 'new', title: '', prompt: '', caseId: draftCase }
@@ -473,7 +543,8 @@ export default function App() {
         history.find((entry) => entry.id === 'storm')!)
   return (
     <QueryWorkspace
-      key={entry.id + entry.caseId}
+      key={entry.id + entry.caseId + settings.mode}
+      settings={settings}
       entry={entry}
       onRun={runQuery}
       onNew={() => newQuery(entry.caseId)}

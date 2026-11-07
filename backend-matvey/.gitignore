@@ -1,0 +1,9 @@
+node_modules/
+state/
+documents/*.pdf
+.env
+*.log
+test-results/
+tools/
+.venv/
+__pycache__/

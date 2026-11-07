@@ -1043,3 +1043,53 @@ button {
     flex: 0 0 auto;
   }
 }
+
+.backend-selector {
+  margin-top: 44px;
+  padding-top: 20px;
+  border-top: 1px solid #414a54;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  color: #a9b6c3;
+  font-size: 11px;
+}
+.backend-selector label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.backend-selector select,
+.backend-selector input {
+  border: 1px solid #4e5a65;
+  background: #282f36;
+  color: #d4dee5;
+  padding: 7px 9px;
+  font: inherit;
+}
+.backend-selector input[type='url'] {
+  width: 280px;
+}
+.backend-selector input[type='password'] {
+  width: 140px;
+}
+.backend-selector button {
+  padding: 7px 10px;
+  border: 1px solid #4d6866;
+}
+.backend-selector [role='status'] {
+  flex-basis: 100%;
+  color: #9bc8be;
+}
+.live-mode {
+  font-size: 10px;
+  color: #91bfb8;
+}
+.result-notes {
+  max-width: 1080px;
+  margin: 20px auto 0;
+  font-size: 11px;
+  color: #8d9daa;
+  line-height: 1.6;
+}

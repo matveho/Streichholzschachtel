@@ -11,7 +11,7 @@ import {
   FileText,
   Map,
 } from 'lucide-react'
-import { documents } from './data'
+import { useDocuments } from './DocumentContext'
 import type { DocId, Reference } from './data'
 import 'pdfjs-dist/web/pdf_viewer.css'
 import { DocumentMinimap } from './DocumentMinimap'
@@ -30,6 +30,7 @@ export function PdfPane({
   onSelectReferences: (ids: string[]) => void
   sourceReferences: Reference[]
 }) {
+  const documents = useDocuments()
   const doc = documents[id]
   const [page, setPage] = useState<number>(
     () => active.find((r) => r.doc === id)?.page ?? doc.initialPage,
@@ -67,7 +68,8 @@ export function PdfPane({
     observer.observe(scroll.current!)
     return () => observer.disconnect()
   }, [])
-  const scale = (width / 612) * zoom
+  const [pageWidth, pageHeight] = doc.pageSizes?.[page] ?? [612, 792]
+  const scale = (width / pageWidth) * zoom
   useEffect(() => {
     const el = scroll.current!
     let frame = 0
@@ -76,11 +78,11 @@ export function PdfPane({
       frame = requestAnimationFrame(() => {
         const top = Math.min(
           0.999,
-          Math.max(0, (el.scrollTop - 24) / (792 * scale)),
+          Math.max(0, (el.scrollTop - 24) / (pageHeight * scale)),
         )
         setViewport({
           top,
-          height: Math.min(1 - top, el.clientHeight / (792 * scale)),
+          height: Math.min(1 - top, el.clientHeight / (pageHeight * scale)),
         })
       })
     }
@@ -93,7 +95,7 @@ export function PdfPane({
       observer.disconnect()
       el.removeEventListener('scroll', update)
     }
-  }, [scale, page])
+  }, [scale, page, pageHeight])
   useEffect(() => {
     let cancelled = false
     let render:
@@ -102,7 +104,7 @@ export function PdfPane({
     let layer: TextLayer | undefined
     async function draw() {
       try {
-        const pdf = await loadPdf(id)
+        const pdf = await loadPdf(id, doc)
         const pdfPage = await pdf.getPage(page)
         if (cancelled) return
         const viewport = pdfPage.getViewport({ scale })
@@ -138,14 +140,14 @@ export function PdfPane({
       render?.cancel()
       layer?.cancel()
     }
-  }, [id, page, scale, retry])
+  }, [id, page, scale, retry, doc])
   useEffect(() => {
     const el = scroll.current!
     if (pendingJump.current !== null) {
       el.scrollTo({
         top: Math.max(
           0,
-          pendingJump.current * 792 * scale - el.clientHeight / 2 + 24,
+          pendingJump.current * pageHeight * scale - el.clientHeight / 2 + 24,
         ),
         behavior: 'instant',
       })
@@ -156,7 +158,7 @@ export function PdfPane({
         behavior: 'smooth',
       })
     else el.scrollTo({ top: 0 })
-  }, [targetTop, targetPage, page, scale, navigationKey, jumpKey])
+  }, [targetTop, targetPage, page, scale, navigationKey, jumpKey, pageHeight])
   return (
     <section className="pdf-pane" aria-label={doc.title}>
       <div className="pane-title">
@@ -246,8 +248,8 @@ export function PdfPane({
             className="pdf-sheet"
             style={
               {
-                width: 612 * scale,
-                height: 792 * scale,
+                width: pageWidth * scale,
+                height: pageHeight * scale,
                 '--scale-factor': scale,
               } as React.CSSProperties
             }

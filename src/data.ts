@@ -1,7 +1,9 @@
 import type { ReportBlock } from './QueryReport'
 import { additionalExamples, additionalReferences } from './additionalExamples'
 
-export const documents = {
+import type { DocumentRecord } from './backend'
+
+export const documents: Record<string, DocumentRecord> = {
   guidelines: {
     label: 'Vol. 3-03',
     code: '3-03',
@@ -58,7 +60,7 @@ export const documents = {
       'https://www.epcor.com/content/dam/epcor/documents/supporting-documents/water-drainage_customer-connection-guide.pdf',
   },
 } as const
-export type DocId = keyof typeof documents
+export type DocId = string
 // PDF points measured from the top-left of each original 612 × 792 pt page.
 export type Reference = {
   id: string
@@ -66,6 +68,8 @@ export type Reference = {
   page: number
   label: string
   rect: [number, number, number, number]
+  regions?: [number, number, number, number][]
+  excerpt?: string
 }
 export const references: Reference[] = [
   {

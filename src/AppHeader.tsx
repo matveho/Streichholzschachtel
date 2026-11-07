@@ -1,4 +1,5 @@
 import { House, Plus } from 'lucide-react'
+import { navigateLink } from './navigation'
 
 export function AppHeader({
   onNew,
@@ -20,6 +21,7 @@ export function AppHeader({
       <a
         className={`home-link ${home ? 'active' : ''}`}
         href="#home"
+        onClick={navigateLink}
         aria-label="Home"
         aria-current={home ? 'page' : undefined}
         title="Query history"

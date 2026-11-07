@@ -1,4 +1,5 @@
-import { documents, references } from './data'
+import { references } from './data'
+import { useDocuments } from './DocumentContext'
 import type { Reference } from './data'
 
 export type ReportBlock = {
@@ -19,6 +20,7 @@ export function QueryReport({
   onSelect: (refs: string[]) => void
   sourceReferences?: Reference[]
 }) {
+  const documents = useDocuments()
   return (
     <article className="query-report" aria-label="Query report">
       {blocks.map((block, index) => (

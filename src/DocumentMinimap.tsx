@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react'
-import { documents } from './data'
+import { useDocuments } from './DocumentContext'
 import type { DocId, Reference } from './data'
 import { loadPdf } from './pdf'
 
@@ -27,6 +27,7 @@ const MiniPage = memo(function MiniPage({
   onNavigate: (page: number, fraction: number) => void
   sourceReferences: Reference[]
 }) {
+  const documents = useDocuments()
   const button = useRef<HTMLButtonElement>(null)
   const key = `${id}:${page}`
   const [image, setImage] = useState(thumbnails.get(key))
@@ -49,7 +50,7 @@ const MiniPage = memo(function MiniPage({
         if (!entry.isIntersecting) return
         observer.disconnect()
         try {
-          const pdf = await loadPdf(id)
+          const pdf = await loadPdf(id, documents[id])
           const pdfPage = await pdf.getPage(page)
           if (cancelled) return
           const canvas = document.createElement('canvas')
@@ -76,7 +77,7 @@ const MiniPage = memo(function MiniPage({
       observer.disconnect()
       task?.cancel()
     }
-  }, [id, page, key, image, root])
+  }, [id, page, key, image, root, documents])
   return (
     <button
       ref={button}
@@ -105,10 +106,10 @@ const MiniPage = memo(function MiniPage({
           className={`minimap-mark ${active.some((a) => a.id === r.id) ? 'active' : ''}`}
           data-minimap-reference={r.id}
           style={{
-            top: `${(r.rect[1] / 792) * 100}%`,
-            left: `${(r.rect[0] / 612) * 100}%`,
-            width: `${(r.rect[2] / 612) * 100}%`,
-            height: `${(r.rect[3] / 792) * 100}%`,
+            top: `${(r.rect[1] / (documents[id].pageSizes?.[page]?.[1] ?? 792)) * 100}%`,
+            left: `${(r.rect[0] / (documents[id].pageSizes?.[page]?.[0] ?? 612)) * 100}%`,
+            width: `${(r.rect[2] / (documents[id].pageSizes?.[page]?.[0] ?? 612)) * 100}%`,
+            height: `${(r.rect[3] / (documents[id].pageSizes?.[page]?.[1] ?? 792)) * 100}%`,
           }}
         />
       ))}
@@ -143,6 +144,7 @@ export function DocumentMinimap({
   onSelectReferences: (ids: string[]) => void
   sourceReferences: Reference[]
 }) {
+  const documents = useDocuments()
   const root = useRef<HTMLDivElement>(null)
   const total = documents[id].pages
   const markers = sourceReferences.filter((r) => r.doc === id)
@@ -247,7 +249,11 @@ export function DocumentMinimap({
               onClick={(event) => {
                 event.stopPropagation()
                 onSelectReferences(group.refs.map((r) => r.id))
-                onNavigate(group.page, group.refs[0].rect[1] / 792)
+                onNavigate(
+                  group.page,
+                  group.refs[0].rect[1] /
+                    (documents[id].pageSizes?.[group.page]?.[1] ?? 792),
+                )
               }}
             />
           ))}

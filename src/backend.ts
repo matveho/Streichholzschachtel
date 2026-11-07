@@ -1,0 +1,235 @@
+import { useEffect, useRef, useState } from 'react'
+import type { Reference } from './data'
+import type { ReportBlock } from './QueryReport'
+export type BackendMode = 'static' | 'main' | 'matvey'
+export type BackendSettings = {
+  mode: BackendMode
+  mainUrl: string
+  matveyUrl: string
+  key: string
+  mainKey: string
+}
+export type DocumentRecord = {
+  label: string
+  code: string
+  title: string
+  edition: string
+  file: string
+  pages: number
+  initialPage: number
+  source: string
+  pageSizes?: Record<number, [number, number]>
+}
+export type LiveResult = {
+  documents: Record<string, DocumentRecord>
+  references: Reference[]
+  report: ReportBlock[]
+  mode: string
+  notes: string[]
+  id: string
+}
+const defaults: BackendSettings = {
+  mode: 'static',
+  mainUrl: '',
+  matveyUrl: 'http://127.0.0.1:8787',
+  key: '',
+  mainKey: '',
+}
+export function readSettings(): BackendSettings {
+  let value = defaults
+  try {
+    value = {
+      ...defaults,
+      ...JSON.parse(localStorage.getItem('basis.backends.v1') || '{}'),
+    }
+  } catch {}
+  if (location.hash.startsWith('#connect?')) {
+    const p = new URLSearchParams(location.hash.slice(9)),
+      url = p.get('url'),
+      key = p.get('key')
+    if (url && /^https?:\/\//.test(url)) {
+      value = { ...value, mode: 'matvey', matveyUrl: url, key: key || '' }
+      localStorage.setItem('basis.backends.v1', JSON.stringify(value))
+      history.replaceState(null, '', location.pathname + '#home')
+    }
+  }
+  return value
+}
+export function saveSettings(value: BackendSettings) {
+  try {
+    localStorage.setItem('basis.backends.v1', JSON.stringify(value))
+  } catch {}
+}
+export const baseUrl = (s: BackendSettings) =>
+  (s.mode === 'main' ? s.mainUrl : s.matveyUrl).replace(/\/$/, '')
+export const connectionKey = (s: BackendSettings) =>
+  s.mode === 'main' ? s.mainKey : s.key
+export async function api(
+  s: BackendSettings,
+  path: string,
+  init: RequestInit = {},
+) {
+  const base = baseUrl(s)
+  if (!base) throw new Error('Set the backend URL in Home first.')
+  const secret = connectionKey(s)
+  const response = await fetch(base + path, {
+    ...init,
+    headers: {
+      ...(secret ? { Authorization: 'Bearer ' + secret } : {}),
+      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+      ...init.headers,
+    },
+  })
+  const body = await response.json()
+  if (!response.ok)
+    throw new Error(body.error || `Backend returned ${response.status}`)
+  return body
+}
+export function useLiveQuery(
+  settings: BackendSettings,
+  question: string,
+  retry: number,
+) {
+  const key = JSON.stringify([settings, question, retry])
+  const cancelRef = useRef<() => void>(() => {})
+  const [state, setState] = useState<{
+    key: string
+    phase: string
+    data: LiveResult | null
+    error: string
+  }>({ key: '', phase: '', data: null, error: '' })
+  useEffect(() => {
+    if (settings.mode === 'static' || !question) return
+    const controller = new AbortController()
+    let jobId = '',
+      finished = false
+    cancelRef.current = () => {
+      controller.abort()
+      if (jobId)
+        void api(settings, `/v1/queries/${jobId}`, { method: 'DELETE' }).catch(
+          () => {},
+        )
+      setState({ key, phase: '', data: null, error: 'Query cancelled.' })
+    }
+    async function run() {
+      try {
+        const cacheKey =
+          'basis.result.' +
+          JSON.stringify([settings.mode, baseUrl(settings), question])
+        let job
+        if (!retry) {
+          try {
+            const saved = localStorage.getItem(cacheKey)
+            if (saved)
+              job = await api(settings, '/v1/queries/' + saved, {
+                signal: controller.signal,
+              })
+          } catch {}
+        }
+        if (!job || job.stale || job.state !== 'completed') {
+          const requestedId =
+            settings.mode === 'matvey' ? crypto.randomUUID() : undefined
+          if (requestedId) jobId = requestedId
+          job = await api(settings, '/v1/queries', {
+            method: 'POST',
+            body: JSON.stringify({
+              question,
+              ...(requestedId ? { id: requestedId } : {}),
+            }),
+            signal: controller.signal,
+          })
+        }
+        jobId = job.id
+        while (!controller.signal.aborted) {
+          if (job.state === 'completed') {
+            const result = job.result,
+              docs: Record<string, DocumentRecord> = {}
+            for (const record of result.documents) {
+              const file = new URL(record.file, baseUrl(settings))
+              if (file.origin !== new URL(baseUrl(settings)).origin)
+                throw new Error(
+                  'The backend returned a document on a different server.',
+                )
+              const secret = connectionKey(settings)
+              if (secret) file.searchParams.set('token', secret)
+              docs[record.id] = { ...record, file: file.href }
+            }
+            try {
+              localStorage.setItem(cacheKey, job.id)
+            } catch {}
+            finished = true
+            setState({
+              key,
+              phase: 'Complete',
+              data: { ...result, documents: docs, id: job.id },
+              error: '',
+            })
+            return
+          }
+          if (['failed', 'cancelled'].includes(job.state))
+            throw new Error(job.error || 'Query was cancelled.')
+          setState({
+            key,
+            phase: job.stage || 'Searching documents',
+            data: null,
+            error: '',
+          })
+          await new Promise<void>((resolve, reject) => {
+            const stop = () => {
+              clearTimeout(t)
+              reject(new Error('Cancelled'))
+            }
+            const t = setTimeout(() => {
+              controller.signal.removeEventListener('abort', stop)
+              resolve()
+            }, 1000)
+            controller.signal.addEventListener('abort', stop, { once: true })
+          })
+          job = await api(settings, `/v1/queries/${jobId}`, {
+            signal: controller.signal,
+          })
+        }
+      } catch (error) {
+        if (!controller.signal.aborted)
+          setState({
+            key,
+            phase: '',
+            data: null,
+            error:
+              error instanceof Error
+                ? error.message
+                : 'Unable to connect to the backend.',
+          })
+      }
+    }
+    void run()
+    return () => {
+      controller.abort()
+      if (jobId && !finished)
+        void api(settings, `/v1/queries/${jobId}`, { method: 'DELETE' }).catch(
+          () => {},
+        )
+    }
+  }, [key, settings, question, retry])
+  if (settings.mode === 'static' || !question)
+    return {
+      phase: '',
+      data: null,
+      error: '',
+      busy: false,
+      cancel: () => cancelRef.current(),
+    }
+  return state.key === key
+    ? {
+        ...state,
+        busy: !state.data && !state.error,
+        cancel: () => cancelRef.current(),
+      }
+    : {
+        phase: 'Connecting to backend',
+        data: null,
+        error: '',
+        busy: true,
+        cancel: () => cancelRef.current(),
+      }
+}
