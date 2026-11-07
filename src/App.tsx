@@ -495,7 +495,8 @@ export default function App() {
     const connect = () => {
       if (!location.hash.startsWith('#connect?')) return
       setSettings(readSettings())
-      window.dispatchEvent(new HashChangeEvent('hashchange'))
+      if (!location.hash.startsWith('#connect?'))
+        window.dispatchEvent(new HashChangeEvent('hashchange'))
     }
     window.addEventListener('hashchange', connect)
     return () => window.removeEventListener('hashchange', connect)
