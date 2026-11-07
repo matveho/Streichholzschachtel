@@ -30,6 +30,12 @@ Open the local URL printed by Vite (usually http://localhost:5173). Changes in s
 
 No environment variables or backend connection are required.
 
+## Backend development
+
+The backend can be built independently in [`backend/`](backend/README.md). Read the [backend handoff and recommendations](docs/backend-handoff.md) for suggested capabilities, source/citation considerations, and deployment boundaries. The backend engineer owns the stack, API, and data model; the frontend will adapt to their implementation.
+
+The frontend remains at the repository root. `vercel.json` pins its Vite build to `npm run build` with `dist/` output. Backend dependencies, runtime, and deployment should stay independent of that build. No backend service or API connection has been installed.
+
 ## Commands
 
 | Command                | Purpose                                                         |

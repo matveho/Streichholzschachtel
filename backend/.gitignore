@@ -1,0 +1,24 @@
+# Python environments and generated files, if Python is chosen
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Local runtime documents, indexes, databases, and other generated state
+data/
+storage/
+indexes/
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+
+# Root ignore rules already cover .env files, node_modules, logs, and dist.
+# Commit small deliberate fixtures elsewhere, such as tests/fixtures/.

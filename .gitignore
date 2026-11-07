@@ -36,3 +36,6 @@ playwright-report/
 
 # Local project documents (may contain confidential material)
 uploads/
+
+# Local Vercel project metadata
+.vercel/
