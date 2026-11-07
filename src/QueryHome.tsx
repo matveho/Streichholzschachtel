@@ -51,6 +51,7 @@ export function QueryHome({
                   <p>{entry.prompt}</p>
                   {entry.id === entry.caseId && (
                     <span className="history-sources">
+                      Example ·{' '}
                       {sources.map((id) => documents[id].label).join(' · ')}
                     </span>
                   )}
