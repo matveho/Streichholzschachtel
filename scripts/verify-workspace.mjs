@@ -10,6 +10,46 @@ try {
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.goto('http://127.0.0.1:5173/')
+  assert.equal(await page.title(), 'Basis')
+  assert.equal(
+    await page.locator('link[rel="icon"]').getAttribute('href'),
+    '/basis.svg',
+  )
+  assert.ok(!(await page.locator('#query').inputValue()).includes('Edmonton'))
+  assert.equal(await page.locator('footer').count(), 0)
+  assert.equal(
+    await page
+      .getByText('Edmonton · Drainage standards', { exact: true })
+      .count(),
+    0,
+  )
+  const report = page.getByRole('article', { name: 'Query report' })
+  await report.waitFor()
+  const paragraphs = await report.locator('p').evaluateAll((els) =>
+    els.map((el) => {
+      const r = el.getBoundingClientRect()
+      return { left: r.left, top: r.top }
+    }),
+  )
+  assert.equal(paragraphs.length, 4)
+  assert.ok(
+    paragraphs.every(
+      (p, i) =>
+        p.left === paragraphs[0].left && (!i || p.top > paragraphs[i - 1].top),
+    ),
+    'Report follows one vertical reading order',
+  )
+  await page
+    .getByRole('button', { name: 'Expand result panel', exact: true })
+    .click()
+  assert.ok(
+    await page
+      .getByRole('region', { name: 'Document workspace', exact: true })
+      .isHidden(),
+  )
+  await page
+    .getByRole('button', { name: 'Restore result panel', exact: true })
+    .click()
   await page.locator('.textLayer span').first().waitFor()
   await page.waitForFunction(
     () => document.querySelectorAll('.pdf-status').length === 0,
@@ -78,14 +118,14 @@ try {
       exact: true,
     })
     .click()
-  await page.getByRole('button', { name: /^Design storm\./ }).click()
-  await page.getByRole('heading', { name: 'Consolidated result' }).hover()
+  await page.getByRole('button', { name: /^Use the 1:5/ }).click()
+  await page.getByRole('heading', { name: 'Query result' }).hover()
   await page.waitForFunction(
     () => document.querySelectorAll('.pdf-status').length === 0,
   )
   await mkdir('test-results', { recursive: true })
   await page.screenshot({ path: 'test-results/workspace.png' })
-  await page.getByRole('button', { name: /^Design storm\./ }).hover()
+  await page.getByRole('button', { name: /^Use the 1:5/ }).hover()
   assert.equal(await page.locator('.source-highlight').count(), 2)
   for (const id of ['1', '2']) {
     const visible = await page
@@ -97,8 +137,8 @@ try {
       })
     assert.ok(visible, `Reference ${id} visible within its viewer`)
   }
-  await page.getByRole('button', { name: /^Velocity\./ }).click()
-  await page.getByRole('heading', { name: 'Consolidated result' }).hover()
+  await page.getByRole('button', { name: /^Target a full-flow/ }).click()
+  await page.getByRole('heading', { name: 'Query result' }).hover()
   assert.equal(await page.locator('[data-reference="6"]').count(), 1)
   await page.keyboard.press('Escape')
   assert.equal(await page.locator('.source-highlight').count(), 0)
@@ -137,7 +177,9 @@ try {
       .inputValue(),
     '12',
   )
-  await page.getByRole('button', { name: /^Inputs still required\./ }).hover()
+  await page
+    .getByRole('button', { name: /^Determine the runoff coefficient/ })
+    .hover()
   await page.waitForFunction(
     () =>
       document.querySelector(
@@ -151,8 +193,8 @@ try {
   await page
     .getByRole('button', { name: 'Side-by-side view', exact: true })
     .click()
-  await page.getByRole('button', { name: /^Design storm\./ }).click()
-  await page.getByRole('heading', { name: 'Consolidated result' }).hover()
+  await page.getByRole('button', { name: /^Use the 1:5/ }).click()
+  await page.getByRole('heading', { name: 'Query result' }).hover()
   await page.waitForFunction(
     () =>
       document.querySelector(
@@ -200,9 +242,44 @@ try {
     ),
     'No page-wide horizontal overflow',
   )
+  // Substitute a variable-sized report through Vite's fixture module, without
+  // adding test-only controls or data to the application UI.
+  const variableReport = Array.from({ length: 12 }, (_, i) => ({
+    heading: i % 3 === 0 ? `Review section ${i + 1}` : undefined,
+    sentences: [
+      {
+        text: `Finding ${i + 1}. ${'A requirement with variable supporting detail. '.repeat(i + 1)}`,
+        refs: i % 2 ? undefined : ['1', '2'],
+      },
+      { text: `Reference identifier ${'A'.repeat(140)}.` },
+    ],
+  }))
+  await page.route('**/src/data.ts*', async (route) => {
+    const response = await route.fetch()
+    await route.fulfill({
+      response,
+      body: `${await response.text()}\nreport.splice(0, report.length, ...${JSON.stringify(variableReport)});\n`,
+    })
+  })
+  await page.reload()
+  await page.waitForFunction(
+    () => document.querySelectorAll('.query-report section').length === 12,
+  )
+  assert.equal(await page.locator('.query-report h2').count(), 4)
+  assert.ok(
+    await page
+      .locator('.result-content')
+      .evaluate((el) => el.scrollWidth <= el.clientWidth),
+    'Long variable reports wrap without horizontal overflow',
+  )
+  await page
+    .getByRole('button', { name: 'Expand result panel', exact: true })
+    .click()
+  await page.locator('.query-report section').last().scrollIntoViewIfNeeded()
+  assert.ok(await page.locator('.query-report section').last().isVisible())
   assert.deepEqual(errors, [])
   console.log(
-    'PASS: lazy minimaps, whole-file navigation, marker selection, viewport tracking, keyboard navigation, minimap toggles, PDFs, citation tracing, pin/clear, tabs, zoom, resize, clipboard, new query, mobile overflow, and browser errors.',
+    'PASS: Basis branding, vertical reports, sentence citations, variable report lengths and headings, expand/restore, minimaps, PDF navigation, zoom, resize, clipboard, query states, mobile overflow, and browser errors.',
   )
 } finally {
   await browser.close()

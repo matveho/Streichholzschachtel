@@ -1,3 +1,5 @@
+import type { ReportBlock } from './QueryReport'
+
 export type DocId = 'guidelines' | 'manual'
 export const documents = {
   guidelines: {
@@ -95,31 +97,60 @@ export const references: Reference[] = [
   },
 ]
 export const exampleQuery =
-  'For a 20 ha development in Edmonton, what design storm, runoff method and pipe-sizing criteria apply to the minor storm sewer system?'
-export const findings = [
+  'For a 20 ha development, what design storm, runoff method and pipe-sizing criteria apply to the minor storm sewer system?'
+export const report: ReportBlock[] = [
   {
-    title: 'Design storm',
-    text: 'Use the 1:5-year rainfall event for this 20 ha catchment. Both documents place areas ≤30 ha in this category; the additional 25% capacity allowance applies to areas above 30 ha.',
-    refs: ['1', '2'],
+    sentences: [
+      {
+        text: 'Use the 1:5-year rainfall event for this 20 ha catchment.',
+        refs: ['1', '2'],
+      },
+      {
+        text: 'Both documents place areas of 30 ha or less in this category; the additional 25% capacity allowance applies to areas above 30 ha.',
+        refs: ['1', '2'],
+      },
+    ],
   },
   {
-    title: 'Runoff method',
-    text: 'The Rational Method is permitted for minor-system catchments of approximately 65 ha or less: Q = CIA / 360, with Q in m³/s, I in mm/h and A in ha. Computer simulation is recommended for final analyses and detailed design.',
-    refs: ['3', '9'],
+    sentences: [
+      {
+        text: 'The Rational Method is permitted for minor-system catchments of approximately 65 ha or less: Q = CIA / 360, with Q in m³/s, I in mm/h and A in ha.',
+        refs: ['3'],
+      },
+      {
+        text: 'Computer simulation is recommended for final analyses and detailed design.',
+        refs: ['9'],
+      },
+    ],
   },
   {
-    title: 'Pipe sizing',
-    text: 'Size the storm sewer with Manning’s equation at full flow (d/D = 1). Use n = 0.013 for smooth-wall pipe. Minimum storm-main diameter is 300 mm; catch-basin leads may be 250 mm.',
-    refs: ['4', '5'],
+    heading: 'Pipe design',
+    sentences: [
+      {
+        text: 'Size the storm sewer with Manning’s equation at full flow (d/D = 1), using n = 0.013 for smooth-wall pipe.',
+        refs: ['4'],
+      },
+      {
+        text: 'The minimum storm-main diameter is 300 mm; catch-basin leads may be 250 mm.',
+        refs: ['5'],
+      },
+      {
+        text: 'Target a full-flow mean velocity of 0.90–1.0 m/s. Lower velocities require a feasibility or cost justification; values below 0.6 m/s are not permitted.',
+        refs: ['6'],
+      },
+    ],
   },
   {
-    title: 'Velocity',
-    text: 'Target a full-flow mean velocity of 0.90–1.0 m/s. Lower velocities require a feasibility or cost justification; values below 0.6 m/s are not permitted.',
-    refs: ['6'],
-  },
-  {
-    title: 'Inputs still required',
-    text: 'A final pipe diameter cannot be established from catchment area alone. Determine the runoff coefficient from ultimate land use or imperviousness, the IDF intensity at the time of concentration, and the proposed pipe slope.',
-    refs: ['7', '8', '4'],
+    heading: 'Information still needed',
+    sentences: [
+      {
+        text: 'A final pipe diameter cannot be established from catchment area alone.',
+        refs: ['4'],
+      },
+      {
+        text: 'Determine the runoff coefficient from ultimate land use or imperviousness, the IDF intensity at the time of concentration, and the proposed pipe slope.',
+        refs: ['7', '8', '4'],
+      },
+    ],
   },
 ]

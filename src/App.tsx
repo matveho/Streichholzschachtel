@@ -9,12 +9,14 @@ import {
   Check,
   X,
   FileText,
-  Link2,
+  Maximize2,
+  Minimize2,
   CornerDownLeft,
 } from 'lucide-react'
-import { documents, exampleQuery, findings, references } from './data'
+import { documents, exampleQuery, report, references } from './data'
 import type { DocId } from './data'
 import { PdfPane } from './PdfPane'
+import { QueryReport } from './QueryReport'
 
 export default function App() {
   const [query, setQuery] = useState(exampleQuery)
@@ -27,6 +29,7 @@ export default function App() {
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
   const [resultHeight, setResultHeight] = useState(264)
+  const [expanded, setExpanded] = useState(false)
   const input = useRef<HTMLTextAreaElement>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const ids = hover ?? pinned
@@ -70,6 +73,7 @@ export default function App() {
   function newQuery() {
     clearTimeout(timer.current)
     setBusy(false)
+    setExpanded(false)
     setQuery('')
     setSubmitted('')
     setPinned([])
@@ -79,7 +83,7 @@ export default function App() {
   async function copy() {
     try {
       await navigator.clipboard.writeText(
-        `${submitted}\n\n${findings.map((f) => `${f.title}: ${f.text} [${f.refs.join(', ')}]`).join('\n\n')}\n\n${references.map((r) => `[${r.id}] Vol. ${documents[r.doc].code}, ${r.label}. ${documents[r.doc].source}`).join('\n')}`,
+        `${submitted}\n\n${report.map((block) => [block.heading, block.sentences.map((s) => `${s.text}${s.refs?.length ? ` [${s.refs.join(', ')}]` : ''}`).join(' ')].filter(Boolean).join('\n')).join('\n\n')}\n\n${references.map((r) => `[${r.id}] Vol. ${documents[r.doc].code}, ${r.label}. ${documents[r.doc].source}`).join('\n')}`,
       )
       setCopied(true)
       setTimeout(() => setCopied(false), 1800)
@@ -110,16 +114,18 @@ export default function App() {
   }
   return (
     <main
-      className="workspace"
+      className={`workspace ${expanded ? 'report-expanded' : ''}`}
       style={{ '--result-height': `${resultHeight}px` } as React.CSSProperties}
     >
       <header className="app-header">
-        <div className="brand-mark">
-          C<span>▱</span>
-        </div>
-        <strong>CONSTRUCTION INTELLIGENCE</strong>
-        <span className="header-divider" />
-        <span className="workspace-name">Edmonton · Drainage standards</span>
+        <img
+          className="brand-mark"
+          src="/basis.svg"
+          alt=""
+          width="26"
+          height="26"
+        />
+        <strong>Basis</strong>
         <button className="new-query" onClick={newQuery}>
           <Plus size={14} />
           New query
@@ -132,8 +138,8 @@ export default function App() {
           search()
         }}
       >
-        <label htmlFor="query">
-          QUERY <span>01</span>
+        <label className="sr-only" htmlFor="query">
+          Query
         </label>
         <div className="query-field">
           <Search size={19} />
@@ -142,7 +148,7 @@ export default function App() {
             id="query"
             rows={2}
             value={query}
-            placeholder="Enter a query across the local documents…"
+            placeholder="Enter a query…"
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -187,9 +193,6 @@ export default function App() {
                   {id === 'guidelines'
                     ? 'Design Guidelines'
                     : 'Stormwater Management'}
-                </span>
-                <span className="tab-count">
-                  {references.filter((r) => r.doc === id).length}
                 </span>
               </button>
             ))}
@@ -258,13 +261,7 @@ export default function App() {
       </div>
       <section className="result-panel" aria-label="Consolidated query result">
         <div className="result-header">
-          <Link2 size={15} />
-          <h1>Consolidated result</h1>
-          {supported && (
-            <span className="result-count">
-              5 findings <span>·</span> 2 documents
-            </span>
-          )}
+          <h1>Query result</h1>
           <div className="result-actions">
             {pinned.length > 0 && (
               <button
@@ -284,6 +281,15 @@ export default function App() {
                 {copied ? 'Copied' : 'Copy'}
               </button>
             )}
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              aria-label={
+                expanded ? 'Restore result panel' : 'Expand result panel'
+              }
+              title={expanded ? 'Restore panel' : 'Expand panel'}
+            >
+              {expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            </button>
           </div>
         </div>
         <div
@@ -324,73 +330,15 @@ export default function App() {
               </button>
             </div>
           ) : (
-            <>
-              <div className="result-scope">
-                <span className="scope-tag">MINOR STORM SYSTEM</span>
-                <span>20 ha · Edmonton · 2025 editions</span>
-                <span className="fixture-tag">Example query</span>
-              </div>
-              <div className="findings">
-                {findings.map((finding, i) => (
-                  <div
-                    className={`finding ${finding.refs.every((r) => ids.includes(r)) ? 'is-active' : ''}`}
-                    key={finding.title}
-                  >
-                    <span className="finding-index">0{i + 1}</span>
-                    <div>
-                      <button
-                        className="finding-text"
-                        onMouseEnter={() => reveal(finding.refs)}
-                        onMouseLeave={() => setHover(null)}
-                        onFocus={() => reveal(finding.refs)}
-                        onBlur={() => setHover(null)}
-                        onClick={() => reveal(finding.refs, true)}
-                      >
-                        <strong>{finding.title}.</strong> {finding.text}
-                      </button>
-                      <span className="citations">
-                        {finding.refs.map((refId) => {
-                          const ref = references.find((r) => r.id === refId)!
-                          return (
-                            <button
-                              key={refId}
-                              className={ids.includes(refId) ? 'active' : ''}
-                              title={`Vol. ${documents[ref.doc].code} · ${ref.label} (PDF page ${ref.page})`}
-                              aria-label={`Source ${refId}: Vol. ${documents[ref.doc].code}, ${ref.label}`}
-                              onMouseEnter={() => reveal([refId])}
-                              onMouseLeave={() => setHover(null)}
-                              onFocus={() => reveal([refId])}
-                              onBlur={() => setHover(null)}
-                              onClick={() => reveal([refId], true)}
-                            >
-                              {refId}
-                            </button>
-                          )
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
+            <QueryReport
+              blocks={report}
+              selected={ids}
+              onPreview={(refs) => (refs ? reveal(refs) : setHover(null))}
+              onSelect={(refs) => reveal(refs, true)}
+            />
           )}
         </div>
       </section>
-      <footer className="status-bar">
-        <span>
-          <i />
-          LOCAL DOCUMENTS
-        </span>
-        <span>
-          2 PDFs <span className="status-sep">/</span> 234 pages
-        </span>
-        <span className="status-hint">
-          Hover to trace · Click to select · Esc to clear
-        </span>
-        <span>
-          {active.length} source{active.length === 1 ? '' : 's'} highlighted
-        </span>
-      </footer>
     </main>
   )
 }

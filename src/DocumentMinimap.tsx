@@ -147,15 +147,24 @@ export function DocumentMinimap({
   useEffect(() => {
     const el = root.current!
     const current = el.querySelector<HTMLElement>(`[data-page="${page}"]`)!
-    if (
-      current.offsetTop < el.scrollTop ||
-      current.offsetTop + current.offsetHeight > el.scrollTop + el.clientHeight
-    ) {
-      el.scrollTo({
-        top: current.offsetTop - el.clientHeight / 2 + current.offsetHeight / 2,
-        behavior: 'smooth',
-      })
+    const keepCurrentVisible = () => {
+      if (!el.clientHeight) return
+      if (
+        current.offsetTop < el.scrollTop ||
+        current.offsetTop + current.offsetHeight >
+          el.scrollTop + el.clientHeight
+      ) {
+        el.scrollTo({
+          top:
+            current.offsetTop - el.clientHeight / 2 + current.offsetHeight / 2,
+          behavior: 'instant',
+        })
+      }
     }
+    keepCurrentVisible()
+    const observer = new ResizeObserver(keepCurrentVisible)
+    observer.observe(el)
+    return () => observer.disconnect()
   }, [page])
   return (
     <aside

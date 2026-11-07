@@ -1,4 +1,4 @@
-# Construction Intelligence
+# Basis
 
 An engineering document search workspace for finding, comparing, and summarizing requirements across construction documents, technical reports, building codes, and municipal regulations, with precise source citations.
 
@@ -8,18 +8,7 @@ Built for natHacks 2026 by team Streichholzschachtel.
 
 A desktop-first engineering query workspace with local PDF documents, a prepared example query, and a consolidated result linked to source passages. There is no backend or live search. Unrecognized queries display an explicit frontend-only state.
 
-### Workspace controls
-
-- Hover or keyboard-focus a finding to trace its source passages across both PDFs. Click to keep that selection; Escape clears it.
-- Hover or select an individual citation to reveal its specific passage. Citation tooltips include document, section, printed page, and PDF page.
-- Switch between side-by-side documents and a centered, tabbed document view. Each document has independent page and zoom controls; the page field uses PDF page numbers.
-- Drag the divider above the result to resize it, or focus the divider and use the arrow keys.
-- Use New query to clear the example, or Ctrl/Cmd+K to focus the query field. Enter submits; Shift+Enter inserts a line break.
-- Copy exports the consolidated result and its source references.
-- Each viewer has a right-hand minimap: scrollable page previews, gold citation markers, and a live viewport rectangle. The narrow overview track maps the entire file. Click a preview or the overview to navigate; click a gold overview marker to select the cited passages on that page. Arrow keys and Home/End navigate when a preview has focus. The map icon toggles the minimap independently for each document.
-- Minimap previews render only near the visible range and are cached during the session. Scrolling the primary document updates its viewport indicator without rendering the other thumbnails again.
-
-## Stack
+## Frpmtemd Stack
 
 - React and TypeScript
 - Vite for development and production builds
@@ -70,11 +59,6 @@ scripts/verify-workspace.mjs Browser interaction checks and screenshots
 
 ## Development notes
 
-- Keep future mock data and service calls separate from UI components so a backend can be connected later.
-- Do not commit credentials or private engineering documents. Environment files and the local `uploads/` directory are ignored.
-- Commit `package-lock.json` when dependencies change. Use `npm ci` when installing an existing checkout.
-- Run `npm run lint` and `npm run build` before opening a pull request.
-
 Vite documentation: https://vite.dev/guide/
 
 ## Example sources
@@ -85,9 +69,3 @@ Original EPCOR PDFs downloaded on November 6, 2026 and stored unchanged in `publ
 - [Volume 3-02: Stormwater Management and Design Manual, April 2025](https://www.epcor.com/content/dam/epcor/documents/supporting-documents/volume-3-02-stormwater-management-and-design-manual.pdf). Example references use printed/PDF pages 12 and 13.
 
 These editions are linked from [EPCOR's guides and standards directory](https://www.epcor.com/ca/en/ab/edmonton/operations/service-connections/guides-checklists-forms.html) as effective August 1, 2025. Source documents remain the property of their publishers.
-
-The 20 ha scenario is illustrative. Its findings are a prepared synthesis of these sources, not a hydraulic calculation or a project approval. The final-diameter limitation is an inference from the required calculation inputs. Highlight rectangles are verified PDF-point coordinates; future retrieval responses should supply document ID, PDF page, and passage coordinates in the same form.
-
-## Browser verification
-
-Start `npm run dev -- --host 127.0.0.1 --port 5173`, then run `npm run test:ui` in another terminal. Google Chrome must be installed. Checks cover PDF rendering, simultaneous source visibility, pin/clear, tabs, citation-driven page changes, zoom, resizing, new-query behavior, unsupported queries, mobile overflow, and uncaught browser errors. Screenshots are saved in ignored `test-results/`.
