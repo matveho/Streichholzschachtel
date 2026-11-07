@@ -821,3 +821,171 @@ button {
     max-height: 50vh;
   }
 }
+
+/* Lazy-rendered page thumbnails plus a fixed whole-file source overview. */
+.pdf-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+.pdf-body > .pdf-scroll {
+  min-width: 0;
+}
+.pdf-toolbar .minimap-toggle {
+  margin-left: 5px;
+  border-left: 1px solid #454d56;
+  border-radius: 0;
+}
+.pdf-toolbar .minimap-toggle.active {
+  color: #b4e2db;
+  background: #414a52;
+}
+.document-minimap {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 94px;
+  min-height: 0;
+  background: #262c32;
+  border-left: 1px solid #535c66;
+}
+.minimap-heading {
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  padding-left: 9px;
+  font:
+    8px 'IBM Plex Mono',
+    monospace;
+  letter-spacing: 0.6px;
+  color: #8c99a7;
+  border-bottom: 1px solid #3e4751;
+}
+.minimap-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.minimap-pages {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+  padding: 8px 7px;
+}
+.minimap-pages::-webkit-scrollbar {
+  display: none;
+}
+.minimap-page {
+  display: block;
+  position: relative;
+  width: 64px;
+  height: 83px;
+  margin: 0 0 9px;
+  padding: 0;
+  background: #d2d6da;
+  border: 1px solid #141b24;
+  border-radius: 0;
+  overflow: hidden;
+}
+.minimap-page:hover {
+  background: #d2d6da;
+  outline: 1px solid #99bab7;
+}
+.minimap-page.current {
+  outline: 1px solid #94c9c1;
+  outline-offset: 2px;
+}
+.minimap-page img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  opacity: 0.82;
+}
+.minimap-placeholder {
+  font:
+    10px 'IBM Plex Mono',
+    monospace;
+  color: #5f6975;
+}
+.minimap-page-number {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 1px 3px;
+  color: #ced8e0;
+  background: #1e2833d9;
+  font:
+    8px 'IBM Plex Mono',
+    monospace;
+  pointer-events: none;
+}
+.minimap-mark {
+  position: absolute;
+  min-height: 2px;
+  background: #deb34b70;
+  box-shadow: inset 0 0 0 1px #bf902b99;
+  pointer-events: none;
+}
+.minimap-mark.active {
+  background: #ffd262c4;
+  box-shadow: inset 0 0 0 1px #ac7c15;
+}
+.minimap-viewport {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  min-height: 3px;
+  border: 1px solid #4b8c85;
+  background: #47b9a526;
+  pointer-events: none;
+}
+.minimap-overview {
+  position: relative;
+  width: 12px;
+  flex-shrink: 0;
+  border-left: 1px solid #414a54;
+  background: #1c242c;
+  cursor: pointer;
+}
+.overview-current {
+  position: absolute;
+  width: 100%;
+  min-height: 3px;
+  background: #a2b8c488;
+  pointer-events: none;
+}
+.overview-mark {
+  position: absolute;
+  left: 1px;
+  width: 9px;
+  height: 3px;
+  padding: 0;
+  background: #ab8840;
+  border-radius: 0;
+}
+.overview-mark.active {
+  background: #f8cf6a;
+  z-index: 1;
+}
+.overview-mark:hover,
+.overview-mark:focus-visible {
+  background: #fff1b8;
+  height: 5px;
+  z-index: 2;
+}
+@media (max-width: 650px) {
+  .document-minimap {
+    flex-basis: 78px;
+  }
+  .minimap-pages {
+    padding: 7px 3px;
+  }
+  .minimap-page {
+    width: 58px;
+    height: 75px;
+  }
+}

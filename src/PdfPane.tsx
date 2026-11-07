@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
-import { getDocument, GlobalWorkerOptions, TextLayer } from 'pdfjs-dist'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { TextLayer } from 'pdfjs-dist'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
-import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import {
   ChevronLeft,
   ChevronRight,
@@ -10,26 +9,24 @@ import {
   Scan,
   ExternalLink,
   FileText,
+  Map,
 } from 'lucide-react'
 import { documents } from './data'
 import type { DocId, Reference } from './data'
 import 'pdfjs-dist/web/pdf_viewer.css'
+import { DocumentMinimap } from './DocumentMinimap'
+import { loadPdf, clearPdf } from './pdf'
 
-GlobalWorkerOptions.workerSrc = workerUrl
-const cache = new Map<DocId, Promise<PDFDocumentProxy>>()
-function loadPdf(id: DocId) {
-  if (!cache.has(id))
-    cache.set(id, getDocument({ url: documents[id].file }).promise)
-  return cache.get(id)!
-}
 export function PdfPane({
   id,
   active,
   navigationKey,
+  onSelectReferences,
 }: {
   id: DocId
   active: Reference[]
   navigationKey: number
+  onSelectReferences: (ids: string[]) => void
 }) {
   const doc = documents[id]
   const [page, setPage] = useState<number>(doc.initialPage)
@@ -40,6 +37,15 @@ export function PdfPane({
   const canvas = useRef<HTMLCanvasElement>(null)
   const text = useRef<HTMLDivElement>(null)
   const scroll = useRef<HTMLDivElement>(null)
+  const [minimap, setMinimap] = useState(true)
+  const [viewport, setViewport] = useState({ top: 0, height: 1 })
+  const pendingJump = useRef<number | null>(null)
+  const [jumpKey, setJumpKey] = useState(0)
+  const navigate = useCallback((page: number, fraction: number) => {
+    pendingJump.current = fraction
+    setPage(page)
+    setJumpKey((k) => k + 1)
+  }, [])
   const targets = active.filter((r) => r.doc === id)
   const targetPage = targets[0]?.page
   const targetTop = targets[0]?.rect[1]
@@ -58,6 +64,32 @@ export function PdfPane({
     return () => observer.disconnect()
   }, [])
   const scale = (width / 612) * zoom
+  useEffect(() => {
+    const el = scroll.current!
+    let frame = 0
+    const update = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        const top = Math.min(
+          0.999,
+          Math.max(0, (el.scrollTop - 24) / (792 * scale)),
+        )
+        setViewport({
+          top,
+          height: Math.min(1 - top, el.clientHeight / (792 * scale)),
+        })
+      })
+    }
+    const observer = new ResizeObserver(update)
+    observer.observe(el)
+    el.addEventListener('scroll', update, { passive: true })
+    update()
+    return () => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+      el.removeEventListener('scroll', update)
+    }
+  }, [scale, page])
   useEffect(() => {
     let cancelled = false
     let render:
@@ -105,13 +137,22 @@ export function PdfPane({
   }, [id, page, scale, retry])
   useEffect(() => {
     const el = scroll.current!
-    if (targetTop !== undefined && page === targetPage)
+    if (pendingJump.current !== null) {
+      el.scrollTo({
+        top: Math.max(
+          0,
+          pendingJump.current * 792 * scale - el.clientHeight / 2 + 24,
+        ),
+        behavior: 'instant',
+      })
+      pendingJump.current = null
+    } else if (targetTop !== undefined && page === targetPage)
       el.scrollTo({
         top: Math.max(0, targetTop * scale - el.clientHeight * 0.28 + 24),
         behavior: 'smooth',
       })
     else el.scrollTo({ top: 0 })
-  }, [targetTop, targetPage, page, scale, navigationKey])
+  }, [targetTop, targetPage, page, scale, navigationKey, jumpKey])
   return (
     <section className="pdf-pane" aria-label={doc.title}>
       <div className="pane-title">
@@ -185,57 +226,78 @@ export function PdfPane({
           <ExternalLink size={14} />
           <span>Original PDF</span>
         </a>
-      </div>
-      <div className="pdf-scroll" ref={scroll}>
-        <div
-          className="pdf-sheet"
-          style={
-            {
-              width: 612 * scale,
-              height: 792 * scale,
-              '--scale-factor': scale,
-            } as React.CSSProperties
-          }
+        <button
+          className={minimap ? 'minimap-toggle active' : 'minimap-toggle'}
+          aria-label={`Toggle minimap ${doc.title}`}
+          aria-pressed={minimap}
+          title="Toggle document minimap"
+          onClick={() => setMinimap((v) => !v)}
         >
-          <canvas ref={canvas} style={{ width: '100%', height: '100%' }} />
-          <div ref={text} className="textLayer" />
-          <div className="highlights" aria-label="Source highlights">
-            {targets
-              .filter((r) => r.page === page)
-              .map((r) => (
-                <div
-                  key={r.id}
-                  data-reference={r.id}
-                  className="source-highlight"
-                  style={{
-                    left: r.rect[0] * scale,
-                    top: r.rect[1] * scale,
-                    width: r.rect[2] * scale,
-                    height: r.rect[3] * scale,
+          <Map />
+        </button>
+      </div>
+      <div className="pdf-body">
+        <div className="pdf-scroll" ref={scroll}>
+          <div
+            className="pdf-sheet"
+            style={
+              {
+                width: 612 * scale,
+                height: 792 * scale,
+                '--scale-factor': scale,
+              } as React.CSSProperties
+            }
+          >
+            <canvas ref={canvas} style={{ width: '100%', height: '100%' }} />
+            <div ref={text} className="textLayer" />
+            <div className="highlights" aria-label="Source highlights">
+              {targets
+                .filter((r) => r.page === page)
+                .map((r) => (
+                  <div
+                    key={r.id}
+                    data-reference={r.id}
+                    className="source-highlight"
+                    style={{
+                      left: r.rect[0] * scale,
+                      top: r.rect[1] * scale,
+                      width: r.rect[2] * scale,
+                      height: r.rect[3] * scale,
+                    }}
+                  >
+                    <span>{r.id}</span>
+                  </div>
+                ))}
+            </div>
+          </div>
+          {status && (
+            <div
+              className={`pdf-status ${status.startsWith('Unable') ? 'error' : ''}`}
+              role="status"
+            >
+              {status}
+              {status.startsWith('Unable') && (
+                <button
+                  onClick={() => {
+                    clearPdf(id)
+                    setRetry((v) => v + 1)
                   }}
                 >
-                  <span>{r.id}</span>
-                </div>
-              ))}
-          </div>
+                  Retry
+                </button>
+              )}
+            </div>
+          )}
         </div>
-        {status && (
-          <div
-            className={`pdf-status ${status.startsWith('Unable') ? 'error' : ''}`}
-            role="status"
-          >
-            {status}
-            {status.startsWith('Unable') && (
-              <button
-                onClick={() => {
-                  cache.delete(id)
-                  setRetry((v) => v + 1)
-                }}
-              >
-                Retry
-              </button>
-            )}
-          </div>
+        {minimap && (
+          <DocumentMinimap
+            id={id}
+            page={page}
+            active={active}
+            viewport={viewport}
+            onNavigate={navigate}
+            onSelectReferences={onSelectReferences}
+          />
         )}
       </div>
     </section>

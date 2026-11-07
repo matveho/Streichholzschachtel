@@ -16,6 +16,8 @@ A desktop-first engineering query workspace with local PDF documents, a prepared
 - Drag the divider above the result to resize it, or focus the divider and use the arrow keys.
 - Use New query to clear the example, or Ctrl/Cmd+K to focus the query field. Enter submits; Shift+Enter inserts a line break.
 - Copy exports the consolidated result and its source references.
+- Each viewer has a right-hand minimap: scrollable page previews, gold citation markers, and a live viewport rectangle. The narrow overview track maps the entire file. Click a preview or the overview to navigate; click a gold overview marker to select the cited passages on that page. Arrow keys and Home/End navigate when a preview has focus. The map icon toggles the minimap independently for each document.
+- Minimap previews render only near the visible range and are cached during the session. Scrolling the primary document updates its viewport indicator without rendering the other thumbnails again.
 
 ## Stack
 

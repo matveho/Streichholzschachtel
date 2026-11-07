@@ -221,7 +221,12 @@ export default function App() {
               className={`pane-slot ${layout === 'tabs' && tab !== id ? 'hidden' : ''}`}
               key={id}
             >
-              <PdfPane id={id} active={active} navigationKey={navigationKey} />
+              <PdfPane
+                id={id}
+                active={active}
+                navigationKey={navigationKey}
+                onSelectReferences={(refIds) => reveal(refIds, true)}
+              />
             </div>
           ))}
         </div>

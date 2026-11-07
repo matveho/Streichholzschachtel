@@ -15,6 +15,74 @@ try {
     () => document.querySelectorAll('.pdf-status').length === 0,
   )
   await page.locator('.source-highlight[data-reference="2"]').waitFor()
+  const minimap = page.getByRole('complementary', {
+    name: 'Document minimap: Design Guidelines',
+    exact: true,
+  })
+  await minimap.locator('.minimap-page.current img').waitFor()
+  assert.equal(await page.locator('.minimap-page').count(), 234)
+  assert.ok(
+    (await page.locator('.minimap-page img').count()) < 45,
+    'Thumbnails load on demand',
+  )
+  assert.equal(await minimap.locator('.minimap-mark.active').count(), 1)
+  const overview = minimap.locator('.minimap-overview')
+  const track = await overview.boundingBox()
+  await overview.click({ position: { x: 5, y: track.height * 0.5 } })
+  await page.waitForFunction(
+    () =>
+      document.querySelector('input[aria-label="Page in Design Guidelines"]')
+        .value === '63',
+  )
+  await minimap
+    .getByRole('button', {
+      name: 'Jump to 4 cited passages, PDF page 10',
+      exact: true,
+    })
+    .click()
+  await page.waitForFunction(
+    () =>
+      document.querySelector('input[aria-label="Page in Design Guidelines"]')
+        .value === '10',
+  )
+  await page
+    .locator('.source-highlight[data-reference="6"]')
+    .waitFor({ state: 'attached' })
+  const viewer = page
+    .getByRole('region', { name: 'Design Guidelines', exact: true })
+    .locator('.pdf-scroll')
+  await viewer.evaluate((el) => {
+    el.scrollTop = 0
+  })
+  await page.waitForFunction(
+    () =>
+      document.querySelector('.pane-slot .minimap-viewport').style.top === '0%',
+  )
+  await minimap.locator('.minimap-page.current').focus()
+  await page.keyboard.press('End')
+  await page.waitForFunction(
+    () =>
+      document.querySelector('input[aria-label="Page in Design Guidelines"]')
+        .value === '125',
+  )
+  await page
+    .getByRole('button', {
+      name: 'Toggle minimap Design Guidelines',
+      exact: true,
+    })
+    .click()
+  assert.equal(await page.locator('.document-minimap').count(), 1)
+  await page
+    .getByRole('button', {
+      name: 'Toggle minimap Design Guidelines',
+      exact: true,
+    })
+    .click()
+  await page.getByRole('button', { name: /^Design storm\./ }).click()
+  await page.getByRole('heading', { name: 'Consolidated result' }).hover()
+  await page.waitForFunction(
+    () => document.querySelectorAll('.pdf-status').length === 0,
+  )
   await mkdir('test-results', { recursive: true })
   await page.screenshot({ path: 'test-results/workspace.png' })
   await page.getByRole('button', { name: /^Design storm\./ }).hover()
@@ -134,7 +202,7 @@ try {
   )
   assert.deepEqual(errors, [])
   console.log(
-    'PASS: PDFs, simultaneous citation tracing, pin/clear, tabs, page navigation, zoom, resize, new query, unsupported query, mobile overflow, and browser errors.',
+    'PASS: lazy minimaps, whole-file navigation, marker selection, viewport tracking, keyboard navigation, minimap toggles, PDFs, citation tracing, pin/clear, tabs, zoom, resize, clipboard, new query, mobile overflow, and browser errors.',
   )
 } finally {
   await browser.close()
