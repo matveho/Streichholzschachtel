@@ -29,31 +29,14 @@ export type LiveResult = {
   id: string
 }
 const defaults: BackendSettings = {
-  mode: 'static',
+  mode: 'matvey',
   mainUrl: '',
-  matveyUrl: 'http://127.0.0.1:8787',
+  matveyUrl: location.origin + '/local-api',
   key: '',
   mainKey: '',
 }
 export function readSettings(): BackendSettings {
-  let value = defaults
-  try {
-    value = {
-      ...defaults,
-      ...JSON.parse(localStorage.getItem('basis.backends.v1') || '{}'),
-    }
-  } catch {}
-  if (location.hash.startsWith('#connect?')) {
-    const p = new URLSearchParams(location.hash.slice(9)),
-      url = p.get('url'),
-      key = p.get('key')
-    if (url && /^https?:\/\//.test(url)) {
-      value = { ...value, mode: 'matvey', matveyUrl: url, key: key || '' }
-      localStorage.setItem('basis.backends.v1', JSON.stringify(value))
-      history.replaceState(null, '', location.pathname + '#home')
-    }
-  }
-  return value
+  return { ...defaults }
 }
 export function saveSettings(value: BackendSettings) {
   try {

@@ -3,20 +3,14 @@ import { ArrowUpRight, Search } from 'lucide-react'
 import { AppHeader } from './AppHeader'
 import { documents, queryCases } from './data'
 import type { HistoryEntry } from './history'
-import { BackendSelector } from './BackendSelector'
-import type { BackendSettings } from './backend'
 import { navigateLink } from './navigation'
 
 export function QueryHome({
   entries,
   onNew,
-  settings,
-  onSettings,
 }: {
   entries: HistoryEntry[]
   onNew: () => void
-  settings: BackendSettings
-  onSettings: (value: BackendSettings) => void
 }) {
   const [filter, setFilter] = useState('')
   const shown = entries.filter((entry) =>
@@ -55,7 +49,7 @@ export function QueryHome({
                 <div>
                   <h2>{entry.title}</h2>
                   <p>{entry.prompt}</p>
-                  {settings.mode === 'static' && (
+                  {entry.id === entry.caseId && (
                     <span className="history-sources">
                       {sources.map((id) => documents[id].label).join(' · ')}
                     </span>
@@ -69,7 +63,6 @@ export function QueryHome({
             <p className="history-empty">No matching queries.</p>
           )}
         </div>
-        <BackendSelector settings={settings} onChange={onSettings} />
       </section>
     </main>
   )

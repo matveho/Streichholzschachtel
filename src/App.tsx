@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { documents as staticDocuments, referenceSets, queryCases } from './data'
 import { DocumentContext } from './DocumentContext'
-import { readSettings, saveSettings, useLiveQuery } from './backend'
+import { readSettings, useLiveQuery } from './backend'
 import type { BackendSettings } from './backend'
 import { navigate } from './navigation'
 import type { DocId } from './data'
@@ -38,6 +38,10 @@ function QueryWorkspace({
 }) {
   const queryCase = queryCases.find((c) => c.id === entry.caseId)!
   const exampleQuery = queryCase.prompt
+  settings =
+    entry.id === entry.caseId && entry.prompt === exampleQuery
+      ? { ...settings, mode: 'static' }
+      : settings
   const [query, setQuery] = useState(entry.prompt)
   const [submitted, setSubmitted] = useState(entry.prompt)
   const [retry, setRetry] = useState(0)
@@ -506,27 +510,15 @@ export default function App() {
     navigate('new')
   }
   function runQuery(prompt: string, caseId: string) {
-    const known = queryCases.find(
-      (c) =>
-        c.prompt.toLowerCase().replace(/\s+/g, ' ') ===
-        prompt.toLowerCase().replace(/\s+/g, ' '),
-    )
     const previous = history.find(
-      (entry) => entry.prompt === prompt && entry.caseId === caseId,
+      (entry) => entry.id !== entry.caseId && entry.prompt === prompt,
     )
-    const entry: HistoryEntry = known
-      ? {
-          id: known.id,
-          title: known.title,
-          prompt: known.prompt,
-          caseId: known.id,
-        }
-      : {
-          id: previous?.id ?? crypto.randomUUID(),
-          title: prompt,
-          prompt,
-          caseId,
-        }
+    const entry: HistoryEntry = {
+      id: previous?.id ?? crypto.randomUUID(),
+      title: prompt,
+      prompt,
+      caseId,
+    }
     setHistory((prev) => {
       const next = [entry, ...prev.filter((item) => item.id !== entry.id)]
       saveHistory(next)
@@ -535,17 +527,7 @@ export default function App() {
     navigate('query/' + encodeURIComponent(entry.id))
   }
   if (route === 'home')
-    return (
-      <QueryHome
-        entries={history}
-        onNew={() => newQuery()}
-        settings={settings}
-        onSettings={(value) => {
-          saveSettings(value)
-          setSettings(value)
-        }}
-      />
-    )
+    return <QueryHome entries={history} onNew={() => newQuery()} />
   const entry =
     route === 'new'
       ? { id: 'new', title: '', prompt: '', caseId: draftCase }

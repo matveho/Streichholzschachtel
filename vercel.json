@@ -2,5 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
   "buildCommand": "npm run build",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/local-api/:path*",
+      "destination": "https://paradise-route-island-somerset.trycloudflare.com/:path*"
+    }
+  ]
 }
