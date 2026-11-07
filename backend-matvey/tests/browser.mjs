@@ -4,6 +4,10 @@ import assert from 'node:assert/strict'
 import { resolve } from 'node:path'
 const key = readFileSync('state/session-token.txt', 'utf8').trim()
 const connection = JSON.parse(readFileSync('state/connection.json', 'utf8'))
+const frontend = process.env.BASIS_FRONTEND_URL || 'http://127.0.0.1:8787/app/'
+const backend = process.env.BASIS_FRONTEND_URL
+  ? connection.url
+  : 'http://127.0.0.1:8787'
 const browser = await chromium.launch({ channel: 'chrome', headless: true })
 try {
   const page = await browser.newPage({
@@ -27,8 +31,9 @@ try {
     'PASS: real deployed HTTPS origin reads authenticated document metadata without CORS errors',
   )
   await page.goto(
-    'http://127.0.0.1:8787/app/#connect?url=' +
-      encodeURIComponent('http://127.0.0.1:8787') +
+    frontend.replace(/\/$/, '') +
+      '/#connect?url=' +
+      encodeURIComponent(backend) +
       '&key=' +
       encodeURIComponent(key),
   )
@@ -89,7 +94,9 @@ try {
   await page.getByRole('link', { name: /Minor storm sewer design/ }).click()
   await page.getByRole('article', { name: 'Query report' }).waitFor()
   console.log(
-    'PASS: bundled launcher frontend, connection bootstrap, mode switch, health check, explicit unsupported query, unseen live query, source PDF/highlight, and static restoration',
+    'PASS: ' +
+      frontend +
+      ' connection bootstrap, mode switch, health check, explicit unsupported query, unseen live query, source PDF/highlight, and static restoration',
   )
 } finally {
   await browser.close()

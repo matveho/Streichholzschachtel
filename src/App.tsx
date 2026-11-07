@@ -491,6 +491,15 @@ export default function App() {
   const [history, setHistory] = useState(readHistory)
   const route = useSyncExternalStore(subscribeRoute, routeId, () => 'storm')
   const [draftCase, setDraftCase] = useState('storm')
+  useEffect(() => {
+    const connect = () => {
+      if (!location.hash.startsWith('#connect?')) return
+      setSettings(readSettings())
+      window.dispatchEvent(new HashChangeEvent('hashchange'))
+    }
+    window.addEventListener('hashchange', connect)
+    return () => window.removeEventListener('hashchange', connect)
+  }, [])
   function newQuery(caseId = 'storm') {
     setDraftCase(caseId)
     navigate('new')
