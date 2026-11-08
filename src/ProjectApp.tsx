@@ -1,6 +1,8 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import {
   FolderOpen,
+  TriangleAlert,
+  ChevronRight,
   Plus,
   Search,
   ArrowLeft,
@@ -267,6 +269,9 @@ function ProjectDashboard({
         .toLowerCase()
         .includes(filter.toLowerCase()),
   )
+  const openIssueCount = issues.filter(
+    (issue) => issue.status === 'open',
+  ).length
   const visibleIssues = issues.filter((issue) => issue.status === issueTab),
     visibleQueries = queries.filter((q) => !savedOnly || q.saved),
     unanswered = queries.filter(
@@ -452,10 +457,17 @@ function ProjectDashboard({
               (type) => {
                 const group = shown.filter((d) => d.category === type)
                 return group.length ? (
-                  <section className="project-document-group" key={type}>
-                    <h3>
-                      {labels[type]} <span>{group.length}</span>
-                    </h3>
+                  <details
+                    className="project-document-group"
+                    key={type + category + filter}
+                    open
+                  >
+                    <summary>
+                      <ChevronRight size={15} aria-hidden="true" />
+                      <h3>
+                        {labels[type]} <span>{group.length}</span>
+                      </h3>
+                    </summary>
                     {group.map((doc) => (
                       <div className="project-document-entry" key={doc.id}>
                         <a
@@ -488,7 +500,7 @@ function ProjectDashboard({
                         )}
                       </div>
                     ))}
-                  </section>
+                  </details>
                 ) : null
               },
             )}
@@ -515,6 +527,13 @@ function ProjectDashboard({
             <section className="project-panel" aria-label="Potential issues">
               <div className="project-panel-heading">
                 <h2 title="Source-verified example findings requiring engineering review">
+                  {openIssueCount > 0 && (
+                    <TriangleAlert
+                      className="issue-warning"
+                      size={17}
+                      aria-hidden="true"
+                    />
+                  )}
                   Potential issues
                 </h2>
               </div>
@@ -523,7 +542,7 @@ function ProjectDashboard({
                   className={issueTab === 'open' ? 'selected' : ''}
                   onClick={() => setIssueTab('open')}
                 >
-                  Open {issues.filter((i) => i.status === 'open').length}
+                  Open {openIssueCount}
                 </button>
                 <button
                   className={issueTab === 'dismissed' ? 'selected' : ''}
@@ -689,14 +708,12 @@ function QueryReader({
   id,
   onRun,
   onNew,
-  tabBar,
   thread,
 }: {
   data: ProjectData
   id: string
   onRun: (question: string, sourceOnly?: boolean, context?: RunContext) => void
   onNew: () => void
-  tabBar: React.ReactNode
   thread?: ThreadTurn[]
 }) {
   const resource = useResource<ProjectQuery>(
@@ -706,7 +723,6 @@ function QueryReader({
     return (
       <Shell title={data.project.name}>
         <Message text={resource.error} error onRetry={resource.refresh} />
-        {tabBar}
       </Shell>
     )
   const job = resource.data
@@ -714,7 +730,6 @@ function QueryReader({
     return (
       <Shell title={data.project.name}>
         <Message text="Opening project query…" />
-        {tabBar}
       </Shell>
     )
   if (job.stale)
@@ -734,7 +749,6 @@ function QueryReader({
             Project dashboard
           </a>
         </div>
-        {tabBar}
       </Shell>
     )
   return (
@@ -754,7 +768,6 @@ function QueryReader({
       projectDocuments={projectDocumentMap(data.documents)}
       onRun={(q, _case, sourceOnly, context) => onRun(q, sourceOnly, context)}
       onNew={onNew}
-      tabBar={tabBar}
       thread={thread}
       onUpload={
         data.project.protectedDemo
@@ -790,7 +803,17 @@ function ProjectPage({
     onEmpty: () => navigate('project/' + id),
   })
   const onQueryRoute = section === 'new' || (section === 'query' && !!record)
-  const tabBar = <QueryTabBar tabs={tabs} />
+  // Keep the tab buttons mounted while navigation replaces the query pane.
+  function withTabs(content: React.ReactNode) {
+    return onQueryRoute ? (
+      <div className="tabbed-workspace">
+        {content}
+        <QueryTabBar tabs={tabs} />
+      </div>
+    ) : (
+      content
+    )
+  }
   async function run(
     question: string,
     sourceOnly = false,
@@ -810,19 +833,17 @@ function ProjectPage({
     }
   }
   if (resource.error)
-    return (
+    return withTabs(
       <Shell>
         <Message text={resource.error} error onRetry={resource.refresh} />
-        {onQueryRoute && tabBar}
-      </Shell>
+      </Shell>,
     )
   const data = resource.data
   if (!data)
-    return (
+    return withTabs(
       <Shell>
         <Message text="Opening project documents…" />
-        {onQueryRoute && tabBar}
-      </Shell>
+      </Shell>,
     )
   let content
   if (section === 'query' && record)
@@ -833,7 +854,6 @@ function ProjectPage({
         id={record}
         onRun={run}
         onNew={tabs.openNew}
-        tabBar={tabBar}
         thread={tabs.activeTab?.thread}
       />
     )
@@ -861,7 +881,6 @@ function ProjectPage({
           void run(q, sourceOnly, context)
         }
         onNew={tabs.openNew}
-        tabBar={tabBar}
       />
     )
   } else if (section === 'document' && record) {
@@ -921,7 +940,7 @@ function ProjectPage({
         }
       />
     )
-  return (
+  return withTabs(
     <>
       {content}
       {error && (
@@ -932,7 +951,7 @@ function ProjectPage({
           </button>
         </div>
       )}
-    </>
+    </>,
   )
 }
 function subscribe(change: () => void) {

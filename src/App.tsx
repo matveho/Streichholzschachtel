@@ -28,8 +28,6 @@ import type { ThreadTurn } from './assist'
 import { AppHeader } from './AppHeader'
 import { readHistory, saveHistory } from './history'
 import type { HistoryEntry } from './history'
-import { QueryTabBar } from './QueryTabs'
-import { useQueryTabs } from './useQueryTabs'
 
 /** Where a new search came from, so the query tab can keep the thread. */
 export type RunContext = { from: string; choice?: string }
@@ -41,7 +39,6 @@ export function QueryWorkspace({
   onNew,
   projectName,
   projectDocuments,
-  tabBar,
   draft,
   onDraftChange,
   thread = [],
@@ -59,8 +56,6 @@ export function QueryWorkspace({
   onNew: () => void
   projectName?: string
   projectDocuments?: Record<string, DocumentRecord>
-  /** Open-query tabs shown along the bottom of the workspace. */
-  tabBar?: React.ReactNode
   /** Unsent text restored when returning to this query's tab. */
   draft?: string
   onDraftChange?: (text: string) => void
@@ -301,7 +296,7 @@ export function QueryWorkspace({
             <textarea
               ref={input}
               id="query"
-              rows={2}
+              rows={1}
               value={query}
               placeholder={
                 entry.projectId
@@ -629,7 +624,6 @@ export function QueryWorkspace({
             ) : null}
           </div>
         </section>
-        {tabBar}
       </main>
     </DocumentContext.Provider>
   )
@@ -655,25 +649,11 @@ export default function App() {
   const [history, setHistory] = useState(readHistory)
   const route = useSyncExternalStore(subscribeRoute, routeId, () => 'storm')
   const [draftCase, setDraftCase] = useState('storm')
-  const tabs = useQueryTabs({
-    scope: 'local',
-    target: route === 'home' ? null : route,
-    open: (target) =>
-      navigate(
-        target === 'new' ? 'new' : 'query/' + encodeURIComponent(target),
-      ),
-    onEmpty: () => navigate('home'),
-  })
   function newQuery(caseId = 'storm') {
     setDraftCase(caseId)
-    tabs.openNew()
+    navigate('new')
   }
-  function runQuery(
-    prompt: string,
-    caseId: string,
-    sourceOnly = false,
-    context?: RunContext,
-  ) {
+  function runQuery(prompt: string, caseId: string, sourceOnly = false) {
     const previous = history.find(
       (entry) =>
         entry.id !== entry.caseId &&
@@ -692,7 +672,6 @@ export default function App() {
       saveHistory(next)
       return next
     })
-    tabs.markRun(context && { ...context, to: prompt })
     navigate('query/' + encodeURIComponent(entry.id))
   }
   if (route === 'home')
@@ -702,21 +681,13 @@ export default function App() {
       ? { id: 'new', title: '', prompt: '', caseId: draftCase }
       : (history.find((entry) => entry.id === route) ??
         history.find((entry) => entry.id === 'storm')!)
-  // Each unsent tab gets its own workspace and keeps its own typed text.
-  const draftTab = route === 'new' ? tabs.activeTab : undefined
   return (
     <QueryWorkspace
-      key={entry.id + entry.caseId + settings.mode + (draftTab?.key ?? '')}
+      key={entry.id + entry.caseId + settings.mode}
       settings={settings}
       entry={entry}
-      draft={draftTab?.draft}
-      onDraftChange={
-        draftTab ? (text) => tabs.setDraft(draftTab.key, text) : undefined
-      }
-      thread={route === 'new' ? undefined : tabs.activeTab?.thread}
       onRun={runQuery}
       onNew={() => newQuery(entry.caseId)}
-      tabBar={<QueryTabBar tabs={tabs} />}
     />
   )
 }
