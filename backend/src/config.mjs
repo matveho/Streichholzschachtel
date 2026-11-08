@@ -25,7 +25,11 @@ export const config = {
   port: Number(process.env.PORT || 8787),
   token: process.env.BASIS_TOKEN || readFileSync(tokenFile, 'utf8').trim(),
   ollamaUrl: process.env.OLLAMA_URL || 'http://127.0.0.1:11435',
-  model: process.env.OLLAMA_MODEL || 'qwen3:4b-instruct-2507-q4_K_M',
+  model: process.env.OLLAMA_MODEL || 'qwen3:32b-q4_K_M',
+  maxFindingsPerCheck: Number(process.env.LOCAL_MAX_FINDINGS_PER_CHECK || 6),
+  localReasoning: process.env.LOCAL_REASONING === '1',
+  localReasoningTokens: Number(process.env.LOCAL_REASONING_TOKENS || 4096),
+  localContextTokens: Number(process.env.LOCAL_CONTEXT_TOKENS || 16384),
   provider: process.env.GENERATION_PROVIDER || 'ollama',
   llamaUrl: process.env.LOCAL_MODEL_URL || 'http://127.0.0.1:11436',
   llamaModel: process.env.LOCAL_MODEL_NAME || 'basis-qwen35',
@@ -90,4 +94,10 @@ export const knownFiles = {
     source:
       'https://www.epcor.com/content/dam/epcor/documents/supporting-documents/water-drainage_customer-connection-guide.pdf',
   },
+}
+
+for (const [name, min, max] of [['maxFindingsPerCheck', 2, 8],
+  ['localReasoningTokens', 256, 16384], ['localContextTokens', 4096, 65536]]) {
+  if (!Number.isInteger(config[name]) || config[name] < min || config[name] > max)
+    throw new Error(`Invalid ${name}; expected an integer between ${min} and ${max}.`)
 }

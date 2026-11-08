@@ -112,8 +112,8 @@ for (const test of cases) {
                 messages,
                 format: schema,
                 stream: false,
-                think: false,
-                options: { temperature: 0, num_ctx: 4096, num_predict: 320 },
+                think: process.env.BASIS_BENCH_REASONING === '1',
+                options: { temperature: process.env.BASIS_BENCH_REASONING === '1' ? 0.6 : 0, num_ctx: 8192, num_predict: process.env.BASIS_BENCH_REASONING === '1' ? 4096 : 320 },
                 keep_alive: '10m',
               }
             : {
@@ -171,6 +171,7 @@ const summary = {
   benchmarkVersion,
   backend,
   model,
+  reasoning: process.env.BASIS_BENCH_REASONING === '1',
   passed: results.filter((r) => r.passed).length,
   total: results.length,
   falseApprovals: results.filter(

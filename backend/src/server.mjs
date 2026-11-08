@@ -54,6 +54,9 @@ const engineVersion = createHash('sha256')
       '../demo/model-documents.mjs',
       '../demo/reference-sources.mjs',
       'local-synthesis.mjs',
+      'linked-tables.mjs',
+      'evidence-guards.mjs',
+      'review-coverage.mjs',
       'synthesis-repair.mjs',
       'evidence-units.mjs',
       'applicability.mjs',
@@ -80,6 +83,7 @@ const engineVersion = createHash('sha256')
       localModelManifest +
       config.extractiveOnly +
       config.localSynthesis +
+      JSON.stringify({reasoning: config.localReasoning, reasoningTokens: config.localReasoningTokens, contextTokens: config.localContextTokens, findingsPerCheck: config.maxFindingsPerCheck}) +
       config.entailmentDir +
       config.entailmentPython +
       verifierManifest,

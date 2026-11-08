@@ -48,6 +48,11 @@ function lidTypes(text) {
   )
 }
 
+export function incompatibleLidAsset(question, finding) {
+  const requested = lidTypes(question), asserted = lidTypes(finding)
+  return requested.size > 0 && asserted.size > 0 && ![...asserted].some(type => requested.has(type))
+}
+
 const units = '(mm|cm|km|ha|m2|m3|m|%)(?![\\p{L}\\d])'
 const number = '(\\d+(?:\\.\\d+)?)'
 function quantities(text) {

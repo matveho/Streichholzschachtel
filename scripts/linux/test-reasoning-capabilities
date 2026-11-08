@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/../../backend"
+export BASIS_STATE_DIR
+BASIS_STATE_DIR=$(mktemp -d "$PWD/state/verification/run-gpu-XXXXXXXX")
+export PDF_CACHE_DIR="$PWD/state"
+export EXTRACTIVE_ONLY=0 GENERATION_PROVIDER=ollama LOCAL_SYNTHESIS=1
+export OLLAMA_URL=http://127.0.0.1:11435 OLLAMA_MODEL="${1:-qwen3:32b-q4_K_M}"
+export TESSERACT_PATH="$HOME/.local/share/basis-ocr/usr/bin/tesseract"
+export TESSDATA_PREFIX="$HOME/.local/share/basis-ocr/usr/share/tesseract-ocr/5/tessdata"
+export BASIS_TEST_URL=http://127.0.0.1:8814
+printf 'GPU qualification state: %s\n' "$BASIS_STATE_DIR"
+PORT=8814 node src/server.mjs > "$BASIS_STATE_DIR/server.log" 2>&1 &
+server_pid=$!
+trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' EXIT
+node --input-type=module - <<'JS'
+for(let i=0;i<180;i++) {
+ try { const h=await(await fetch(process.env.BASIS_TEST_URL+'/health')).json(); if(h.ready && !h.failures) process.exit(0); }catch{}
+ await new Promise(r=>setTimeout(r,1000));
+}
+throw new Error('Isolated GPU backend not ready');
+JS
+kill -0 "$server_pid"
+node tests/reasoning-capabilities.integration.mjs > "$BASIS_STATE_DIR/capabilities.log" 2>&1

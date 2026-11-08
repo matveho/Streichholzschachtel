@@ -137,4 +137,5 @@ writeFileSync(
   `test-results/quality${process.env.BASIS_QUALITY_SUITE === 'engineering' ? '-engineering' : ''}${caseId ? '-' + caseId : ''}.json`,
   JSON.stringify(outputs, null, 2),
 )
+if (process.env.BASIS_STATE_DIR) writeFileSync(resolve(process.env.BASIS_STATE_DIR, 'quality-results.json'), JSON.stringify(outputs, null, 2))
 if (outputs.some((o) => !o.passed)) process.exitCode = 1

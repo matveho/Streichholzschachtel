@@ -1,4 +1,7 @@
 import { normalize, locateQuote, quantityUnits } from './indexer.mjs'
+import { evidenceInterpretationIssue } from './evidence-guards.mjs'
+import { foreignJurisdiction } from './catalog.mjs'
+import { attachReviewCoverage } from './review-coverage.mjs'
 import { config } from './config.mjs'
 import { mergeApprovedSynthesis } from './synthesis-repair.mjs'
 import { tokens, rankProvisions } from './search.mjs'
@@ -6,6 +9,7 @@ import { generate } from './model.mjs'
 import { selectEvidence } from './local-evidence.mjs'
 import {
   falseComparisons,
+  incompatibleLidAsset,
   applicableEvidence,
   requiresOptionalComponent,
 } from './applicability.mjs'
@@ -210,6 +214,19 @@ export function validateSynthesis(output, passages, question) {
       ]
       const strong = /\b(?:must|shall|required|mandatory|only)\b/i
       const sourceText = evidence.map((e) => e.excerpt).join(' ')
+      if (incompatibleLidAsset(question, claim.text)) {
+        rejected++
+        issues.push({ ...(claim.check ? {check: claim.check} : {}), claim: claim.text, reason: 'This finding concerns a different LID asset than the requested review. Do not transfer requirements between sibling facility types.' })
+        continue
+      }
+
+      const interpretationIssue = evidenceInterpretationIssue(claim.text, sourceText, question)
+      if (interpretationIssue) {
+        rejected++
+        issues.push({ ...(claim.check ? {check: claim.check} : {}), claim: claim.text, reason: interpretationIssue })
+        continue
+      }
+
       if (
         requiresOptionalComponent(
           claim.text,
@@ -399,13 +416,13 @@ export function validateSynthesis(output, passages, question) {
   return { sections, rejected, issues }
 }
 
-export function relatedProvisions(claim, question) {
+export function relatedProvisions(claim, question, contextPassages = []) {
   const passages = [
-    ...new Map(claim.evidence.map((e) => [e.passage.id, e.passage])).values(),
+    ...new Map([...claim.evidence.map(e => e.passage), ...contextPassages].map(p => [p.id, p])).values(),
   ]
   const attached = new Set(claim.evidence.map((e) => e.excerpt))
   return rankProvisions(
-    applicableEvidence(question, evidenceUnits(passages)).units.filter(
+    applicableEvidence(question, evidenceUnits(passages, 50000)).units.filter(
       isProvision,
     ),
     claim.text,
@@ -491,14 +508,14 @@ async function review(
   sections,
   question,
   signal,
-  { allowQuoteFallback = true } = {},
+  { allowQuoteFallback = true, contextPassages = [] } = {},
 ) {
   const claims = sections.flatMap((s) => s.claims)
   const checks = claims.map((c, id) => ({
     id,
     claim: c.text,
     quotes: c.evidence.map((e) => e.excerpt),
-    relatedProvisions: relatedProvisions(c, question),
+    relatedProvisions: relatedProvisions(c, question, contextPassages),
     verifiedConditions: applicableEvidence(
       question,
       c.evidence.map((e) => ({ excerpt: e.excerpt })),
@@ -526,6 +543,7 @@ async function review(
       evidenceReviewSchema(batch.map((c) => c.id)),
       signal,
       1500,
+      { reasoning: true },
     )
     for (const claim of batch) {
       const item = verdict.verdicts?.[String(claim.id)]
@@ -782,6 +800,8 @@ export async function answer(
   searchIndex,
   { publicBase, token, signal, sourceOnly = false, progress = () => {} },
 ) {
+  if (foreignJurisdiction(question, searchIndex.corpus.documents))
+    return answerFromUnits(question, searchIndex, { publicBase, token, signal, progress, sourceOnly: true })
   if (sourceOnly || ['extractive', 'anthropic'].includes(config.provider))
     return answerFromUnits(question, searchIndex, {
       publicBase,
@@ -853,6 +873,7 @@ export async function answer(
         if (!conclusions.length) return result
         const audited = await review(conclusions, question, signal, {
           allowQuoteFallback: false,
+          contextPassages: passages,
         })
         return {
           ...result,
@@ -892,7 +913,7 @@ export async function answer(
                   JSON.stringify(corrected.issues),
                 )
               if (corrected.sections.length) {
-                checked = mergeApprovedSynthesis(checked, corrected)
+                checked = mergeApprovedSynthesis(checked, corrected, config.maxFindingsPerCheck)
                 draft = repaired
               }
             }
@@ -912,7 +933,7 @@ export async function answer(
           notes.push(
             `${checked.rejected} unsupported finding(s) were withheld.`,
           )
-        return renderResult(
+        return attachReviewCoverage(renderResult(
           checked.sections,
           searchIndex.corpus,
           publicBase,
@@ -920,7 +941,14 @@ export async function answer(
           hasConclusion ? 'local_synthesis' : 'source_evidence',
           notes,
           checked.rejected,
-        )
+        ), retrieval.topics, draft.plan, checked)
+      }
+      if (checked.sections.some(section => section.heading && section.claims.length)) {
+        return attachReviewCoverage(renderResult(
+          checked.sections.filter(section => section.heading), searchIndex.corpus,
+          publicBase, token, 'source_evidence',
+          ['Generated findings were withheld. Original source provisions remain available; applicability and conclusions require engineering review.']
+        ), retrieval.topics, draft.plan, checked)
       }
       const result = renderResult(
         [],

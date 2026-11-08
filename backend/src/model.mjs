@@ -45,6 +45,9 @@ export async function generate(
   limit = 1800,
   options = {},
 ) {
+  const { reasoning = false, ...runtimeOptions } = options
+  const think = config.localReasoning && reasoning
+  const outputLimit = limit + (think ? config.localReasoningTokens : 0)
   if (config.provider === 'gateway') {
     if (!process.env.AI_GATEWAY_API_KEY)
       throw new Error(
@@ -80,13 +83,13 @@ export async function generate(
           type: 'json_schema',
           json_schema: { name: 'basis_response', strict: true, schema: format },
         },
-        max_tokens: limit,
+        max_tokens: outputLimit,
         temperature: options.temperature ?? 0,
         top_p: options.top_p ?? 0.8,
         top_k: options.top_k ?? 20,
         min_p: 0,
         seed: options.seed ?? 42,
-        chat_template_kwargs: { enable_thinking: false },
+        chat_template_kwargs: { enable_thinking: think },
       }),
       signal: AbortSignal.any([signal, AbortSignal.timeout(180000)]),
     })
@@ -115,7 +118,11 @@ export async function generate(
       )
     return JSON.parse(choice.message.content)
   }
+  const ollama = new URL(config.ollamaUrl)
+  if (!['127.0.0.1', 'localhost', '[::1]'].includes(ollama.hostname))
+    throw new Error('The local model runtime must use a loopback address')
   const raw = /^qwen3-vl/i.test(config.model)
+  if (raw && think) throw new Error('Reasoning requires the structured chat provider')
   // This installed Qwen model's chat template always starts a thinking block.
   // Complete that block explicitly to produce the constrained answer directly.
   const prompt =
@@ -130,14 +137,14 @@ export async function generate(
       body: JSON.stringify({
         model: config.model,
         stream: false,
-        think: false,
+        think,
         format,
         ...(raw ? { raw: true, prompt } : { messages }),
         options: {
           temperature: 0,
-          num_ctx: 8192,
-          num_predict: limit,
-          ...options,
+          num_ctx: config.localContextTokens,
+          num_predict: outputLimit,
+          ...runtimeOptions,
         },
         keep_alive: '10m',
       }),

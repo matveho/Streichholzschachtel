@@ -604,7 +604,7 @@ export function lookup(question, index) {
   if (foreign)
     return notFound(
       question,
-      `${foreign} design standards are not in the indexed documents. The collection covers City of Edmonton (EPCOR) standards only, so their values cannot be used as ${foreign} requirements.`,
+      `${foreign} design standards are not in the indexed documents. The selected references cannot establish requirements for that jurisdiction. Add the applicable standards or revise the search scope.`,
     )
   const series = seriesInQuestion(question)
   if (series.length && changeIntent.test(question)) {

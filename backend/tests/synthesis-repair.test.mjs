@@ -77,3 +77,10 @@ test('merging repair results cannot duplicate findings or exceed the per-check b
   )
   assert.deepEqual(merged.sections[0].claims, [a, b])
 })
+
+test('complex reviews can retain a larger explicitly bounded set of atomic findings', () => {
+  const claims = Array.from({length: 7}, (_, i) => ({check:'sizing',text:`Supported sizing fact ${i}.`,evidence:[]}))
+  const merged = mergeApprovedSynthesis({sections:[{claims:claims.slice(0,3)}],issues:[]},{sections:[{claims}],issues:[],rejected:0},6)
+  assert.equal(merged.sections[0].claims.length,6)
+  assert.equal(new Set(merged.sections[0].claims.map(c=>c.text)).size,6)
+})

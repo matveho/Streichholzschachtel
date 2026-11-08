@@ -89,3 +89,27 @@ test('local inference rejects remote endpoints and incomplete output before rele
   config.llamaUrl = 'http://127.0.0.1:11436'
   await assert.rejects(run, /did not complete/)
 })
+
+test('Ollama reasoning is explicit, bounded and never exposed as the answer', async t => {
+  const previous = {...config}
+  t.after(() => Object.assign(config,previous))
+  Object.assign(config,{provider:'ollama',ollamaUrl:'http://127.0.0.1:11435',model:'qwen3:32b-q4_K_M',localReasoning:true,localReasoningTokens:2048,localContextTokens:16384})
+  const calls=[]
+  t.mock.method(globalThis,'fetch',async (_url,init) => {
+    calls.push(JSON.parse(init.body))
+    return new Response(JSON.stringify({done_reason:'stop',message:{content:'{"supported":true}',thinking:'Private intermediate reasoning'}}))
+  })
+  const signal=new AbortController().signal
+  const schema={type:'object'}
+  assert.deepEqual(await generate('Check evidence.',{},schema,signal,500,{reasoning:true}),{supported:true})
+  assert.equal(calls[0].think,true)
+  assert.equal(calls[0].options.num_predict,2548)
+  assert.equal(calls[0].options.num_ctx,16384)
+  assert.equal('reasoning' in calls[0].options,false)
+  await generate('Retrieve.',{},schema,signal,500)
+  assert.equal(calls[1].think,false)
+  assert.equal(calls[1].options.num_predict,500)
+  config.ollamaUrl='https://example.com'
+  await assert.rejects(generate('Check.',{},schema,signal),/loopback/)
+  assert.equal(calls.length,2)
+})

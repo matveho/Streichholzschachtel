@@ -9,7 +9,7 @@ export function scopedRepair(cached, issues, check) {
   }
 }
 
-export function mergeApprovedSynthesis(previous, repaired) {
+export function mergeApprovedSynthesis(previous, repaired, maxFindingsPerCheck = 2) {
   const sections = new Map(),
     seen = new Set(),
     counts = new Map()
@@ -21,7 +21,7 @@ export function mergeApprovedSynthesis(previous, repaired) {
       for (const claim of section.claims) {
         const key = heading + '\0' + textKey(claim.text)
         if (seen.has(key)) continue
-        if (!heading && claim.check && (counts.get(claim.check) || 0) >= 2)
+        if (!heading && claim.check && (counts.get(claim.check) || 0) >= maxFindingsPerCheck)
           continue
         sections.get(heading).claims.push(claim)
         seen.add(key)

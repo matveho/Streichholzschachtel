@@ -59,6 +59,7 @@ export const lookupStopwords = new Set(
     ]),
 )
 const concepts = [
+  ['pipe sizing', 'pipe-sizing', 'manning', 'roughness', 'diameter', 'velocity'],
   ['cover', 'burial', 'depth', 'frost', 'freezing', 'insulation'],
   ['compaction', 'compacted', 'traffic', 'vehicles', 'infiltration'],
   ['detention', 'pond', 'storage', 'modelling', 'simulation'],
