@@ -30,7 +30,7 @@ http
         res.end(
           JSON.stringify({
             service: 'basis-gateway',
-            version: 6,
+            version: 7,
             targetPort: Number(targetUrl.port),
           }),
         )
@@ -76,6 +76,7 @@ http
         return
       }
       const allowed =
+        (req.method === 'POST' && url.pathname === '/v1/demo/reset') ||
         (['GET', 'POST', 'PATCH', 'DELETE'].includes(req.method) &&
           /^\/v1\/projects(?:\/[a-zA-Z0-9-]+(?:\/(?:reset|queries(?:\/[a-f0-9-]{36})?|issues\/[a-z0-9-]+|documents\/(?:import|doc-[a-f0-9]+\/file)))?)?$/.test(
             url.pathname,

@@ -43,7 +43,10 @@ From `backend-matvey`:
 - `node --test tests/*.test.mjs` — backend unit/retrieval/project tests.
 - `node --test tests/projects.integration.mjs` — actual API workflow on isolated 8810.
 - `node tests/projects.restart.mjs` — restarts isolated 8810/8812 and checks recovery/persistence.
-- `node tests/projects.browser.mjs` — project browser workflow; accepts `BASIS_FRONTEND_URL` for compiled or deployed frontend.
+- `node tests/projects.browser.mjs` — project browser workflow against the isolated preview on 8842.
+- `node tests/demo-reset.integration.mjs` and `node tests/demo-reset.browser.mjs` — destructive reset checks against isolated preview storage only.
 - `node tests/control.integration.mjs` — separate launcher lifecycle/crash-recovery test on 8820/8822.
 
 Integration/browser suites modify and reset demonstration state; run them outside a presentation. Earlier `npm run test:ui` scripts target the legacy query screen and are retained as legacy checks, not the project-workspace acceptance suite.
+
+**Settings → Reset demo** restores the built-in examples and deletes ordinary projects unless **Keep on reset** is checked in that project’s Settings. The checkbox is saved locally; built-in examples are permanently checked and locked. Reset removes temporary projects’ imports and query history, while opted-in projects and shared references remain.

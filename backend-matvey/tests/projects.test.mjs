@@ -291,6 +291,35 @@ test('finding dismissal persists and demo reset restores original state', (t) =>
     status: 403,
   })
 })
+
+test('reset persistence defaults off for ordinary projects and is locked on for built-in examples', (t) => {
+  const { store, folder } = fresh(t)
+  const project = store.create({ name: 'Temporary project', collectionIds: [] })
+  assert.equal(project.persistOnReset, false)
+  store.update(project.id, { persistOnReset: true })
+  assert.equal(
+    new ProjectStore(corpus, folder).get(project.id).persistOnReset,
+    true,
+  )
+  store.update(project.id, { persistOnReset: false })
+  assert.equal(store.get(project.id).persistOnReset, false)
+  assert.throws(() => store.update(project.id, { persistOnReset: 'true' }), {
+    status: 400,
+  })
+  for (const spec of demoProjects) {
+    assert.equal(store.get(spec.id).persistOnReset, true)
+    assert.throws(() => store.update(spec.id, { persistOnReset: false }), {
+      status: 403,
+    })
+  }
+  const data = store.read()
+  data.projects.find((p) => p.id === 'demo-mill-creek').persistOnReset = false
+  store.write(data)
+  assert.equal(
+    new ProjectStore(corpus, folder).get('demo-mill-creek').persistOnReset,
+    true,
+  )
+})
 test('prepared findings and histories are project-bound and anchored to original PDFs', (t) => {
   const { folder } = fresh(t),
     api = new ProjectApi(corpus, folder, 'project-test-engine')

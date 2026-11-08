@@ -9,6 +9,7 @@ export type Project = {
   descriptionMode?: 'auto' | 'manual'
   discipline: string
   protectedDemo: boolean
+  persistOnReset: boolean
   documentIds: string[]
   collectionIds: string[]
   documentCount: number

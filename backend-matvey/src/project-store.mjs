@@ -39,6 +39,10 @@ export class ProjectStore {
     const existing = this.read()
     let migrated = false
     for (const project of existing.projects) {
+      if (typeof project.persistOnReset !== 'boolean') {
+        project.persistOnReset = !!project.protectedDemo
+        migrated = true
+      }
       if (project.descriptionMode) continue
       project.descriptionMode = project.description?.trim() ? 'manual' : 'auto'
       if (project.descriptionMode === 'auto')
@@ -126,6 +130,7 @@ export class ProjectStore {
       location: spec.location,
       discipline: spec.discipline,
       protectedDemo: true,
+      persistOnReset: true,
       collectionIds: [...spec.collectionIds],
       documentIds: this.selection(spec.collectionIds, undefined, privateIds),
       issueStates: {},
@@ -208,6 +213,11 @@ export class ProjectStore {
     return project
   }
   create(input) {
+    if (
+      input.persistOnReset !== undefined &&
+      typeof input.persistOnReset !== 'boolean'
+    )
+      throw problem(400, 'persistOnReset must be a boolean.')
     const name = String(input.name || '').trim()
     if (!name || name.length > 100)
       throw problem(400, 'Enter a project name of 1 to 100 characters.')
@@ -235,6 +245,7 @@ export class ProjectStore {
       discipline: 'Engineering research',
       descriptionMode: input.description?.trim() ? 'manual' : 'auto',
       protectedDemo: false,
+      persistOnReset: input.persistOnReset === true,
       collectionIds: [...new Set(collectionIds)],
       documentIds,
       issueStates: {},
@@ -250,6 +261,16 @@ export class ProjectStore {
   }
   update(id, input) {
     const project = this.get(id)
+    if (
+      input.persistOnReset !== undefined &&
+      typeof input.persistOnReset !== 'boolean'
+    )
+      throw problem(400, 'persistOnReset must be a boolean.')
+    if (project.protectedDemo && input.persistOnReset === false)
+      throw problem(
+        403,
+        'Built-in demonstration projects must persist on reset.',
+      )
     if (input.protectedDemo !== undefined || input.id !== undefined)
       throw problem(400, 'Project identity and protection cannot be changed.')
     const collections = input.collectionIds ?? project.collectionIds
@@ -272,6 +293,9 @@ export class ProjectStore {
     }
     const next = {
       ...project,
+      persistOnReset:
+        project.protectedDemo ||
+        (input.persistOnReset ?? project.persistOnReset ?? false),
       collectionIds: [...new Set(collections)],
       documentIds,
       revision: project.revision + 1,

@@ -371,8 +371,45 @@ export class ProjectApi {
     }
     return this.serialize(job)
   }
+  resetProject(projectId) {
+    if (this.importing)
+      throw problem(
+        409,
+        'Wait for the current document import to finish before resetting.',
+      )
+    this.eraseHistory(projectId)
+    removeProjectImports(projectId)
+    this.dropUploads(projectId)
+    restoreDemoDocuments(undefined, projectId)
+    this.store.reset(projectId)
+    this.prepareSeeds(projectId)
+  }
+  resetDemo() {
+    if (this.importing)
+      throw problem(
+        409,
+        'Wait for the current document import to finish before resetting.',
+      )
+    this.store.restoreSeeds()
+    const removed = []
+    for (const project of this.store.list()) {
+      if (project.protectedDemo || project.persistOnReset === true) continue
+      this.eraseHistory(project.id)
+      this.store.remove(project.id)
+      removeProjectImports(project.id)
+      this.dropUploads(project.id)
+      removed.push(project.id)
+    }
+    for (const project of demoProjects) this.resetProject(project.id)
+    return {
+      removedProjectIds: removed,
+      projects: this.store.list().map((p) => this.project(p.id)),
+    }
+  }
   async handle(req, url, res, json, readBody) {
     const pathname = url.pathname
+    if (pathname === '/v1/demo/reset' && req.method === 'POST')
+      return json(200, this.resetDemo())
     const input = async () => {
       if (!String(req.headers['content-type']).startsWith('application/json'))
         throw problem(415, 'Send application/json.')
@@ -495,12 +532,7 @@ export class ProjectApi {
     if (route === '/reset' && req.method === 'POST') {
       if (!project.protectedDemo)
         throw problem(400, 'Only demonstration projects have a reset state.')
-      this.eraseHistory(projectId)
-      removeProjectImports(projectId)
-      this.dropUploads(projectId)
-      restoreDemoDocuments(undefined, projectId)
-      this.store.reset(projectId)
-      this.prepareSeeds(projectId)
+      this.resetProject(projectId)
       return json(200, { project: this.project(projectId) })
     }
     const issueMatch = route.match(/^\/issues\/([a-z0-9-]+)$/)

@@ -627,10 +627,9 @@ button.primary-action:hover {
 }
 .project-card {
   display: grid;
-  grid-template-columns: 26px minmax(190px, 1.25fr) minmax(120px, 0.9fr) minmax(
-      180px,
-      1.5fr
-    ) 180px;
+  grid-template-columns:
+    26px minmax(190px, 1.25fr) minmax(120px, 0.9fr) minmax(180px, 1.5fr)
+    180px;
   align-items: center;
   gap: 14px;
   min-height: 66px;
@@ -953,4 +952,28 @@ button.primary-action:hover {
   .project-description-editor input {
     flex-basis: 100%;
   }
+}
+.demo-retention {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px 5px;
+  margin-top: 3px;
+  border-top: 1px solid #3c4650;
+  color: #9aa9b7;
+  font-size: 11px;
+  cursor: pointer;
+}
+.demo-retention input {
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  accent-color: #71b8ae;
+}
+.demo-retention svg {
+  margin-left: auto;
+  opacity: 0.6;
+}
+.demo-retention:has(input:disabled) {
+  cursor: default;
 }

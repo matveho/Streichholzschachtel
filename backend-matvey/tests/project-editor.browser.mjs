@@ -6,6 +6,13 @@ import { fileURLToPath } from 'node:url'
 const root = fileURLToPath(new URL('..', import.meta.url)),
   origin = process.env.BASIS_FRONTEND_URL || 'http://127.0.0.1:8842/app'
 const folder = resolve(root, 'state/ui-test-files')
+assert.ok(
+  process.env.BASIS_TEST_DEMO_EDITS === '0' ||
+    ['http://127.0.0.1:8842', 'http://localhost:8842'].includes(
+      new URL(origin).origin,
+    ),
+  'Destructive demo checks require the isolated preview; use BASIS_TEST_DEMO_EDITS=0 for non-reset checks elsewhere',
+)
 mkdirSync(folder, { recursive: true })
 copyFileSync(
   resolve(root, 'output/pdf/mill-creek-client-brief.pdf'),
@@ -70,6 +77,14 @@ try {
     )
     await page.getByRole('button', { name: 'Settings', exact: true }).click()
     await page.getByRole('button', { name: 'Reset demo', exact: true }).click()
+    await page.getByRole('heading', { name: 'Projects', exact: true }).waitFor()
+    await page
+      .getByRole('link')
+      .filter({ hasText: 'Mill Creek Corner Infill' })
+      .click()
+    await page
+      .getByRole('heading', { name: 'Mill Creek Corner Infill', exact: true })
+      .waitFor()
     await expect(page.locator('.project-scope')).not.toHaveText(
       'Editable review scope',
     )

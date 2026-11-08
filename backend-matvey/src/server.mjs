@@ -352,6 +352,7 @@ export const server = http.createServer(async (req, res) => {
       return json(401, { error: 'Connection key is missing or incorrect.' })
     if (
       url.pathname === '/v1/reference-collections' ||
+      url.pathname === '/v1/demo/reset' ||
       /^\/v1\/projects(?:\/|$)/.test(url.pathname)
     ) {
       if (!projectApi || !indexing.ready)

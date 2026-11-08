@@ -42,7 +42,9 @@ export function AppHeader({
         <Plus size={14} />
         New query
       </button>
-      <WorkspaceSettings />
+      <WorkspaceSettings
+        projectId={homeHref.match(/^#project\/([a-zA-Z0-9-]+)/)?.[1]}
+      />
     </header>
   )
 }

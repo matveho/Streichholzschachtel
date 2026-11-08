@@ -8,7 +8,8 @@ The frontend uses the keyless `/local-api` gateway. The underlying API requires 
 | GET / POST | `/v1/projects` | List / create with `name`, `client`, `location`, `description`, `collectionIds`, optional `documentIds` |
 | GET | `/v1/projects/:project` | Project, documents, query history, issues and selected collections |
 | PATCH / DELETE | `/v1/projects/:project` | Update / delete ordinary projects; protected demo deletion returns 403 |
-| POST | `/v1/projects/:project/reset` | Restore demo associations, runtime PDFs, issue states and initial history |
+| POST | `/v1/projects/:project/reset` | Targeted restoration of one built-in project (internal compatibility endpoint) |
+| POST | `/v1/demo/reset` | Workspace demo reset: delete ordinary projects with `persistOnReset !== true`, their imports and history; restore both protected seeds |
 | PATCH | `/v1/projects/:project/issues/:issue` | Persist `{status:"dismissed"}` or `"open"` |
 | GET / POST | `/v1/projects/:project/queries` | History / submit `{question,documentIds?,sourceOnly?,id?}`; pollable job |
 | GET / PATCH / DELETE | `/v1/projects/:project/queries/:query` | Read / bookmark with `{saved:true}` / cancel |
@@ -30,6 +31,8 @@ Findings are prepared comparisons, clearly labeled. Exact excerpts must anchor i
 
 ## Verification commands
 
-From `backend-matvey`: `node --test tests/projects.test.mjs`; against private API 8810: `node --test tests/projects.integration.mjs`; against the compiled gateway: `$env:BASIS_FRONTEND_URL='http://127.0.0.1:8812/app'; node tests/projects.browser.mjs`. HTTP/browser suites create/delete test projects and reset demo state; avoid running them during presentation. Root checks: `npx tsc -b` and `npm run lint`.
+From `backend-matvey`: `node --test tests/projects.test.mjs`; against private API 8810: `node --test tests/projects.integration.mjs`; against isolated preview storage: `$env:BASIS_FRONTEND_URL='http://127.0.0.1:8842/app'; node tests/projects.browser.mjs`. HTTP/browser suites create/delete test projects and reset demo state; avoid running them during presentation. Root checks: `npx tsc -b` and `npm run lint`.
 
 Project descriptions default to an automatic local summary of selected collections and imported document topics/types. Editing a description stores a manual override; setting `description` to an empty string regenerates it. Description edits are allowed on protected examples and do not invalidate existing document-scoped query results. Reset restores original descriptions. `BASIS_STATE_DIR` can isolate development storage from the active demo.
+
+`persistOnReset` is a boolean project field (POST/PATCH), defaulting to false for ordinary projects. Protected seeds always return true and reject attempts to set false with 403. This flag does not prevent explicit deletion of an ordinary project. All visible Reset demo controls call the workspace endpoint. Opted-in projects retain documents, history and bookmarks; built-in examples return to their initial state. Reset rejects concurrent imports with 409. Destructive reset tests must run on the isolated 8840/8842 runtime with `BASIS_STATE_DIR` pointing to `state/ui-preview`, never the presenter’s live data.

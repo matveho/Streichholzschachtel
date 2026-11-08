@@ -89,11 +89,15 @@ function Shell({
   actions,
   title = '',
   settings,
+  settingsProject,
+  onSettingsChange,
 }: {
   children: React.ReactNode
   actions?: React.ReactNode
   title?: string
   settings?: React.ReactNode
+  settingsProject?: Project
+  onSettingsChange?: () => void
 }) {
   return (
     <main className="project-shell">
@@ -105,7 +109,12 @@ function Shell({
         <span className="project-header-title">{title}</span>
         <div className="project-header-actions">
           {actions}
-          <WorkspaceSettings>{settings}</WorkspaceSettings>
+          <WorkspaceSettings
+            project={settingsProject}
+            onProjectChange={onSettingsChange}
+          >
+            {settings}
+          </WorkspaceSettings>
         </div>
       </header>
       {children}
@@ -282,6 +291,8 @@ function ProjectDashboard({
   return (
     <Shell
       title={project.name}
+      settingsProject={project}
+      onSettingsChange={onRefresh}
       settings={
         <>
           {!project.protectedDemo && (
@@ -289,21 +300,7 @@ function ProjectDashboard({
               Manage project
             </button>
           )}
-          {project.protectedDemo ? (
-            <button
-              disabled={pending}
-              onClick={() => {
-                if (
-                  confirm(
-                    'Restore this project’s original documents, query history and findings?',
-                  )
-                )
-                  void action('/reset', 'POST', {})
-              }}
-            >
-              Reset demo
-            </button>
-          ) : (
+          {!project.protectedDemo && (
             <button disabled={pending} onClick={remove}>
               Delete project
             </button>

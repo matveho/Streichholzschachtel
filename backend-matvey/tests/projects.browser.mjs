@@ -1,7 +1,13 @@
 import { chromium, expect } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { mkdirSync } from 'node:fs'
-const origin = process.env.BASIS_FRONTEND_URL || 'http://127.0.0.1:5180'
+const origin = process.env.BASIS_FRONTEND_URL || 'http://127.0.0.1:8842/app'
+assert.ok(
+  ['http://127.0.0.1:8842', 'http://localhost:8842'].includes(
+    new URL(origin).origin,
+  ),
+  'Workspace reset checks require the isolated preview on 8842',
+)
 const browser = await chromium.launch({ channel: 'chrome', headless: true })
 let createdId = ''
 try {
@@ -108,6 +114,14 @@ try {
   await expect(page.locator('.project-query-row')).toHaveCount(1)
   await page.getByRole('button', { name: 'Settings', exact: true }).click()
   await page.getByRole('button', { name: 'Reset demo', exact: true }).click()
+  await page.getByRole('heading', { name: 'Projects', exact: true }).waitFor()
+  await page
+    .getByRole('link')
+    .filter({ hasText: 'Mill Creek Corner Infill' })
+    .click()
+  await page
+    .getByRole('heading', { name: 'Mill Creek Corner Infill', exact: true })
+    .waitFor()
   await page.getByRole('button', { name: 'Open 2', exact: true }).waitFor()
   await page.screenshot({ path: 'test-results/project-dashboard.png' })
   await page.getByRole('link', { name: 'Projects', exact: true }).click()

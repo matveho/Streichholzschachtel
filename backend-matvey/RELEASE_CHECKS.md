@@ -4,7 +4,7 @@ Verified on 8 November 2026 against the local Windows runtime and deployed Verce
 
 | Check | Result |
 | --- | --- |
-| `node --test tests/*.test.mjs` | 135 passed, zero failed |
+| `node --test tests/*.test.mjs` | 136 passed, zero failed |
 | `node --test tests/projects.integration.mjs` | Four passed: protected seeds, scoped live 450 mm lookup, isolation/cache/files/history, ordinary project lifecycle |
 | `node tests/projects.restart.mjs` | Passed: real API restart, ordinary project persistence, query history, issue dismissal, deleted runtime PDF recovery, seed deduplication |
 | `node tests/projects.browser.mjs` | Passed against compiled local frontend and production Vercel; overview, documents, citations, findings, persistence, bookmarks, create/edit/delete and responsive layout |
@@ -43,3 +43,7 @@ The project list now uses dense rows. Collection selection uses a searchable dro
 Executed checks for this update: 135 backend unit tests, local project browser workflow, native folder/PDF import browser workflow (including partial failure/retry and query/PDF highlighting), and import API isolation/restart persistence. Uploaded bytes stay under ignored local project storage; private document IDs differ across projects even for identical PDFs.
 
 Production verification of the compact workspace passed through Vercel: native folder/PDF selection, automatic/manual descriptions, partial import recovery, a real query over an imported PDF, original citation highlighting, and ordinary project deletion. A 3.9 MB published engineering PDF imported and indexed all 159 pages through the public connection. Public checks preserved existing example descriptions and dismissals.
+
+## Demo reset retention
+
+Passed isolated API and browser checks for global reset, imported-file/history cleanup, persisted project retention across restart, opt-out, and built-in persistence locks. The complete backend unit suite passes 136 tests. Settings exposes a muted Keep on reset checkbox; built-in examples are checked and disabled. Destructive reset was not executed against the live workspace during verification.
