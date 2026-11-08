@@ -15,7 +15,7 @@ import {
 import { documents as staticDocuments, referenceSets, queryCases } from './data'
 import { DocumentContext } from './DocumentContext'
 import { readSettings, useLiveQuery } from './backend'
-import type { BackendSettings, DocumentRecord } from './backend'
+import type { BackendSettings, DocumentRecord, QueryJob } from './backend'
 import { navigate } from './navigation'
 import type { DocId } from './data'
 import { PdfPane } from './PdfPane'
@@ -30,7 +30,12 @@ import { readHistory, saveHistory } from './history'
 import type { HistoryEntry } from './history'
 
 /** Where a new search came from, so the query tab can keep the thread. */
-export type RunContext = { from: string; choice?: string }
+export type RunContext = {
+  from: string
+  choice?: string
+  /** A rephrased question: searched on its own, starting a new thread. */
+  fresh?: boolean
+}
 
 export function QueryWorkspace({
   entry,
@@ -42,6 +47,7 @@ export function QueryWorkspace({
   draft,
   onDraftChange,
   thread = [],
+  preloadedJob,
   onUpload,
   uploadNote = "Add the required PDF to the backend's documents folder, then restart it.",
 }: {
@@ -52,7 +58,7 @@ export function QueryWorkspace({
     caseId: string,
     sourceOnly?: boolean,
     context?: RunContext,
-  ) => void
+  ) => void | Promise<void>
   onNew: () => void
   projectName?: string
   projectDocuments?: Record<string, DocumentRecord>
@@ -61,6 +67,8 @@ export function QueryWorkspace({
   onDraftChange?: (text: string) => void
   /** Earlier questions asked in this query's tab. */
   thread?: ThreadTurn[]
+  /** The finished job for this query, if already fetched. */
+  preloadedJob?: QueryJob
   /** Opens the project's document upload; absent where uploads aren't possible. */
   onUpload?: () => void
   /** Shown instead of the upload button when `onUpload` is absent. */
@@ -84,6 +92,7 @@ export function QueryWorkspace({
     entry.sourceOnly === true,
     entry.projectId,
     entry.queryId,
+    preloadedJob,
   )
   const documents =
     settings.mode === 'static'
@@ -116,6 +125,7 @@ export function QueryWorkspace({
   )
   const [navigationKey, setNavigationKey] = useState(0)
   const [busy, setBusy] = useState(false)
+  const [pending, setPending] = useState('')
   const [copied, setCopied] = useState(false)
   const [resultHeight, setResultHeight] = useState(264)
   const [expanded, setExpanded] = useState(false)
@@ -197,7 +207,8 @@ export function QueryWorkspace({
   function search() {
     if (!query.trim() || busy) return
     if (entry.projectId) {
-      onRun(query.trim(), entry.caseId, false, { from: submitted })
+      // Typing a new question is a rephrase: search it alone.
+      runInPlace(query.trim(), { from: submitted, fresh: true })
       return
     }
     setBusy(true)
@@ -213,11 +224,23 @@ export function QueryWorkspace({
       setNavigationKey((k) => k + 1)
     }, 500)
   }
+  /** Runs a project search while this result stays on screen. */
+  function runInPlace(question: string, context: RunContext) {
+    setBusy(true)
+    setPending(question)
+    void Promise.resolve(onRun(question, entry.caseId, false, context)).finally(
+      () => {
+        setBusy(false)
+        setPending('')
+      },
+    )
+  }
   /** Runs a clarified or more detailed version of the current question. */
   function refine(question: string, choice: string) {
     if (busy) return
     setQuery(question)
-    onRun(question, entry.caseId, false, { from: submitted, choice })
+    if (entry.projectId) runInPlace(question, { from: submitted, choice })
+    else onRun(question, entry.caseId, false, { from: submitted, choice })
   }
   function rephrase() {
     setExpanded(false)
@@ -450,6 +473,11 @@ export function QueryWorkspace({
         >
           <div className="result-header">
             <h1>Query result</h1>
+            {pending && (
+              <span className="searching-note" role="status">
+                Searching: {pending}
+              </span>
+            )}
             {settings.mode !== 'static' && !entry.projectId && (
               <span className="live-mode">
                 {entry.projectId

@@ -19,7 +19,7 @@ type TabState = {
    * Set just before a search navigates, so the active tab follows it. `turn`
    * is the question being left behind, added to the tab's thread.
    */
-  retarget: null | { turn?: ThreadTurn }
+  retarget: null | { turn?: ThreadTurn; reset?: boolean }
 }
 
 const empty: TabState = { tabs: [], active: null, next: 1, retarget: null }
@@ -90,7 +90,7 @@ function reconcile(state: TabState, target: string | null): TabState {
         active: existing.key,
         retarget: null,
       }
-    const turn = state.retarget.turn
+    const { turn, reset } = state.retarget
     return {
       ...state,
       tabs: state.tabs.map((tab) =>
@@ -99,8 +99,9 @@ function reconcile(state: TabState, target: string | null): TabState {
               ...tab,
               target,
               draft: undefined,
-              thread:
-                turn && active.target !== 'new'
+              thread: reset
+                ? undefined
+                : turn && active.target !== 'new'
                   ? [...(tab.thread ?? []), turn].slice(-20)
                   : tab.thread,
             }
@@ -201,7 +202,17 @@ export function useQueryTabs({
      * Call right before a search navigates to its result. `from` is the
      * question on screen; `choice` is the clarification that led onward.
      */
-    markRun(context?: { from: string; to: string; choice?: string }) {
+    markRun(context?: {
+      from: string
+      to: string
+      choice?: string
+      fresh?: boolean
+    }) {
+      // A rephrased question stands alone: it starts a new thread.
+      if (context?.fresh) {
+        setState((current) => ({ ...current, retarget: { reset: true } }))
+        return
+      }
       const turn =
         context?.from.trim() && context.from.trim() !== context.to.trim()
           ? { question: context.from.trim(), choice: context.choice }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Reference } from './data'
 import type { ReportBlock } from './QueryReport'
 export type BackendMode = 'static' | 'main' | 'matvey'
@@ -115,6 +115,28 @@ export async function api(
     )
   return body
 }
+/** A finished query job as the backend returns it. */
+export type QueryJob = { id: string; state: string; result?: unknown }
+
+type RawResult = Omit<LiveResult, 'documents' | 'id'> & {
+  documents: (DocumentRecord & { id: string })[]
+}
+
+/** Turns a completed job into a result, pinning document links to the backend. */
+function liveResult(settings: BackendSettings, job: QueryJob): LiveResult {
+  const result = job.result as RawResult,
+    docs: Record<string, DocumentRecord> = {}
+  for (const record of result.documents) {
+    const file = new URL(record.file, baseUrl(settings))
+    if (file.origin !== new URL(baseUrl(settings)).origin)
+      throw new Error('The backend returned a document on a different server.')
+    const secret = connectionKey(settings)
+    if (secret) file.searchParams.set('token', secret)
+    docs[record.id] = { ...record, file: file.href }
+  }
+  return { ...result, documents: docs, id: job.id }
+}
+
 export function useLiveQuery(
   settings: BackendSettings,
   question: string,
@@ -122,6 +144,8 @@ export function useLiveQuery(
   sourceOnly = false,
   projectId?: string,
   existingJobId?: string,
+  /** An already fetched job, shown immediately instead of fetched again. */
+  preloaded?: QueryJob,
 ) {
   const path = projectId
     ? `/v1/projects/${encodeURIComponent(projectId)}/queries`
@@ -134,6 +158,26 @@ export function useLiveQuery(
     projectId,
     existingJobId,
   ])
+  const ready = useMemo(() => {
+    if (
+      settings.mode === 'static' ||
+      !question ||
+      retry ||
+      !existingJobId ||
+      preloaded?.id !== existingJobId ||
+      preloaded.state !== 'completed' ||
+      !preloaded.result
+    )
+      return null
+    try {
+      return { data: liveResult(settings, preloaded), error: '' }
+    } catch (error) {
+      return {
+        data: null,
+        error: error instanceof Error ? error.message : 'Unusable result.',
+      }
+    }
+  }, [settings, question, retry, existingJobId, preloaded])
   const cancelRef = useRef<() => void>(() => {})
   const [state, setState] = useState<{
     key: string
@@ -142,7 +186,7 @@ export function useLiveQuery(
     error: string
   }>({ key: '', phase: '', data: null, error: '' })
   useEffect(() => {
-    if (settings.mode === 'static' || !question) return
+    if (settings.mode === 'static' || !question || ready) return
     const controller = new AbortController()
     let jobId = '',
       finished = false,
@@ -208,18 +252,7 @@ export function useLiveQuery(
         cancellable = ['queued', 'running'].includes(job.state)
         while (!controller.signal.aborted) {
           if (job.state === 'completed') {
-            const result = job.result,
-              docs: Record<string, DocumentRecord> = {}
-            for (const record of result.documents) {
-              const file = new URL(record.file, baseUrl(settings))
-              if (file.origin !== new URL(baseUrl(settings)).origin)
-                throw new Error(
-                  'The backend returned a document on a different server.',
-                )
-              const secret = connectionKey(settings)
-              if (secret) file.searchParams.set('token', secret)
-              docs[record.id] = { ...record, file: file.href }
-            }
+            const data = liveResult(settings, job)
             try {
               localStorage.setItem(cacheKey, job.id)
             } catch {}
@@ -227,7 +260,7 @@ export function useLiveQuery(
             setState({
               key,
               phase: 'Complete',
-              data: { ...result, documents: docs, id: job.id },
+              data,
               error: '',
             })
             return
@@ -285,7 +318,15 @@ export function useLiveQuery(
     projectId,
     existingJobId,
     path,
+    ready,
   ])
+  if (ready)
+    return {
+      phase: ready.data ? 'Complete' : '',
+      ...ready,
+      busy: false,
+      cancel: () => cancelRef.current(),
+    }
   if (settings.mode === 'static' || !question)
     return {
       phase: '',

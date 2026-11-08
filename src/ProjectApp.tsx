@@ -32,6 +32,8 @@ import { useQueryTabs } from './useQueryTabs'
 import './projects.css'
 
 const emptyReferences: Reference[] = []
+/** Finished jobs fetched while a search ran, so their page opens instantly. */
+const settledJobs = new Map<string, ProjectQuery>()
 const unansweredLabels: Record<string, string> = {
   not_found: 'Not found',
   partial: 'No direct answer',
@@ -50,7 +52,7 @@ const date = (value: string) =>
     month: 'short',
     day: 'numeric',
   }).format(new Date(value))
-function useResource<T>(path: string, context = '') {
+function useResource<T>(path: string, context = '', keepStale = false) {
   const [settings] = useState(readSettings),
     [version, setVersion] = useState(0)
   const [state, setState] = useState<{
@@ -91,7 +93,13 @@ function useResource<T>(path: string, context = '') {
   return {
     ...(state.key === identity
       ? state
-      : { key: identity, data: null, error: '', status: 0 }),
+      : {
+          key: identity,
+          // Optionally keep the last record on screen until the next arrives.
+          data: keepStale && !state.error ? state.data : null,
+          error: '',
+          status: 0,
+        }),
     refresh: () => setVersion((v) => v + 1),
   }
 }
@@ -712,12 +720,18 @@ function QueryReader({
 }: {
   data: ProjectData
   id: string
-  onRun: (question: string, sourceOnly?: boolean, context?: RunContext) => void
+  onRun: (
+    question: string,
+    sourceOnly?: boolean,
+    context?: RunContext,
+  ) => Promise<void>
   onNew: () => void
   thread?: ThreadTurn[]
 }) {
   const resource = useResource<ProjectQuery>(
     projectPath(data.project.id) + '/queries/' + id,
+    '',
+    true,
   )
   if (resource.error)
     return (
@@ -725,7 +739,10 @@ function QueryReader({
         <Message text={resource.error} error onRetry={resource.refresh} />
       </Shell>
     )
-  const job = resource.data
+  const job =
+    resource.data?.id === id
+      ? resource.data
+      : (settledJobs.get(id) ?? resource.data)
   if (!job)
     return (
       <Shell title={data.project.name}>
@@ -767,6 +784,7 @@ function QueryReader({
       projectName={data.project.name}
       projectDocuments={projectDocumentMap(data.documents)}
       onRun={(q, _case, sourceOnly, context) => onRun(q, sourceOnly, context)}
+      preloadedJob={job}
       onNew={onNew}
       thread={thread}
       onUpload={
@@ -790,6 +808,7 @@ function ProjectPage({
   const resource = useResource<ProjectData>(
       projectPath(id),
       `${section || ''}/${record || ''}`,
+      true,
     ),
     [error, setError] = useState('')
   const tabs = useQueryTabs({
@@ -820,17 +839,40 @@ function ProjectPage({
     context?: RunContext,
   ) {
     setError('')
+    const startedAt = location.hash
     try {
       const job = await requestProject(projectPath(id) + '/queries', 'POST', {
         question,
         sourceOnly,
         id: crypto.randomUUID(),
       })
+      await settle(job)
+      // The user moved elsewhere meanwhile; the result waits in history.
+      if (location.hash !== startedAt) return
       tabs.markRun(context && { ...context, to: question })
       navigate('project/' + id + '/query/' + job.id)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not run the query.')
     }
+  }
+  /** Waits until a submitted query finishes, so the result appears at once. */
+  async function settle(job: { id: string; state: string }) {
+    const deadline = Date.now() + 120000
+    let current = job
+    while (['queued', 'running'].includes(current.state)) {
+      if (Date.now() > deadline) return
+      await new Promise((resolve) => setTimeout(resolve, 700))
+      try {
+        current = await requestProject(
+          projectPath(id) + '/queries/' + job.id,
+          'GET',
+        )
+      } catch {
+        return
+      }
+    }
+    if (current.state === 'completed')
+      settledJobs.set(job.id, current as ProjectQuery)
   }
   if (resource.error)
     return withTabs(
@@ -849,7 +891,6 @@ function ProjectPage({
   if (section === 'query' && record)
     content = (
       <QueryReader
-        key={record}
         data={data}
         id={record}
         onRun={run}
@@ -877,9 +918,7 @@ function ProjectPage({
         settings={readSettings()}
         projectName={data.project.name}
         projectDocuments={projectDocumentMap(data.documents)}
-        onRun={(q, _case, sourceOnly, context) =>
-          void run(q, sourceOnly, context)
-        }
+        onRun={(q, _case, sourceOnly, context) => run(q, sourceOnly, context)}
         onNew={tabs.openNew}
       />
     )
