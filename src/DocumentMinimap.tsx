@@ -29,7 +29,7 @@ const MiniPage = memo(function MiniPage({
 }) {
   const documents = useDocuments()
   const button = useRef<HTMLButtonElement>(null)
-  const key = `${id}:${page}`
+  const key = JSON.stringify([documents[id].file, id, page])
   const [image, setImage] = useState(thumbnails.get(key))
   const [failed, setFailed] = useState(false)
   const markers = sourceReferences.filter(
@@ -203,7 +203,7 @@ export function DocumentMinimap({
         >
           {Array.from({ length: total }, (_, i) => (
             <MiniPage
-              key={i}
+              key={documents[id].file + i}
               id={id}
               page={i + 1}
               current={page === i + 1}

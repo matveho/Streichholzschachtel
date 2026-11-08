@@ -37,7 +37,7 @@ export function PdfPane({
   )
   const [zoom, setZoom] = useState(1)
   const [width, setWidth] = useState(650)
-  const [status, setStatus] = useState('Loading document…')
+  const [rendered, setRendered] = useState({ key: '', status: '' })
   const [retry, setRetry] = useState(0)
   const canvas = useRef<HTMLCanvasElement>(null)
   const text = useRef<HTMLDivElement>(null)
@@ -68,8 +68,19 @@ export function PdfPane({
     observer.observe(scroll.current!)
     return () => observer.disconnect()
   }, [])
-  const [pageWidth, pageHeight] = doc.pageSizes?.[page] ?? [612, 792]
+  const pageKey = JSON.stringify([doc.file, page])
+  const [measured, setMeasured] = useState<{
+    key: string
+    size: [number, number]
+  }>()
+  const [pageWidth, pageHeight] =
+    measured?.key === pageKey
+      ? measured.size
+      : (doc.pageSizes?.[page] ?? [612, 792])
   const scale = (width / pageWidth) * zoom
+  const renderKey = JSON.stringify([id, doc.file, page, scale, retry])
+  const status =
+    rendered.key === renderKey ? rendered.status : 'Loading document…'
   useEffect(() => {
     const el = scroll.current!
     let frame = 0
@@ -107,6 +118,14 @@ export function PdfPane({
         const pdf = await loadPdf(id, doc)
         const pdfPage = await pdf.getPage(page)
         if (cancelled) return
+        const original = pdfPage.getViewport({ scale: 1 })
+        if (
+          Math.abs(original.width - pageWidth) > 0.01 ||
+          Math.abs(original.height - pageHeight) > 0.01
+        ) {
+          setMeasured({ key: pageKey, size: [original.width, original.height] })
+          return
+        }
         const viewport = pdfPage.getViewport({ scale })
         const el = canvas.current!
         const ratio = window.devicePixelRatio || 1
@@ -120,17 +139,19 @@ export function PdfPane({
         await render.promise
         if (cancelled) return
         text.current!.replaceChildren()
+        const content = await pdfPage.getTextContent()
+        if (cancelled) return
         layer = new TextLayer({
-          textContentSource: await pdfPage.getTextContent(),
+          textContentSource: content,
           container: text.current!,
           viewport,
         })
         await layer.render()
-        if (!cancelled) setStatus('')
+        if (!cancelled) setRendered({ key: renderKey, status: '' })
       } catch (error) {
         if (!cancelled) {
           console.error(error)
-          setStatus('Unable to render document.')
+          setRendered({ key: renderKey, status: 'Unable to render document.' })
         }
       }
     }
@@ -140,7 +161,7 @@ export function PdfPane({
       render?.cancel()
       layer?.cancel()
     }
-  }, [id, page, scale, retry, doc])
+  }, [id, page, scale, retry, doc, renderKey, pageKey, pageWidth, pageHeight])
   useEffect(() => {
     const el = scroll.current!
     if (pendingJump.current !== null) {
@@ -185,7 +206,7 @@ export function PdfPane({
             value={page}
             onChange={(e) => {
               const n = Number(e.target.value)
-              if (n >= 1 && n <= doc.pages) setPage(n)
+              if (Number.isInteger(n) && n >= 1 && n <= doc.pages) setPage(n)
             }}
           />
           <span>/ {doc.pages}</span>
@@ -251,29 +272,43 @@ export function PdfPane({
                 width: pageWidth * scale,
                 height: pageHeight * scale,
                 '--scale-factor': scale,
+                '--total-scale-factor': scale,
               } as React.CSSProperties
             }
           >
-            <canvas ref={canvas} style={{ width: '100%', height: '100%' }} />
-            <div ref={text} className="textLayer" />
+            <canvas
+              ref={canvas}
+              style={{
+                width: '100%',
+                height: '100%',
+                visibility: status ? 'hidden' : undefined,
+              }}
+            />
+            <div
+              ref={text}
+              className="textLayer"
+              style={{ visibility: status ? 'hidden' : undefined }}
+            />
             <div className="highlights" aria-label="Source highlights">
               {targets
-                .filter((r) => r.page === page)
-                .map((r) => (
-                  <div
-                    key={r.id}
-                    data-reference={r.id}
-                    className="source-highlight"
-                    style={{
-                      left: r.rect[0] * scale,
-                      top: r.rect[1] * scale,
-                      width: r.rect[2] * scale,
-                      height: r.rect[3] * scale,
-                    }}
-                  >
-                    <span>{r.id}</span>
-                  </div>
-                ))}
+                .filter((r) => !status && r.page === page)
+                .flatMap((r) =>
+                  (r.regions ?? [r.rect]).map((rect, index) => (
+                    <div
+                      key={r.id + '-' + index}
+                      data-reference={r.id}
+                      className="source-highlight"
+                      style={{
+                        left: rect[0] * scale,
+                        top: rect[1] * scale,
+                        width: rect[2] * scale,
+                        height: rect[3] * scale,
+                      }}
+                    >
+                      {index === 0 && <span>{r.id}</span>}
+                    </div>
+                  )),
+                )}
             </div>
           </div>
           {status && (
