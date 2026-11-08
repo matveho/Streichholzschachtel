@@ -253,6 +253,39 @@ button.primary-action:hover {
   text-decoration: none;
   border-bottom: 1px solid #ffffff0a;
 }
+.project-document-entry {
+  display: flex;
+  align-items: stretch;
+}
+.project-document-entry > .project-document-row {
+  flex: 1;
+  min-width: 0;
+}
+.model-download {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 12px;
+  color: #9bcbc5;
+  font-size: 11px;
+  text-decoration: none;
+  border: 1px solid #ffffff12;
+}
+.model-download:hover {
+  background: #ffffff0a;
+  color: #c0e8e2;
+}
+.model-download:focus-visible {
+  outline: 2px solid #88c4bd;
+  outline-offset: -2px;
+}
+.model-document-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 12px;
+  border-bottom: 1px solid #ffffff12;
+}
 .project-document-row:hover {
   background: #ffffff06;
 }

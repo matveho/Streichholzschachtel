@@ -422,6 +422,12 @@ export async function buildIndex(progress = () => {}, onlyFiles) {
           projectArtifact: true,
           ownerProjectId: owner.id,
           category: artifact.category,
+          ...(artifact.modelFile
+            ? {
+                modelFile: artifact.modelFile,
+                modelSha256: artifact.modelSha256,
+              }
+            : {}),
           source: '',
         })
       }

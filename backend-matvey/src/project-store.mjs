@@ -451,6 +451,9 @@ export class ProjectStore {
       filename: doc.originalFilename || basename(filePath),
       category: doc.projectArtifact ? doc.category : 'reference',
       file: `/v1/projects/${id}/documents/${docId}/file`,
+      ...(doc.modelFile
+        ? { model: `/v1/projects/${id}/documents/${docId}/model` }
+        : {}),
     }
   }
 }

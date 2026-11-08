@@ -79,7 +79,15 @@ export function projectDocumentMap(
         throw new Error('A project document pointed to a different server.')
       const key = connectionKey(settings)
       if (key) file.searchParams.set('token', key)
-      return [doc.id, { ...doc, file: file.href }]
+      let model: string | undefined
+      if (doc.model) {
+        const url = new URL(doc.model, baseUrl(settings))
+        if (url.origin !== origin)
+          throw new Error('A project model pointed to a different server.')
+        if (key) url.searchParams.set('token', key)
+        model = url.href
+      }
+      return [doc.id, { ...doc, file: file.href, model }]
     }),
   )
 }

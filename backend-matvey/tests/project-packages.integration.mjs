@@ -16,7 +16,7 @@ for (const spec of projectPackages) {
   const detail = await request('/projects/' + spec.id)
   assert.equal(
     detail.documents.length,
-    spec.id === 'parkview-exchange' ? 16 : 17,
+    spec.id === 'parkview-exchange' ? 17 : 18,
   )
   assert.equal(detail.issues.length, 4)
   assert.ok(

@@ -451,22 +451,36 @@ function ProjectDashboard({
                       {labels[type]} <span>{group.length}</span>
                     </h3>
                     {group.map((doc) => (
-                      <a
-                        className="project-document-row"
-                        key={doc.id}
-                        href={route('/document/' + doc.id)}
-                        onClick={navigateLink}
-                      >
-                        <FileText size={17} />
-                        <span>
-                          <strong>{doc.title}</strong>
-                          <small>
-                            {doc.label} · {doc.edition}
-                          </small>
-                        </span>
-                        <span className="document-pages">{doc.pages} pp.</span>
-                        <ArrowUpRight size={14} />
-                      </a>
+                      <div className="project-document-entry" key={doc.id}>
+                        <a
+                          className="project-document-row"
+                          href={route('/document/' + doc.id)}
+                          onClick={navigateLink}
+                        >
+                          <FileText size={17} />
+                          <span>
+                            <strong>{doc.title}</strong>
+                            <small>
+                              {doc.label} · {doc.edition}
+                            </small>
+                          </span>
+                          <span className="document-pages">
+                            {doc.pages} pp.
+                          </span>
+                          <ArrowUpRight size={14} />
+                        </a>
+                        {doc.model && (
+                          <a
+                            className="model-download"
+                            href={projectDocumentMap([doc])[doc.id].model}
+                            download
+                            aria-label={`Download IFC model for ${project.name}`}
+                            title="Download IFC model"
+                          >
+                            IFC <ArrowUpRight size={13} />
+                          </a>
+                        )}
+                      </div>
                     ))}
                   </section>
                 ) : null
@@ -756,6 +770,17 @@ function ProjectPage({
             homeHref={'#project/' + id}
             onNew={() => navigate('project/' + id + '/new')}
           />
+          {documents[record].model && (
+            <div className="model-document-toolbar">
+              <a
+                className="model-download"
+                href={documents[record].model}
+                download
+              >
+                Download IFC
+              </a>
+            </div>
+          )}
           <div className="project-document-view">
             <PdfPane
               key={record}

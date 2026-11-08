@@ -49,6 +49,7 @@ const engineVersion = createHash('sha256')
       'demo-documents.mjs',
       '../demo/manifest.mjs',
       '../demo/project-packages.mjs',
+      '../demo/model-documents.mjs',
       '../demo/reference-sources.mjs',
       'local-synthesis.mjs',
       'synthesis-repair.mjs',

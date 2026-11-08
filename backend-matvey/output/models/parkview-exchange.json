@@ -1,0 +1,139 @@
+{
+  "projectId": "parkview-exchange",
+  "file": "parkview-exchange.ifc",
+  "schema": "IFC4",
+  "sha256": "9f06f4a31b65c27a4c8bc1e662600e44c850bd30a1d1cd9f42b7c84f367c5a50",
+  "datumMeters": 670.0,
+  "origin": "synthetic-project-artifact",
+  "objects": [
+    {
+      "guid": "2LVQ6sV3XIVfxm6Pa0iRvI",
+      "tag": "FG-ST1",
+      "name": "FG-ST1 - Finished-grade cover check",
+      "class": "IfcBuildingElementProxy",
+      "description": "IFC object FG-ST1 is the local finished-grade patch above storm reach ST1 at chainage 0+018. Finished grade is 671.300 m and storm outside crown is 669.650 m. Cover is 1.650 m. Patch extents are illustrative and do not represent a surveyed terrain surface.",
+      "properties": {
+        "FinishedGradeElevation": "671.300 m",
+        "Chainage": "0+018",
+        "SurfaceExtent": "6 m by 2 m local visualization patch only"
+      },
+      "evidence": {
+        "SourceDocument": "pxr_site-grading-plan_ifr_2026-10-02.pdf",
+        "SourcePage": 2,
+        "Status": "Issued for review",
+        "SearchText": "IFC object FG-ST1 is the local finished-grade patch above storm reach ST1 at chainage 0+018. Finished grade is 671.300 m and storm outside crown is 669.650 m. Cover is 1.650 m. Patch extents are illustrative and do not represent a surveyed terrain surface.",
+        "RepresentationLimit": "Concept geometry; verify against cited design documents."
+      }
+    },
+    {
+      "guid": "21GsQxNDDHauOc6RhC7NHe",
+      "tag": "BLDG",
+      "name": "BLDG - Building envelope",
+      "class": "IfcBuildingElementProxy",
+      "description": "IFC object BLDG is a simplified six-storey building envelope with 92 residences and 1,250 m\u00b2 commercial area. Its model finished floor is 672.250 m, as recorded in C201. Envelope dimensions and 20 m height are illustrative; they are not architectural design commitments.",
+      "properties": {
+        "FinishedFloorElevation": "672.250 m",
+        "ResidentialUnits": 92,
+        "CommercialFloorArea": "1,250 m\u00b2",
+        "Storeys": 6,
+        "EnvelopeHeight": "20 m - visualization assumption"
+      },
+      "evidence": {
+        "SourceDocument": "pxr_client-design-brief_rev0_2026-09-18.pdf",
+        "SourcePage": 1,
+        "Status": "Issued for review",
+        "SearchText": "IFC object BLDG is a simplified six-storey building envelope with 92 residences and 1,250 m\u00b2 commercial area. Its model finished floor is 672.250 m, as recorded in C201. Envelope dimensions and 20 m height are illustrative; they are not architectural design commitments.",
+        "RepresentationLimit": "Concept geometry; verify against cited design documents.",
+        "RelatedSourceDocument": "pxr_site-grading-plan_ifr_2026-10-02.pdf",
+        "RelatedSourcePage": 1
+      }
+    },
+    {
+      "guid": "0NtIT6QF1IJhG5Q8P9XbJS",
+      "tag": "S1",
+      "name": "S1 - Upstream sanitary branch",
+      "class": "IfcPipeSegment",
+      "description": "IFC object S1 is the upstream sanitary branch. The nominal pipe diameter of IFC object S1 is 200 mm. Its length is 43 m and proposed slope is 0.30%. Peak dry-weather flow is 0.34 L/s for the limited branch only. The model cylinder uses nominal diameter; wall thickness is unresolved.",
+      "properties": {
+        "NominalPipeDiameter": "200 mm",
+        "Length": "43 m",
+        "Slope": "0.30%",
+        "PeakDryWeatherFlow": "0.34 L/s",
+        "UpstreamInvertElevation": "668.480 m",
+        "DownstreamInvertElevation": "668.351 m",
+        "FlowScope": "250 m\u00b2 east retail/frontage only; excludes remaining building service"
+      },
+      "evidence": {
+        "SourceDocument": "pxr_site-servicing-plan_ifr_2026-10-02.pdf",
+        "SourcePage": 1,
+        "Status": "Issued for review",
+        "SearchText": "IFC object S1 is the upstream sanitary branch. The nominal pipe diameter of IFC object S1 is 200 mm. Its length is 43 m and proposed slope is 0.30%. Peak dry-weather flow is 0.34 L/s for the limited branch only. The model cylinder uses nominal diameter; wall thickness is unresolved.",
+        "RepresentationLimit": "Concept geometry; verify against cited design documents."
+      }
+    },
+    {
+      "guid": "1Iqn8UTNHKieVvvXnswxWV",
+      "tag": "ST1",
+      "name": "ST1 - Terminal storm reach",
+      "class": "IfcPipeSegment",
+      "description": "IFC object ST1 is the terminal storm reach. The cover of IFC object ST1 at chainage 0+018 is 1.650 m. Its nominal diameter is 300 mm and slope is 0.25%. No insulation detail is included. The cylinder follows the documented outside crown; nominal diameter is used as a simplified envelope.",
+      "properties": {
+        "NominalPipeDiameter": "300 mm",
+        "Length": "38 m",
+        "Slope": "0.25%",
+        "CoverAtChainage018": "1.650 m",
+        "Insulation": "No insulation detail included",
+        "OutsideCrownAt018": "669.650 m"
+      },
+      "evidence": {
+        "SourceDocument": "pxr_site-servicing-plan_ifr_2026-10-02.pdf",
+        "SourcePage": 2,
+        "Status": "Issued for review",
+        "SearchText": "IFC object ST1 is the terminal storm reach. The cover of IFC object ST1 at chainage 0+018 is 1.650 m. Its nominal diameter is 300 mm and slope is 0.25%. No insulation detail is included. The cylinder follows the documented outside crown; nominal diameter is used as a simplified envelope.",
+        "RepresentationLimit": "Concept geometry; verify against cited design documents.",
+        "RelatedSourceDocument": "pxr_site-servicing-plan_ifr_2026-10-02.pdf",
+        "RelatedSourcePage": 1
+      }
+    },
+    {
+      "guid": "1_G99KApbMVg4kbNz_f1dr",
+      "tag": "S2",
+      "name": "S2 - Sewer service at crossing X1",
+      "class": "IfcPipeSegment",
+      "description": "IFC object S2 is the sewer service at crossing X1. The vertical clearance at IFC crossing X1 is 0.220 m between sewer outside crown 668.380 m and watermain underside 668.600 m. The sewer cylinder diameter is a visualization assumption, not a confirmed design size.",
+      "properties": {
+        "Crossing": "X1",
+        "OutsideCrownElevation": "668.380 m",
+        "VerticalClearance": "0.220 m",
+        "EnvelopeDiameter": "200 mm - visualization assumption; service sizing not established"
+      },
+      "evidence": {
+        "SourceDocument": "pxr_site-servicing-plan_ifr_2026-10-02.pdf",
+        "SourcePage": 2,
+        "Status": "Issued for review",
+        "SearchText": "IFC object S2 is the sewer service at crossing X1. The vertical clearance at IFC crossing X1 is 0.220 m between sewer outside crown 668.380 m and watermain underside 668.600 m. The sewer cylinder diameter is a visualization assumption, not a confirmed design size.",
+        "RepresentationLimit": "Concept geometry; verify against cited design documents."
+      }
+    },
+    {
+      "guid": "2K$D1jiEzHMQ06k33KWpEl",
+      "tag": "W1",
+      "name": "W1 - Existing watermain at X1",
+      "class": "IfcPipeSegment",
+      "description": "IFC object W1 is the 150 mm watermain at crossing X1. Its underside elevation is 668.600 m. The sewer service below it has 0.220 m clearance. Utility exposure remains required.",
+      "properties": {
+        "NominalPipeDiameter": "150 mm",
+        "UndersideElevation": "668.600 m",
+        "Crossing": "X1",
+        "Envelope": "Nominal diameter, wall thickness unresolved"
+      },
+      "evidence": {
+        "SourceDocument": "pxr_site-servicing-plan_ifr_2026-10-02.pdf",
+        "SourcePage": 2,
+        "Status": "Issued for review",
+        "SearchText": "IFC object W1 is the 150 mm watermain at crossing X1. Its underside elevation is 668.600 m. The sewer service below it has 0.220 m clearance. Utility exposure remains required.",
+        "RepresentationLimit": "Concept geometry; verify against cited design documents."
+      }
+    }
+  ]
+}

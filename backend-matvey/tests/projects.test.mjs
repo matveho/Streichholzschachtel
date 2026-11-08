@@ -122,6 +122,19 @@ test('demo document originals restore missing or modified runtime copies', (t) =
   assert.deepEqual(readFileSync(second), other)
   restoreDemoDocuments(directory)
   assert.deepEqual(readFileSync(first), expected)
+  const models = demoProjects.flatMap((p) =>
+    p.documents
+      .filter((d) => d.modelFile)
+      .map((d) => resolve(directory, d.modelFile)),
+  )
+  assert.equal(models.length, 2)
+  const originals = models.map((file) => readFileSync(file))
+  unlinkSync(models[0])
+  writeFileSync(models[1], 'damaged model')
+  restoreDemoDocuments(directory)
+  models.forEach((file, i) =>
+    assert.deepEqual(readFileSync(file), originals[i]),
+  )
 })
 function fresh(t) {
   const folder = mkdtempSync(resolve(tmpdir(), 'basis-project-test-'))
@@ -172,7 +185,7 @@ test('researched packages have exact collection memberships and independent arti
     const scoped = store.scope(id)
     assert.equal(
       scoped.corpus.documents.filter((d) => d.projectArtifact).length,
-      6,
+      7,
     )
     assert.ok(
       scoped.corpus.documents.every(

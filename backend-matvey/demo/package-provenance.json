@@ -118,7 +118,7 @@
           "id": "doc-ede1832e22f5",
           "filename": "pxr_client-design-brief_rev0_2026-09-18.pdf",
           "title": "Client design brief",
-          "edition": "Issued for review \u00c2\u00b7 2026-09-18",
+          "edition": "Issued for review Â· 2026-09-18",
           "pageCount": 2,
           "sha256": "ede1832e22f543b8dc1bd99dcafccbc9c20066063691bf5d7b2db21c52f93f07",
           "source": "",
@@ -128,7 +128,7 @@
           "id": "doc-78c8e4d3cbb4",
           "filename": "pxr_design-coordination-memo_2026-10-07.pdf",
           "title": "Civil design coordination register",
-          "edition": "Issued for review \u00c2\u00b7 2026-10-07",
+          "edition": "Issued for review Â· 2026-10-07",
           "pageCount": 1,
           "sha256": "78c8e4d3cbb44cdd33f2df14b72320dab9fc30c509da8166e08b25cd2ae4304f",
           "source": "",
@@ -138,7 +138,7 @@
           "id": "doc-fd479745e2a5",
           "filename": "pxr_existing-conditions-survey_rev0_2026-09-22.pdf",
           "title": "Existing conditions and survey summary",
-          "edition": "Issued for review \u00c2\u00b7 2026-09-22",
+          "edition": "Issued for review Â· 2026-09-22",
           "pageCount": 2,
           "sha256": "fd479745e2a5a1afabc5e68ecadd47642761e4a21faccdc2c7176c3ef5efb236",
           "source": "",
@@ -148,7 +148,7 @@
           "id": "doc-0ee53acf3b25",
           "filename": "pxr_servicing-design-memo_rev1_2026-10-03.pdf",
           "title": "Servicing design basis and calculations",
-          "edition": "Issued for review \u00c2\u00b7 2026-10-03",
+          "edition": "Issued for review Â· 2026-10-03",
           "pageCount": 2,
           "sha256": "0ee53acf3b25cdbde6e7cf92e2cde00941c1ba13778b805c6b5cdadaf18b2879",
           "source": "",
@@ -158,7 +158,7 @@
           "id": "doc-7f328f329ffd",
           "filename": "pxr_site-grading-plan_ifr_2026-10-02.pdf",
           "title": "Site grading and drainage details",
-          "edition": "Issued for review \u00c2\u00b7 2026-10-02",
+          "edition": "Issued for review Â· 2026-10-02",
           "pageCount": 2,
           "sha256": "7f328f329ffd69784b6163c70f4a561fcee59a4b5c12cab7a4c4b05bed9461f1",
           "source": "",
@@ -168,9 +168,19 @@
           "id": "doc-f961fe8a4049",
           "filename": "pxr_site-servicing-plan_ifr_2026-10-02.pdf",
           "title": "Site servicing plan and utility profile",
-          "edition": "Issued for review \u00c2\u00b7 2026-10-02",
+          "edition": "Issued for review Â· 2026-10-02",
           "pageCount": 2,
           "sha256": "f961fe8a40497eaf33ef89dbaa458887f22c2c98eceba4bae698968d4626e812",
+          "source": "",
+          "origin": "synthetic-project-artifact"
+        },
+        {
+          "id": "doc-7ae9666e2e45",
+          "filename": "parkview-exchange-ifc-register.pdf",
+          "title": "IFC model register",
+          "edition": "Concept model · 8 November 2026",
+          "pageCount": 7,
+          "sha256": "7ae9666e2e4500220cceb68565cfe22d7467f1c8bb8944218ddc33fa225e949f",
           "source": "",
           "origin": "synthetic-project-artifact"
         }
@@ -188,7 +198,7 @@
               "design-guidelines.pdf",
               "For the upstream reaches of the sanitary system, where peak dry weather flow (DWF) is equal to or less than 1.5 L/s, the designer is to follow slopes per Table 1.1."
             ],
-            ["design-guidelines.pdf", "0.25\u00e2\u20ac\u201c0.40 | 1.00", 8]
+            ["design-guidelines.pdf", "0.25â€“0.40 | 1.00", 8]
           ]
         },
         {
@@ -276,6 +286,152 @@
           "id": "finished-floor",
           "question": "What is the proposed finished floor elevation?",
           "sourceOnly": true
+        },
+        {
+          "id": "ifc-object-query",
+          "sourceOnly": true,
+          "question": "What is the nominal pipe diameter of IFC object S1?"
+        }
+      ],
+      "models": [
+        {
+          "projectId": "parkview-exchange",
+          "file": "parkview-exchange.ifc",
+          "schema": "IFC4",
+          "sha256": "9f06f4a31b65c27a4c8bc1e662600e44c850bd30a1d1cd9f42b7c84f367c5a50",
+          "datumMeters": 670,
+          "origin": "synthetic-project-artifact",
+          "objects": [
+            {
+              "guid": "2LVQ6sV3XIVfxm6Pa0iRvI",
+              "tag": "FG-ST1",
+              "name": "FG-ST1 - Finished-grade cover check",
+              "class": "IfcBuildingElementProxy",
+              "description": "IFC object FG-ST1 is the local finished-grade patch above storm reach ST1 at chainage 0+018. Finished grade is 671.300 m and storm outside crown is 669.650 m. Cover is 1.650 m. Patch extents are illustrative and do not represent a surveyed terrain surface.",
+              "properties": {
+                "FinishedGradeElevation": "671.300 m",
+                "Chainage": "0+018",
+                "SurfaceExtent": "6 m by 2 m local visualization patch only"
+              },
+              "evidence": {
+                "SourceDocument": "pxr_site-grading-plan_ifr_2026-10-02.pdf",
+                "SourcePage": 2,
+                "Status": "Issued for review",
+                "SearchText": "IFC object FG-ST1 is the local finished-grade patch above storm reach ST1 at chainage 0+018. Finished grade is 671.300 m and storm outside crown is 669.650 m. Cover is 1.650 m. Patch extents are illustrative and do not represent a surveyed terrain surface.",
+                "RepresentationLimit": "Concept geometry; verify against cited design documents."
+              }
+            },
+            {
+              "guid": "21GsQxNDDHauOc6RhC7NHe",
+              "tag": "BLDG",
+              "name": "BLDG - Building envelope",
+              "class": "IfcBuildingElementProxy",
+              "description": "IFC object BLDG is a simplified six-storey building envelope with 92 residences and 1,250 m² commercial area. Its model finished floor is 672.250 m, as recorded in C201. Envelope dimensions and 20 m height are illustrative; they are not architectural design commitments.",
+              "properties": {
+                "FinishedFloorElevation": "672.250 m",
+                "ResidentialUnits": 92,
+                "CommercialFloorArea": "1,250 m²",
+                "Storeys": 6,
+                "EnvelopeHeight": "20 m - visualization assumption"
+              },
+              "evidence": {
+                "SourceDocument": "pxr_client-design-brief_rev0_2026-09-18.pdf",
+                "SourcePage": 1,
+                "Status": "Issued for review",
+                "SearchText": "IFC object BLDG is a simplified six-storey building envelope with 92 residences and 1,250 m² commercial area. Its model finished floor is 672.250 m, as recorded in C201. Envelope dimensions and 20 m height are illustrative; they are not architectural design commitments.",
+                "RepresentationLimit": "Concept geometry; verify against cited design documents.",
+                "RelatedSourceDocument": "pxr_site-grading-plan_ifr_2026-10-02.pdf",
+                "RelatedSourcePage": 1
+              }
+            },
+            {
+              "guid": "0NtIT6QF1IJhG5Q8P9XbJS",
+              "tag": "S1",
+              "name": "S1 - Upstream sanitary branch",
+              "class": "IfcPipeSegment",
+              "description": "IFC object S1 is the upstream sanitary branch. The nominal pipe diameter of IFC object S1 is 200 mm. Its length is 43 m and proposed slope is 0.30%. Peak dry-weather flow is 0.34 L/s for the limited branch only. The model cylinder uses nominal diameter; wall thickness is unresolved.",
+              "properties": {
+                "NominalPipeDiameter": "200 mm",
+                "Length": "43 m",
+                "Slope": "0.30%",
+                "PeakDryWeatherFlow": "0.34 L/s",
+                "UpstreamInvertElevation": "668.480 m",
+                "DownstreamInvertElevation": "668.351 m",
+                "FlowScope": "250 m² east retail/frontage only; excludes remaining building service"
+              },
+              "evidence": {
+                "SourceDocument": "pxr_site-servicing-plan_ifr_2026-10-02.pdf",
+                "SourcePage": 1,
+                "Status": "Issued for review",
+                "SearchText": "IFC object S1 is the upstream sanitary branch. The nominal pipe diameter of IFC object S1 is 200 mm. Its length is 43 m and proposed slope is 0.30%. Peak dry-weather flow is 0.34 L/s for the limited branch only. The model cylinder uses nominal diameter; wall thickness is unresolved.",
+                "RepresentationLimit": "Concept geometry; verify against cited design documents."
+              }
+            },
+            {
+              "guid": "1Iqn8UTNHKieVvvXnswxWV",
+              "tag": "ST1",
+              "name": "ST1 - Terminal storm reach",
+              "class": "IfcPipeSegment",
+              "description": "IFC object ST1 is the terminal storm reach. The cover of IFC object ST1 at chainage 0+018 is 1.650 m. Its nominal diameter is 300 mm and slope is 0.25%. No insulation detail is included. The cylinder follows the documented outside crown; nominal diameter is used as a simplified envelope.",
+              "properties": {
+                "NominalPipeDiameter": "300 mm",
+                "Length": "38 m",
+                "Slope": "0.25%",
+                "CoverAtChainage018": "1.650 m",
+                "Insulation": "No insulation detail included",
+                "OutsideCrownAt018": "669.650 m"
+              },
+              "evidence": {
+                "SourceDocument": "pxr_site-servicing-plan_ifr_2026-10-02.pdf",
+                "SourcePage": 2,
+                "Status": "Issued for review",
+                "SearchText": "IFC object ST1 is the terminal storm reach. The cover of IFC object ST1 at chainage 0+018 is 1.650 m. Its nominal diameter is 300 mm and slope is 0.25%. No insulation detail is included. The cylinder follows the documented outside crown; nominal diameter is used as a simplified envelope.",
+                "RepresentationLimit": "Concept geometry; verify against cited design documents.",
+                "RelatedSourceDocument": "pxr_site-servicing-plan_ifr_2026-10-02.pdf",
+                "RelatedSourcePage": 1
+              }
+            },
+            {
+              "guid": "1_G99KApbMVg4kbNz_f1dr",
+              "tag": "S2",
+              "name": "S2 - Sewer service at crossing X1",
+              "class": "IfcPipeSegment",
+              "description": "IFC object S2 is the sewer service at crossing X1. The vertical clearance at IFC crossing X1 is 0.220 m between sewer outside crown 668.380 m and watermain underside 668.600 m. The sewer cylinder diameter is a visualization assumption, not a confirmed design size.",
+              "properties": {
+                "Crossing": "X1",
+                "OutsideCrownElevation": "668.380 m",
+                "VerticalClearance": "0.220 m",
+                "EnvelopeDiameter": "200 mm - visualization assumption; service sizing not established"
+              },
+              "evidence": {
+                "SourceDocument": "pxr_site-servicing-plan_ifr_2026-10-02.pdf",
+                "SourcePage": 2,
+                "Status": "Issued for review",
+                "SearchText": "IFC object S2 is the sewer service at crossing X1. The vertical clearance at IFC crossing X1 is 0.220 m between sewer outside crown 668.380 m and watermain underside 668.600 m. The sewer cylinder diameter is a visualization assumption, not a confirmed design size.",
+                "RepresentationLimit": "Concept geometry; verify against cited design documents."
+              }
+            },
+            {
+              "guid": "2K$D1jiEzHMQ06k33KWpEl",
+              "tag": "W1",
+              "name": "W1 - Existing watermain at X1",
+              "class": "IfcPipeSegment",
+              "description": "IFC object W1 is the 150 mm watermain at crossing X1. Its underside elevation is 668.600 m. The sewer service below it has 0.220 m clearance. Utility exposure remains required.",
+              "properties": {
+                "NominalPipeDiameter": "150 mm",
+                "UndersideElevation": "668.600 m",
+                "Crossing": "X1",
+                "Envelope": "Nominal diameter, wall thickness unresolved"
+              },
+              "evidence": {
+                "SourceDocument": "pxr_site-servicing-plan_ifr_2026-10-02.pdf",
+                "SourcePage": 2,
+                "Status": "Issued for review",
+                "SearchText": "IFC object W1 is the 150 mm watermain at crossing X1. Its underside elevation is 668.600 m. The sewer service below it has 0.220 m clearance. Utility exposure remains required.",
+                "RepresentationLimit": "Concept geometry; verify against cited design documents."
+              }
+            }
+          ]
         }
       ]
     },
@@ -402,7 +558,7 @@
           "id": "doc-3d91ddf53090",
           "filename": "nrh_existing-conditions-survey-geotech_2026-08-28.pdf",
           "title": "Existing conditions and ground summary",
-          "edition": "Issued for review \u00c2\u00b7 2026-08-28",
+          "edition": "Issued for review Â· 2026-08-28",
           "pageCount": 2,
           "sha256": "3d91ddf530902b345a1ede6d451bd383022d32a116bbcc83a6e06eaeba49500f",
           "source": "",
@@ -412,7 +568,7 @@
           "id": "doc-0d80f61bace4",
           "filename": "nrh_geometric-design-plan-profile_ifr_2026-09-12.pdf",
           "title": "Geometric design plan and profile",
-          "edition": "Issued for review \u00c2\u00b7 2026-09-12",
+          "edition": "Issued for review Â· 2026-09-12",
           "pageCount": 3,
           "sha256": "0d80f61bace4933fda284f6972e35abbd24a0c2706bca5a118df0e850caa4692",
           "source": "",
@@ -422,7 +578,7 @@
           "id": "doc-a0d81ef01708",
           "filename": "nrh_owner-design-brief_rev0_2026-08-14.pdf",
           "title": "Owner design brief",
-          "edition": "Issued for review \u00c2\u00b7 2026-08-14",
+          "edition": "Issued for review Â· 2026-08-14",
           "pageCount": 2,
           "sha256": "a0d81ef017089acbc2cba0a5860b9f28a2e0b7b738771248615e4f19cb2ebef5",
           "source": "",
@@ -432,7 +588,7 @@
           "id": "doc-d0a7aeda5f3e",
           "filename": "nrh_pavement-design-memo_rev0_2026-09-19.pdf",
           "title": "Preliminary pavement design memorandum",
-          "edition": "Issued for review \u00c2\u00b7 2026-09-19",
+          "edition": "Issued for review Â· 2026-09-19",
           "pageCount": 2,
           "sha256": "d0a7aeda5f3e815d85fe74d323ebc450fc9d13ee63da2ddfe1b45aa9eeb713ec",
           "source": "",
@@ -442,7 +598,7 @@
           "id": "doc-4e1fde5c2ba7",
           "filename": "nrh_traffic-accommodation-plan_ifr_2026-09-22.pdf",
           "title": "Traffic accommodation concept",
-          "edition": "Issued for review \u00c2\u00b7 2026-09-22",
+          "edition": "Issued for review Â· 2026-09-22",
           "pageCount": 2,
           "sha256": "4e1fde5c2ba75d2a43471617dc29a597b3c7c3e993409735d5748ffe0d501d7a",
           "source": "",
@@ -452,9 +608,19 @@
           "id": "doc-3c0534bfa723",
           "filename": "nrh_traffic-impact-assessment_rev1_2026-09-15.pdf",
           "title": "Traffic impact assessment",
-          "edition": "Issued for review \u00c2\u00b7 2026-09-15",
+          "edition": "Issued for review Â· 2026-09-15",
           "pageCount": 2,
           "sha256": "3c0534bfa723d4da7fe04610f54bd22287de2380d9b263ebd2014631322dd6e2",
+          "source": "",
+          "origin": "synthetic-project-artifact"
+        },
+        {
+          "id": "doc-2fb80129b93a",
+          "filename": "north-ridge-highway-ifc-register.pdf",
+          "title": "IFC model register",
+          "edition": "Concept model · 8 November 2026",
+          "pageCount": 8,
+          "sha256": "2fb80129b93a3d15465d18b6e4e4e4357d2bd487c361474efe7e1bebb29d91bf",
           "source": "",
           "origin": "synthetic-project-artifact"
         }
@@ -556,6 +722,183 @@
           "id": "traffic-basis",
           "question": "What is the 2026 base-year traffic dataset?",
           "sourceOnly": true
+        },
+        {
+          "id": "ifc-object-query",
+          "sourceOnly": true,
+          "question": "What is the thickness of IFC object PAV-ACP?"
+        }
+      ],
+      "models": [
+        {
+          "projectId": "north-ridge-highway",
+          "file": "north-ridge-highway.ifc",
+          "schema": "IFC4",
+          "sha256": "53ea60239fd97177e362ccc461bc626c92d8730431ddca15b73b446d4dafbf5a",
+          "datumMeters": 670,
+          "origin": "synthetic-project-artifact",
+          "objects": [
+            {
+              "guid": "0svb8hfuPHSuo0Bt8GKC4e",
+              "tag": "RD-EB",
+              "name": "RD-EB - Eastbound through lane",
+              "class": "IfcCivilElement",
+              "description": "IFC object RD-EB is the eastbound through lane. Its width is 3.5 m on the 12.0 m paved surface. The design speed of IFC object RD-EB is 100 km/h. Available eastbound stopping sight distance is 165 m. The profile crest is 671.875 m at chainage 0+300. Final geometry and grade-corrected SSD require review.",
+              "properties": {
+                "Width": "3.5 m",
+                "DesignSpeed": "100 km/h",
+                "PavedSurfaceWidth": "12.0 m",
+                "AvailableEastboundSSD": "165 m",
+                "InitialSSDscreen": "185 m, level-road basis; grade effects outstanding",
+                "Profile": "L250 m; grades +3% / -3%; K41.67 m/%",
+                "Geometry": "Station 0+100 to 0+500; surface display thickness 2 mm is illustrative"
+              },
+              "evidence": {
+                "SourceDocument": "nrh_geometric-design-plan-profile_ifr_2026-09-12.pdf",
+                "SourcePage": 3,
+                "Status": "Issued for review",
+                "SearchText": "IFC object RD-EB is the eastbound through lane. Its width is 3.5 m on the 12.0 m paved surface. The design speed of IFC object RD-EB is 100 km/h. Available eastbound stopping sight distance is 165 m. The profile crest is 671.875 m at chainage 0+300. Final geometry and grade-corrected SSD require review.",
+                "RepresentationLimit": "Concept geometry; verify against cited design documents.",
+                "RelatedSourceDocument": "nrh_geometric-design-plan-profile_ifr_2026-09-12.pdf",
+                "RelatedSourcePage": 1
+              }
+            },
+            {
+              "guid": "3Bvd0L2cbGGw_qBTAV7Ctw",
+              "tag": "RD-WB",
+              "name": "RD-WB - Westbound through lane",
+              "class": "IfcCivilElement",
+              "description": "IFC object RD-WB is the westbound through lane. Its width is 3.5 m on the 12.0 m paved surface. The design speed of IFC object RD-WB is 100 km/h. Available eastbound stopping sight distance is 165 m. The profile crest is 671.875 m at chainage 0+300. Final geometry and grade-corrected SSD require review.",
+              "properties": {
+                "Width": "3.5 m",
+                "DesignSpeed": "100 km/h",
+                "PavedSurfaceWidth": "12.0 m",
+                "AvailableEastboundSSD": "165 m",
+                "InitialSSDscreen": "185 m, level-road basis; grade effects outstanding",
+                "Profile": "L250 m; grades +3% / -3%; K41.67 m/%",
+                "Geometry": "Station 0+100 to 0+500; surface display thickness 2 mm is illustrative"
+              },
+              "evidence": {
+                "SourceDocument": "nrh_geometric-design-plan-profile_ifr_2026-09-12.pdf",
+                "SourcePage": 1,
+                "Status": "Issued for review",
+                "SearchText": "IFC object RD-WB is the westbound through lane. Its width is 3.5 m on the 12.0 m paved surface. The design speed of IFC object RD-WB is 100 km/h. Available eastbound stopping sight distance is 165 m. The profile crest is 671.875 m at chainage 0+300. Final geometry and grade-corrected SSD require review.",
+                "RepresentationLimit": "Concept geometry; verify against cited design documents."
+              }
+            },
+            {
+              "guid": "3i$5uabxXVgRDfjhtSuqOA",
+              "tag": "SH-S",
+              "name": "SH-S - South paved shoulder",
+              "class": "IfcCivilElement",
+              "description": "IFC object SH-S is the south paved shoulder. Its width is 2.5 m on the 12.0 m paved surface. The design speed of IFC object SH-S is 100 km/h. Available eastbound stopping sight distance is 165 m. The profile crest is 671.875 m at chainage 0+300. Final geometry and grade-corrected SSD require review.",
+              "properties": {
+                "Width": "2.5 m",
+                "DesignSpeed": "100 km/h",
+                "PavedSurfaceWidth": "12.0 m",
+                "AvailableEastboundSSD": "165 m",
+                "InitialSSDscreen": "185 m, level-road basis; grade effects outstanding",
+                "Profile": "L250 m; grades +3% / -3%; K41.67 m/%",
+                "Geometry": "Station 0+100 to 0+500; surface display thickness 2 mm is illustrative"
+              },
+              "evidence": {
+                "SourceDocument": "nrh_geometric-design-plan-profile_ifr_2026-09-12.pdf",
+                "SourcePage": 1,
+                "Status": "Issued for review",
+                "SearchText": "IFC object SH-S is the south paved shoulder. Its width is 2.5 m on the 12.0 m paved surface. The design speed of IFC object SH-S is 100 km/h. Available eastbound stopping sight distance is 165 m. The profile crest is 671.875 m at chainage 0+300. Final geometry and grade-corrected SSD require review.",
+                "RepresentationLimit": "Concept geometry; verify against cited design documents."
+              }
+            },
+            {
+              "guid": "2DVEcjv2XJRv7Cz_G21rfu",
+              "tag": "SH-N",
+              "name": "SH-N - North paved shoulder",
+              "class": "IfcCivilElement",
+              "description": "IFC object SH-N is the north paved shoulder. Its width is 2.5 m on the 12.0 m paved surface. The design speed of IFC object SH-N is 100 km/h. Available eastbound stopping sight distance is 165 m. The profile crest is 671.875 m at chainage 0+300. Final geometry and grade-corrected SSD require review.",
+              "properties": {
+                "Width": "2.5 m",
+                "DesignSpeed": "100 km/h",
+                "PavedSurfaceWidth": "12.0 m",
+                "AvailableEastboundSSD": "165 m",
+                "InitialSSDscreen": "185 m, level-road basis; grade effects outstanding",
+                "Profile": "L250 m; grades +3% / -3%; K41.67 m/%",
+                "Geometry": "Station 0+100 to 0+500; surface display thickness 2 mm is illustrative"
+              },
+              "evidence": {
+                "SourceDocument": "nrh_geometric-design-plan-profile_ifr_2026-09-12.pdf",
+                "SourcePage": 1,
+                "Status": "Issued for review",
+                "SearchText": "IFC object SH-N is the north paved shoulder. Its width is 2.5 m on the 12.0 m paved surface. The design speed of IFC object SH-N is 100 km/h. Available eastbound stopping sight distance is 165 m. The profile crest is 671.875 m at chainage 0+300. Final geometry and grade-corrected SSD require review.",
+                "RepresentationLimit": "Concept geometry; verify against cited design documents."
+              }
+            },
+            {
+              "guid": "10A6yafYDTvwHilhGmBh1G",
+              "tag": "PAV-ACP",
+              "name": "PAV-ACP - Trial asphalt layer",
+              "class": "IfcCivilElement",
+              "description": "IFC object PAV-ACP is the trial asphalt layer. The thickness of IFC object PAV-ACP is 110 mm. Pavement draft inputs are 7,200 AADT, 10% trucks and 1.0% annual non-compounded growth. This trial section is not a verified structural design.",
+              "properties": {
+                "Thickness": "110 mm",
+                "Status": "Trial option; structural adequacy not established",
+                "TrafficAADT": 7200,
+                "TruckShare": "10%",
+                "Growth": "1.0% annual non-compounded",
+                "SubgradeCBR": "5%"
+              },
+              "evidence": {
+                "SourceDocument": "nrh_pavement-design-memo_rev0_2026-09-19.pdf",
+                "SourcePage": 1,
+                "Status": "Issued for review",
+                "SearchText": "IFC object PAV-ACP is the trial asphalt layer. The thickness of IFC object PAV-ACP is 110 mm. Pavement draft inputs are 7,200 AADT, 10% trucks and 1.0% annual non-compounded growth. This trial section is not a verified structural design.",
+                "RepresentationLimit": "Concept geometry; verify against cited design documents."
+              }
+            },
+            {
+              "guid": "227ISfgILK$gmlXEfPV7QE",
+              "tag": "PAV-BASE",
+              "name": "PAV-BASE - Trial granular base",
+              "class": "IfcCivilElement",
+              "description": "IFC object PAV-BASE is the trial granular base layer. Its thickness is 250 mm below the trial 110 mm asphalt layer. Loading must be reconciled with the traffic assessment; no ESAL-based adequacy is claimed.",
+              "properties": {
+                "Thickness": "250 mm",
+                "Status": "Trial option; structural adequacy not established",
+                "TrafficAADT": 7200,
+                "TruckShare": "10%",
+                "Growth": "1.0% annual non-compounded"
+              },
+              "evidence": {
+                "SourceDocument": "nrh_pavement-design-memo_rev0_2026-09-19.pdf",
+                "SourcePage": 1,
+                "Status": "Issued for review",
+                "SearchText": "IFC object PAV-BASE is the trial granular base layer. Its thickness is 250 mm below the trial 110 mm asphalt layer. Loading must be reconciled with the traffic assessment; no ESAL-based adequacy is claimed.",
+                "RepresentationLimit": "Concept geometry; verify against cited design documents."
+              }
+            },
+            {
+              "guid": "3F1P_DBv5TAfXydDnsyL44",
+              "tag": "ACC-N",
+              "name": "ACC-N - Industrial access context",
+              "class": "IfcCivilElement",
+              "description": "IFC object ACC-N is the illustrative north industrial access. Traffic assessment inputs are 7,800 AADT, 14% heavy vehicles and 2.0% annual non-compounded growth. The 2047 twenty-year combined traffic horizon is missing. Access geometry is illustrative and has not been designed.",
+              "properties": {
+                "Arrangement": "North T-intersection; no south access",
+                "Station": "0+300",
+                "Geometry": "Illustrative access envelope; levels, throat width and tie-in unresolved",
+                "TIAAADT": 7800,
+                "TIAHeavyVehicles": "14%",
+                "TIAGrowth": "2.0% annual non-compounded",
+                "TIAMissingHorizon": "2047"
+              },
+              "evidence": {
+                "SourceDocument": "nrh_traffic-impact-assessment_rev1_2026-09-15.pdf",
+                "SourcePage": 1,
+                "Status": "Issued for review",
+                "SearchText": "IFC object ACC-N is the illustrative north industrial access. Traffic assessment inputs are 7,800 AADT, 14% heavy vehicles and 2.0% annual non-compounded growth. The 2047 twenty-year combined traffic horizon is missing. Access geometry is illustrative and has not been designed.",
+                "RepresentationLimit": "Concept geometry; verify against cited design documents."
+              }
+            }
+          ]
         }
       ]
     }

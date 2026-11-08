@@ -21,11 +21,17 @@ export function restoreDemoDocuments(
     (p) => !projectId || p.id === projectId,
   )) {
     for (const document of project.documents) {
-      const original = readFileSync(resolve(root, 'output/pdf', document.file))
-      const target = resolve(directory, document.file)
-      if (existsSync(target) && readFileSync(target).equals(original)) continue
-      writeFileSync(target + '.tmp', original)
-      renameSync(target + '.tmp', target)
+      for (const [folder, file] of [
+        ['output/pdf', document.file],
+        ...(document.modelFile ? [['output/models', document.modelFile]] : []),
+      ]) {
+        const original = readFileSync(resolve(root, folder, file))
+        const target = resolve(directory, file)
+        if (existsSync(target) && readFileSync(target).equals(original))
+          continue
+        writeFileSync(target + '.tmp', original)
+        renameSync(target + '.tmp', target)
+      }
     }
   }
   return directory

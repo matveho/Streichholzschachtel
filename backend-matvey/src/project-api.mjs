@@ -9,7 +9,7 @@ import {
   statSync,
   createReadStream,
 } from 'node:fs'
-import { resolve, sep } from 'node:path'
+import { resolve, sep, basename } from 'node:path'
 import { randomUUID, createHash } from 'node:crypto'
 import { ProjectStore, problem } from './project-store.mjs'
 import { demoProjects } from '../demo/manifest.mjs'
@@ -17,7 +17,10 @@ import { preparedEvidence, projectResult } from './project-evidence.mjs'
 import { answer, renderUnits } from './answer.mjs'
 import { lookup, UnitIndex } from './lookup.mjs'
 import { suggestQueries } from './query-suggestions.mjs'
-import { restoreDemoDocuments } from './demo-documents.mjs'
+import {
+  restoreDemoDocuments,
+  demoDocumentDirectory,
+} from './demo-documents.mjs'
 import { buildIndex } from './indexer.mjs'
 import {
   stageImport,
@@ -559,6 +562,32 @@ export class ProjectApi {
           (await input()).status,
         ),
       })
+    const modelMatch = route.match(/^\/documents\/(doc-[a-f0-9]+)\/model$/)
+    if (modelMatch && req.method === 'GET') {
+      this.store.document(projectId, modelMatch[1])
+      const doc = this.store.documents.get(modelMatch[1])
+      if (
+        !doc.modelFile ||
+        basename(doc.modelFile) !== doc.modelFile ||
+        !doc.modelFile.endsWith('.ifc')
+      )
+        throw problem(404, 'This document has no associated IFC model.')
+      const path = resolve(demoDocumentDirectory, doc.modelFile)
+      if (!existsSync(path))
+        throw problem(
+          503,
+          'Model file is unavailable. Restart the backend to restore it.',
+        )
+      res.writeHead(200, {
+        'Content-Type': 'application/x-step',
+        'Content-Disposition': `attachment; filename="${doc.modelFile}"`,
+        'Content-Length': statSync(path).size,
+        'Cache-Control': 'private, no-store',
+        'X-Content-Type-Options': 'nosniff',
+      })
+      createReadStream(path).pipe(res)
+      return
+    }
     const fileMatch = route.match(/^\/documents\/(doc-[a-f0-9]+)\/file$/)
     if (fileMatch && req.method === 'GET') {
       this.store.document(projectId, fileMatch[1])

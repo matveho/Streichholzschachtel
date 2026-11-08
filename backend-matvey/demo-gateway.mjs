@@ -30,7 +30,7 @@ http
         res.end(
           JSON.stringify({
             service: 'basis-gateway',
-            version: 7,
+            version: 8,
             targetPort: Number(targetUrl.port),
           }),
         )
@@ -78,7 +78,7 @@ http
       const allowed =
         (req.method === 'POST' && url.pathname === '/v1/demo/reset') ||
         (['GET', 'POST', 'PATCH', 'DELETE'].includes(req.method) &&
-          /^\/v1\/projects(?:\/[a-zA-Z0-9-]+(?:\/(?:reset|queries(?:\/[a-f0-9-]{36})?|issues\/[a-z0-9-]+|documents\/(?:import|doc-[a-f0-9]+\/file)))?)?$/.test(
+          /^\/v1\/projects(?:\/[a-zA-Z0-9-]+(?:\/(?:reset|queries(?:\/[a-f0-9-]{36})?|issues\/[a-z0-9-]+|documents\/(?:import|doc-[a-f0-9]+\/(?:file|model))))?)?$/.test(
             url.pathname,
           )) ||
         (req.method === 'GET' &&
@@ -121,17 +121,23 @@ http
       })
       res.statusCode = upstream.status
       res.setHeader('Cache-Control', 'no-store')
-      for (const name of ['content-type', 'content-range', 'accept-ranges'])
+      for (const name of [
+        'content-type',
+        'content-range',
+        'accept-ranges',
+        'content-disposition',
+      ])
         if (upstream.headers.has(name))
           res.setHeader(name, upstream.headers.get(name))
       if (upstream.headers.get('content-type')?.includes('application/json')) {
         const data = await upstream.json()
         const rewrite = (value) => {
           if (!value || typeof value !== 'object') return
-          if (typeof value.file === 'string') {
-            const file = new URL(value.file, target)
-            value.file = '/local-api' + file.pathname
-          }
+          for (const key of ['file', 'model'])
+            if (typeof value[key] === 'string') {
+              const file = new URL(value[key], target)
+              value[key] = '/local-api' + file.pathname
+            }
           for (const child of Object.values(value)) rewrite(child)
         }
         rewrite(data)

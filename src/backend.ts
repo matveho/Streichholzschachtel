@@ -10,6 +10,7 @@ export type BackendSettings = {
   mainKey: string
 }
 export type DocumentRecord = {
+  model?: string
   label: string
   code: string
   title: string

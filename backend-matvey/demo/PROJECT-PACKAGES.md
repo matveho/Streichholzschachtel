@@ -1,6 +1,6 @@
 # Project packages
 
-The first two workspaces are Parkview Exchange Redevelopment (`parkview-exchange`, PX-26017) and North Ridge Highway Intersection Upgrade (`north-ridge-highway`, NRH-26104). Each contains six fictional consultant/client artifacts, four manually prepared source-verified review findings and six completed query fixtures. Two fixtures per project are produced by the actual offline extractive query engine; the other four are checked cross-document comparisons. Existing Mill Creek and Willow Creek workspaces remain available.
+The first two workspaces are Parkview Exchange Redevelopment (`parkview-exchange`, PX-26017) and North Ridge Highway Intersection Upgrade (`north-ridge-highway`, NRH-26104). Each contains six fictional consultant/client artifacts, four manually prepared source-verified review findings plus a searchable IFC model register, and seven completed query fixtures. Three fixtures per project are produced by the actual offline extractive query engine; the other four are checked cross-document comparisons. Each IFC model is downloadable from its register; see [IFC models](IFC-MODELS.md). Existing Mill Creek and Willow Creek workspaces remain available.
 
 ## Source and identity policy
 

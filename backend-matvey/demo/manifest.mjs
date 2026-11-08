@@ -1,7 +1,22 @@
 // Synthetic project material is deliberately separate from published standards.
 import { projectPackages } from './project-packages.mjs'
+import { modelDocuments } from './model-documents.mjs'
 export const demoProjects = [
-  ...projectPackages,
+  ...projectPackages.map((p) => ({
+    ...p,
+    documents: [...p.documents, modelDocuments[p.id]],
+    queries: [
+      ...p.queries,
+      {
+        id: 'ifc-object-query',
+        sourceOnly: true,
+        question:
+          p.id === 'parkview-exchange'
+            ? 'What is the nominal pipe diameter of IFC object S1?'
+            : 'What is the thickness of IFC object PAV-ACP?',
+      },
+    ],
+  })),
   {
     id: 'demo-mill-creek',
     name: 'Mill Creek Corner Infill',

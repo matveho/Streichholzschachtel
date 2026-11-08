@@ -1,0 +1,170 @@
+{
+  "projectId": "north-ridge-highway",
+  "file": "north-ridge-highway.ifc",
+  "schema": "IFC4",
+  "sha256": "53ea60239fd97177e362ccc461bc626c92d8730431ddca15b73b446d4dafbf5a",
+  "datumMeters": 670.0,
+  "origin": "synthetic-project-artifact",
+  "objects": [
+    {
+      "guid": "0svb8hfuPHSuo0Bt8GKC4e",
+      "tag": "RD-EB",
+      "name": "RD-EB - Eastbound through lane",
+      "class": "IfcCivilElement",
+      "description": "IFC object RD-EB is the eastbound through lane. Its width is 3.5 m on the 12.0 m paved surface. The design speed of IFC object RD-EB is 100 km/h. Available eastbound stopping sight distance is 165 m. The profile crest is 671.875 m at chainage 0+300. Final geometry and grade-corrected SSD require review.",
+      "properties": {
+        "Width": "3.5 m",
+        "DesignSpeed": "100 km/h",
+        "PavedSurfaceWidth": "12.0 m",
+        "AvailableEastboundSSD": "165 m",
+        "InitialSSDscreen": "185 m, level-road basis; grade effects outstanding",
+        "Profile": "L250 m; grades +3% / -3%; K41.67 m/%",
+        "Geometry": "Station 0+100 to 0+500; surface display thickness 2 mm is illustrative"
+      },
+      "evidence": {
+        "SourceDocument": "nrh_geometric-design-plan-profile_ifr_2026-09-12.pdf",
+        "SourcePage": 3,
+        "Status": "Issued for review",
+        "SearchText": "IFC object RD-EB is the eastbound through lane. Its width is 3.5 m on the 12.0 m paved surface. The design speed of IFC object RD-EB is 100 km/h. Available eastbound stopping sight distance is 165 m. The profile crest is 671.875 m at chainage 0+300. Final geometry and grade-corrected SSD require review.",
+        "RepresentationLimit": "Concept geometry; verify against cited design documents.",
+        "RelatedSourceDocument": "nrh_geometric-design-plan-profile_ifr_2026-09-12.pdf",
+        "RelatedSourcePage": 1
+      }
+    },
+    {
+      "guid": "3Bvd0L2cbGGw_qBTAV7Ctw",
+      "tag": "RD-WB",
+      "name": "RD-WB - Westbound through lane",
+      "class": "IfcCivilElement",
+      "description": "IFC object RD-WB is the westbound through lane. Its width is 3.5 m on the 12.0 m paved surface. The design speed of IFC object RD-WB is 100 km/h. Available eastbound stopping sight distance is 165 m. The profile crest is 671.875 m at chainage 0+300. Final geometry and grade-corrected SSD require review.",
+      "properties": {
+        "Width": "3.5 m",
+        "DesignSpeed": "100 km/h",
+        "PavedSurfaceWidth": "12.0 m",
+        "AvailableEastboundSSD": "165 m",
+        "InitialSSDscreen": "185 m, level-road basis; grade effects outstanding",
+        "Profile": "L250 m; grades +3% / -3%; K41.67 m/%",
+        "Geometry": "Station 0+100 to 0+500; surface display thickness 2 mm is illustrative"
+      },
+      "evidence": {
+        "SourceDocument": "nrh_geometric-design-plan-profile_ifr_2026-09-12.pdf",
+        "SourcePage": 1,
+        "Status": "Issued for review",
+        "SearchText": "IFC object RD-WB is the westbound through lane. Its width is 3.5 m on the 12.0 m paved surface. The design speed of IFC object RD-WB is 100 km/h. Available eastbound stopping sight distance is 165 m. The profile crest is 671.875 m at chainage 0+300. Final geometry and grade-corrected SSD require review.",
+        "RepresentationLimit": "Concept geometry; verify against cited design documents."
+      }
+    },
+    {
+      "guid": "3i$5uabxXVgRDfjhtSuqOA",
+      "tag": "SH-S",
+      "name": "SH-S - South paved shoulder",
+      "class": "IfcCivilElement",
+      "description": "IFC object SH-S is the south paved shoulder. Its width is 2.5 m on the 12.0 m paved surface. The design speed of IFC object SH-S is 100 km/h. Available eastbound stopping sight distance is 165 m. The profile crest is 671.875 m at chainage 0+300. Final geometry and grade-corrected SSD require review.",
+      "properties": {
+        "Width": "2.5 m",
+        "DesignSpeed": "100 km/h",
+        "PavedSurfaceWidth": "12.0 m",
+        "AvailableEastboundSSD": "165 m",
+        "InitialSSDscreen": "185 m, level-road basis; grade effects outstanding",
+        "Profile": "L250 m; grades +3% / -3%; K41.67 m/%",
+        "Geometry": "Station 0+100 to 0+500; surface display thickness 2 mm is illustrative"
+      },
+      "evidence": {
+        "SourceDocument": "nrh_geometric-design-plan-profile_ifr_2026-09-12.pdf",
+        "SourcePage": 1,
+        "Status": "Issued for review",
+        "SearchText": "IFC object SH-S is the south paved shoulder. Its width is 2.5 m on the 12.0 m paved surface. The design speed of IFC object SH-S is 100 km/h. Available eastbound stopping sight distance is 165 m. The profile crest is 671.875 m at chainage 0+300. Final geometry and grade-corrected SSD require review.",
+        "RepresentationLimit": "Concept geometry; verify against cited design documents."
+      }
+    },
+    {
+      "guid": "2DVEcjv2XJRv7Cz_G21rfu",
+      "tag": "SH-N",
+      "name": "SH-N - North paved shoulder",
+      "class": "IfcCivilElement",
+      "description": "IFC object SH-N is the north paved shoulder. Its width is 2.5 m on the 12.0 m paved surface. The design speed of IFC object SH-N is 100 km/h. Available eastbound stopping sight distance is 165 m. The profile crest is 671.875 m at chainage 0+300. Final geometry and grade-corrected SSD require review.",
+      "properties": {
+        "Width": "2.5 m",
+        "DesignSpeed": "100 km/h",
+        "PavedSurfaceWidth": "12.0 m",
+        "AvailableEastboundSSD": "165 m",
+        "InitialSSDscreen": "185 m, level-road basis; grade effects outstanding",
+        "Profile": "L250 m; grades +3% / -3%; K41.67 m/%",
+        "Geometry": "Station 0+100 to 0+500; surface display thickness 2 mm is illustrative"
+      },
+      "evidence": {
+        "SourceDocument": "nrh_geometric-design-plan-profile_ifr_2026-09-12.pdf",
+        "SourcePage": 1,
+        "Status": "Issued for review",
+        "SearchText": "IFC object SH-N is the north paved shoulder. Its width is 2.5 m on the 12.0 m paved surface. The design speed of IFC object SH-N is 100 km/h. Available eastbound stopping sight distance is 165 m. The profile crest is 671.875 m at chainage 0+300. Final geometry and grade-corrected SSD require review.",
+        "RepresentationLimit": "Concept geometry; verify against cited design documents."
+      }
+    },
+    {
+      "guid": "10A6yafYDTvwHilhGmBh1G",
+      "tag": "PAV-ACP",
+      "name": "PAV-ACP - Trial asphalt layer",
+      "class": "IfcCivilElement",
+      "description": "IFC object PAV-ACP is the trial asphalt layer. The thickness of IFC object PAV-ACP is 110 mm. Pavement draft inputs are 7,200 AADT, 10% trucks and 1.0% annual non-compounded growth. This trial section is not a verified structural design.",
+      "properties": {
+        "Thickness": "110 mm",
+        "Status": "Trial option; structural adequacy not established",
+        "TrafficAADT": 7200,
+        "TruckShare": "10%",
+        "Growth": "1.0% annual non-compounded",
+        "SubgradeCBR": "5%"
+      },
+      "evidence": {
+        "SourceDocument": "nrh_pavement-design-memo_rev0_2026-09-19.pdf",
+        "SourcePage": 1,
+        "Status": "Issued for review",
+        "SearchText": "IFC object PAV-ACP is the trial asphalt layer. The thickness of IFC object PAV-ACP is 110 mm. Pavement draft inputs are 7,200 AADT, 10% trucks and 1.0% annual non-compounded growth. This trial section is not a verified structural design.",
+        "RepresentationLimit": "Concept geometry; verify against cited design documents."
+      }
+    },
+    {
+      "guid": "227ISfgILK$gmlXEfPV7QE",
+      "tag": "PAV-BASE",
+      "name": "PAV-BASE - Trial granular base",
+      "class": "IfcCivilElement",
+      "description": "IFC object PAV-BASE is the trial granular base layer. Its thickness is 250 mm below the trial 110 mm asphalt layer. Loading must be reconciled with the traffic assessment; no ESAL-based adequacy is claimed.",
+      "properties": {
+        "Thickness": "250 mm",
+        "Status": "Trial option; structural adequacy not established",
+        "TrafficAADT": 7200,
+        "TruckShare": "10%",
+        "Growth": "1.0% annual non-compounded"
+      },
+      "evidence": {
+        "SourceDocument": "nrh_pavement-design-memo_rev0_2026-09-19.pdf",
+        "SourcePage": 1,
+        "Status": "Issued for review",
+        "SearchText": "IFC object PAV-BASE is the trial granular base layer. Its thickness is 250 mm below the trial 110 mm asphalt layer. Loading must be reconciled with the traffic assessment; no ESAL-based adequacy is claimed.",
+        "RepresentationLimit": "Concept geometry; verify against cited design documents."
+      }
+    },
+    {
+      "guid": "3F1P_DBv5TAfXydDnsyL44",
+      "tag": "ACC-N",
+      "name": "ACC-N - Industrial access context",
+      "class": "IfcCivilElement",
+      "description": "IFC object ACC-N is the illustrative north industrial access. Traffic assessment inputs are 7,800 AADT, 14% heavy vehicles and 2.0% annual non-compounded growth. The 2047 twenty-year combined traffic horizon is missing. Access geometry is illustrative and has not been designed.",
+      "properties": {
+        "Arrangement": "North T-intersection; no south access",
+        "Station": "0+300",
+        "Geometry": "Illustrative access envelope; levels, throat width and tie-in unresolved",
+        "TIAAADT": 7800,
+        "TIAHeavyVehicles": "14%",
+        "TIAGrowth": "2.0% annual non-compounded",
+        "TIAMissingHorizon": "2047"
+      },
+      "evidence": {
+        "SourceDocument": "nrh_traffic-impact-assessment_rev1_2026-09-15.pdf",
+        "SourcePage": 1,
+        "Status": "Issued for review",
+        "SearchText": "IFC object ACC-N is the illustrative north industrial access. Traffic assessment inputs are 7,800 AADT, 14% heavy vehicles and 2.0% annual non-compounded growth. The 2047 twenty-year combined traffic horizon is missing. Access geometry is illustrative and has not been designed.",
+        "RepresentationLimit": "Concept geometry; verify against cited design documents."
+      }
+    }
+  ]
+}
