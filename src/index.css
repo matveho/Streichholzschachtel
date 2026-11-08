@@ -1176,3 +1176,78 @@ button,
 .workspace > .app-header:has(.new-query) > .workspace-settings:last-child {
   margin-left: 0;
 }
+
+/* Open-query tabs along the bottom of the workspace (double-click to rename). */
+.query-tabs {
+  display: flex;
+  height: 34px;
+  min-height: 34px;
+  flex-shrink: 0;
+  background: var(--surface-muted);
+  border-top: 1px solid var(--line);
+  padding-left: 12px;
+}
+.project-shell > .query-tabs {
+  margin-top: auto;
+}
+.query-tab-list {
+  display: flex;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+.query-tab {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  max-width: 220px;
+  border-right: 1px solid var(--line);
+  border-top: 2px solid transparent;
+  color: var(--color-secondary);
+}
+.query-tab:first-child {
+  border-left: 1px solid var(--line);
+}
+.query-tab.selected {
+  background: var(--surface);
+  border-top-color: var(--color-accent);
+  color: var(--color-text);
+}
+.query-tab-name {
+  height: 100%;
+  padding: 0 4px 0 14px;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  border-radius: 0;
+}
+.query-tab-name:hover,
+.query-tab.selected .query-tab-name:hover {
+  background: transparent;
+}
+.query-tab-rename {
+  margin: 0 4px 0 9px;
+  padding: 2px 5px;
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 13px;
+  border: 1px solid #74bdb4;
+  background: var(--surface);
+  outline: 0;
+  box-shadow: 0 0 0 1px #74bdb422;
+}
+.query-tab-close {
+  width: 20px;
+  height: 20px;
+  margin-right: 6px;
+  color: var(--color-secondary);
+  opacity: 0;
+}
+.query-tab:hover .query-tab-close,
+.query-tab.selected .query-tab-close,
+.query-tab-close:focus-visible {
+  opacity: 1;
+}
