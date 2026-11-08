@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/local-api/:path*",
-      "destination": "https://deck-mall-route-sender.trycloudflare.com/:path*"
+      "destination": "https://domain-student-arch-deemed.trycloudflare.com/:path*"
     }
   ]
 }

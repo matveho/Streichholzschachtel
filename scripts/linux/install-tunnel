@@ -10,7 +10,7 @@ cat > "$HOME/.config/systemd/user/basis-tunnel.service" <<UNIT
 [Unit]
 Description=basis authorized demo HTTPS tunnel
 After=basis-gateway.service
-Requires=basis-gateway.service
+Wants=basis-gateway.service
 [Service]
 ExecStart="$HOME/.local/bin/cloudflared" tunnel --url http://127.0.0.1:8789 --no-autoupdate
 Restart=on-failure
