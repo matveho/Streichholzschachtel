@@ -17,6 +17,13 @@ import { preparedEvidence, projectResult } from './project-evidence.mjs'
 import { answer } from './answer.mjs'
 import { suggestQueries } from './query-suggestions.mjs'
 import { restoreDemoDocuments } from './demo-documents.mjs'
+import { buildIndex } from './indexer.mjs'
+import {
+  stageImport,
+  discardImport,
+  removeProjectImports,
+  finishImport,
+} from './project-imports.mjs'
 
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/
 const preparedId = (project, query) => {
@@ -222,6 +229,22 @@ export class ProjectApi {
       throw problem(500, 'Unsafe project-history path.')
     if (existsSync(folder)) rmSync(folder, { recursive: true, force: true })
   }
+  dropUploads(projectId) {
+    const corpus = this.store.corpus,
+      keep = (doc) =>
+        !(doc.ownerProjectId === projectId && doc.originalFilename)
+    const ids = new Set(corpus.documents.filter(keep).map((d) => d.id))
+    this.store.corpus = {
+      ...corpus,
+      documents: corpus.documents.filter(keep),
+      passages: corpus.passages.filter((p) => ids.has(p.doc)),
+      units: corpus.units.filter((u) => ids.has(u.doc)),
+    }
+    this.store.documents = new Map(
+      this.store.corpus.documents.map((d) => [d.id, d]),
+    )
+    this.scopeCache.clear()
+  }
   async work() {
     if (this.active) return
     const job = this.queue.shift()
@@ -385,6 +408,63 @@ export class ProjectApi {
     if (!match) throw problem(404, 'Project route not found.')
     const [, projectId, route] = match
     const project = this.store.get(projectId)
+    if (route === '/documents/import' && req.method === 'POST') {
+      if (this.importing)
+        throw problem(
+          409,
+          'Another document is being indexed. Try again shortly.',
+        )
+      this.importing = true
+      let file
+      let committed = false
+      try {
+        file = stageImport(projectId, await input())
+        const added = await buildIndex(() => {}, [file])
+        if (
+          added.failures.length ||
+          !added.documents.length ||
+          !added.passages.length
+        )
+          throw problem(
+            422,
+            'No searchable text could be extracted from this PDF.',
+          )
+        const ids = new Set(added.documents.map((d) => d.id)),
+          old = this.store.corpus
+        const corpus = {
+          ...old,
+          documents: [
+            ...old.documents.filter((d) => !ids.has(d.id)),
+            ...added.documents,
+          ],
+          passages: [
+            ...old.passages.filter((p) => !ids.has(p.doc)),
+            ...added.passages,
+          ],
+          units: [...old.units.filter((u) => !ids.has(u.doc)), ...added.units],
+        }
+        const updated = this.store.attach(projectId, added.documents, corpus)
+        committed = true
+        try {
+          finishImport(projectId, file)
+        } catch {
+          /* Startup completes a pending manifest write. */
+        }
+        this.scopeCache.clear()
+        if (project.protectedDemo) this.prepareSeeds(projectId)
+        return json(201, {
+          project: updated,
+          documents: added.documents.map((d) =>
+            this.store.document(projectId, d.id),
+          ),
+        })
+      } catch (error) {
+        if (file && !committed) discardImport(projectId, file)
+        throw error
+      } finally {
+        this.importing = false
+      }
+    }
     if (!route) {
       if (req.method === 'GET')
         return json(200, {
@@ -407,6 +487,8 @@ export class ProjectApi {
           throw problem(403, 'Demonstration projects cannot be deleted.')
         this.eraseHistory(projectId)
         this.store.remove(projectId)
+        removeProjectImports(projectId)
+        this.dropUploads(projectId)
         return json(200, { deleted: true })
       }
     }
@@ -414,6 +496,8 @@ export class ProjectApi {
       if (!project.protectedDemo)
         throw problem(400, 'Only demonstration projects have a reset state.')
       this.eraseHistory(projectId)
+      removeProjectImports(projectId)
+      this.dropUploads(projectId)
       restoreDemoDocuments(undefined, projectId)
       this.store.reset(projectId)
       this.prepareSeeds(projectId)

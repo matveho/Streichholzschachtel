@@ -1,32 +1,27 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import {
   FolderOpen,
   Plus,
   Search,
   ArrowLeft,
   ArrowUpRight,
-  Trash2,
   RotateCcw,
   Star,
   X,
   FileText,
-  ShieldCheck,
   BookOpen,
+  Pencil,
 } from 'lucide-react'
 import LegacyApp, { QueryWorkspace } from './App'
+import { ProjectEditor } from './ProjectEditor'
+import { WorkspaceSettings } from './WorkspaceSettings'
 import { api, ApiError, readSettings } from './backend'
 import { navigate, navigateLink } from './navigation'
 import { AppHeader } from './AppHeader'
 import { DocumentContext } from './DocumentContext'
 import { PdfPane } from './PdfPane'
 import { projectPath, requestProject, projectDocumentMap } from './projects'
-import type {
-  Project,
-  ProjectData,
-  ProjectDocument,
-  Collection,
-  ProjectQuery,
-} from './projects'
+import type { Project, ProjectData, ProjectQuery } from './projects'
 import type { Reference } from './data'
 import './projects.css'
 
@@ -92,11 +87,13 @@ function useResource<T>(path: string, context = '') {
 function Shell({
   children,
   actions,
-  title = 'Projects',
+  title = '',
+  settings,
 }: {
   children: React.ReactNode
   actions?: React.ReactNode
   title?: string
+  settings?: React.ReactNode
 }) {
   return (
     <main className="project-shell">
@@ -106,7 +103,10 @@ function Shell({
           <strong>Basis</strong>
         </a>
         <span className="project-header-title">{title}</span>
-        <div className="project-header-actions">{actions}</div>
+        <div className="project-header-actions">
+          {actions}
+          <WorkspaceSettings>{settings}</WorkspaceSettings>
+        </div>
       </header>
       {children}
     </main>
@@ -128,216 +128,6 @@ function Message({
     >
       <span>{text}</span>
       {onRetry && <button onClick={onRetry}>Retry</button>}
-    </div>
-  )
-}
-function ProjectEditor({
-  project,
-  onClose,
-  onSaved,
-}: {
-  project?: Project
-  onClose: () => void
-  onSaved: (id: string) => void
-}) {
-  const resource = useResource<{
-    collections: Collection[]
-    documents: ProjectDocument[]
-  }>('/v1/reference-collections')
-  const [name, setName] = useState(project?.name || ''),
-    [client, setClient] = useState(project?.client || ''),
-    [location, setLocation] = useState(project?.location || ''),
-    [description, setDescription] = useState(project?.description || '')
-  const [collections, setCollections] = useState(project?.collectionIds || []),
-    [documents, setDocuments] = useState(project?.documentIds || [])
-  const [error, setError] = useState(''),
-    [saving, setSaving] = useState(false)
-  const nameInput = useRef<HTMLInputElement>(null)
-  useEffect(() => {
-    nameInput.current?.focus()
-  }, [])
-  const data = resource.data
-  function toggleCollection(collection: Collection, checked: boolean) {
-    setCollections((ids) =>
-      checked
-        ? [...new Set([...ids, collection.id])]
-        : ids.filter((id) => id !== collection.id),
-    )
-    setDocuments((ids) =>
-      checked
-        ? [...new Set([...ids, ...collection.documentIds])]
-        : ids.filter((id) => !collection.documentIds.includes(id)),
-    )
-  }
-  async function save(e: React.FormEvent) {
-    e.preventDefault()
-    setSaving(true)
-    setError('')
-    try {
-      const response = await requestProject(
-        project ? projectPath(project.id) : '/v1/projects',
-        project ? 'PATCH' : 'POST',
-        {
-          name,
-          client,
-          location,
-          description,
-          collectionIds: collections,
-          documentIds: documents,
-        },
-      )
-      onSaved(response.project.id)
-    } catch (error) {
-      setError(
-        error instanceof Error ? error.message : 'Could not save project.',
-      )
-      setSaving(false)
-    }
-  }
-  return (
-    <div
-      className="project-modal-backdrop"
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') onClose()
-      }}
-    >
-      <section
-        className="project-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="project-editor-title"
-      >
-        <div className="project-modal-heading">
-          <h1 id="project-editor-title">
-            {project ? 'Manage project' : 'New project'}
-          </h1>
-          <button
-            type="button"
-            aria-label="Close project editor"
-            onClick={onClose}
-          >
-            <X size={18} />
-          </button>
-        </div>
-        <form onSubmit={save}>
-          <div className="project-form-fields">
-            <label>
-              Project name
-              <input
-                ref={nameInput}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                maxLength={100}
-              />
-            </label>
-            <label>
-              Client / owner
-              <input
-                value={client}
-                onChange={(e) => setClient(e.target.value)}
-                maxLength={150}
-              />
-            </label>
-            <label>
-              Location
-              <input
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                maxLength={150}
-              />
-            </label>
-            <label>
-              Scope
-              <input
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                maxLength={1000}
-              />
-            </label>
-          </div>
-          <div className="collection-heading">
-            <h2>Reference Collections</h2>
-            <span>{documents.length} documents selected</span>
-          </div>
-          {resource.error ? (
-            <Message text={resource.error} error onRetry={resource.refresh} />
-          ) : !data ? (
-            <Message text="Loading Reference Collections…" />
-          ) : (
-            <div className="collection-picker">
-              {data.collections.map((collection) => (
-                <section className="collection-option" key={collection.id}>
-                  <label className="collection-toggle">
-                    <input
-                      type="checkbox"
-                      checked={collections.includes(collection.id)}
-                      onChange={(e) =>
-                        toggleCollection(collection, e.target.checked)
-                      }
-                    />
-                    <span>
-                      <strong>{collection.title}</strong>
-                      <small>
-                        {collection.authority} · {collection.documentCount}{' '}
-                        documents
-                      </small>
-                    </span>
-                  </label>
-                  <p>{collection.description}</p>
-                  <details>
-                    <summary>
-                      Choose individual documents ·{' '}
-                      {
-                        collection.documentIds.filter((id) =>
-                          documents.includes(id),
-                        ).length
-                      }{' '}
-                      selected
-                    </summary>
-                    {data.documents
-                      .filter((doc) => collection.documentIds.includes(doc.id))
-                      .map((doc) => (
-                        <label className="collection-document" key={doc.id}>
-                          <input
-                            type="checkbox"
-                            disabled={!collections.includes(collection.id)}
-                            checked={documents.includes(doc.id)}
-                            onChange={(e) =>
-                              setDocuments((ids) =>
-                                e.target.checked
-                                  ? [...new Set([...ids, doc.id])]
-                                  : ids.filter((id) => id !== doc.id),
-                              )
-                            }
-                          />
-                          <span>
-                            {doc.title}
-                            <small>
-                              {doc.edition} · {doc.pages} pages
-                            </small>
-                          </span>
-                        </label>
-                      ))}
-                  </details>
-                </section>
-              ))}
-            </div>
-          )}
-          {error && <Message text={error} error />}
-          <footer className="project-modal-footer">
-            <button type="button" onClick={onClose}>
-              Cancel
-            </button>
-            <button
-              className="primary-action"
-              disabled={!name.trim() || saving || !data}
-            >
-              {saving ? 'Saving…' : project ? 'Save project' : 'Create project'}
-            </button>
-          </footer>
-        </form>
-      </section>
     </div>
   )
 }
@@ -364,9 +154,6 @@ function ProjectsOverview() {
         <div className="project-page-heading">
           <div>
             <h1>Projects</h1>
-            <p>
-              Engineering documents, requirements and source-verified research.
-            </p>
           </div>
           <label className="project-filter">
             <Search size={15} />
@@ -393,23 +180,21 @@ function ProjectsOverview() {
               >
                 <div className="project-card-top">
                   <FolderOpen size={21} />
-                  {project.protectedDemo && (
-                    <span className="project-badge">
-                      <ShieldCheck size={12} />
-                      Demonstration
-                    </span>
-                  )}
                 </div>
-                <span className="project-discipline">{project.discipline}</span>
                 <h2>{project.name}</h2>
-                <p className="project-client">
-                  {project.client || 'Client not set'}
-                </p>
-                <p>{project.description || 'Project document workspace'}</p>
+                <p className="project-client">{project.client}</p>
+                {project.description && (
+                  <p
+                    className="project-card-description"
+                    title={project.description}
+                  >
+                    {project.description}
+                  </p>
+                )}
                 <div className="project-card-footer">
                   <span>
                     {project.documentCount} documents · {project.openIssueCount}{' '}
-                    potential issues
+                    issues
                   </span>
                   <ArrowUpRight size={17} />
                 </div>
@@ -423,7 +208,10 @@ function ProjectsOverview() {
       </div>
       {creating && (
         <ProjectEditor
-          onClose={() => setCreating(false)}
+          onClose={() => {
+            setCreating(false)
+            resource.refresh()
+          }}
           onSaved={(id) => navigate('project/' + id)}
         />
       )}
@@ -445,6 +233,8 @@ function ProjectDashboard({
     [editing, setEditing] = useState(false),
     [error, setError] = useState(''),
     [pending, setPending] = useState(false)
+  const [descriptionEditing, setDescriptionEditing] = useState(false),
+    [description, setDescription] = useState(project.description)
   const shown = documents.filter(
     (doc) =>
       (category === 'all' || doc.category === category) &&
@@ -492,7 +282,7 @@ function ProjectDashboard({
   return (
     <Shell
       title={project.name}
-      actions={
+      settings={
         <>
           {!project.protectedDemo && (
             <button disabled={pending} onClick={() => setEditing(true)}>
@@ -504,26 +294,25 @@ function ProjectDashboard({
               disabled={pending}
               onClick={() => {
                 if (
-                  window.confirm(
-                    'Restore this demo’s documents, initial queries and open findings?',
+                  confirm(
+                    'Restore this project’s original documents, query history and findings?',
                   )
                 )
                   void action('/reset', 'POST', {})
               }}
             >
-              <RotateCcw size={14} />
               Reset demo
             </button>
           ) : (
-            <button
-              aria-label="Delete project"
-              title="Delete project"
-              disabled={pending}
-              onClick={remove}
-            >
-              <Trash2 size={15} />
+            <button disabled={pending} onClick={remove}>
+              Delete project
             </button>
           )}
+        </>
+      }
+
+      actions={
+        <>
           <button
             className="primary-action"
             disabled={!documents.length}
@@ -544,18 +333,61 @@ function ProjectDashboard({
             </a>
             <h1>{project.name}</h1>
             <p>
-              {project.client || 'Client not set'} ·{' '}
-              {project.location || 'Location not set'}
-              {project.protectedDemo ? ' · Demonstration project' : ''}
+              {[project.client, project.location].filter(Boolean).join(' · ')}
             </p>
           </div>
-          <span className="project-context-count">
-            {documents.length} documents in search scope
-          </span>
         </div>
-        <p className="project-scope">
-          {project.description || 'Add a project scope through Manage project.'}
-        </p>
+        {descriptionEditing ? (
+          <form
+            className="project-description-editor"
+            onSubmit={async (e) => {
+              e.preventDefault()
+              await action('', 'PATCH', { description })
+              setDescriptionEditing(false)
+            }}
+          >
+            <input
+              autoFocus
+              aria-label="Project description"
+              value={description}
+              maxLength={1000}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+            <button disabled={pending} type="submit">
+              Save
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              title="Generate from documents"
+              aria-label="Generate description from documents"
+              onClick={async () => {
+                await action('', 'PATCH', { description: '' })
+                setDescriptionEditing(false)
+              }}
+            >
+              <RotateCcw size={14} />
+            </button>
+            <button type="button" onClick={() => setDescriptionEditing(false)}>
+              Cancel
+            </button>
+          </form>
+        ) : (
+          <div className="project-description-line">
+            <p className="project-scope">{project.description}</p>
+            <button
+              type="button"
+              aria-label="Edit description"
+              title="Edit description"
+              onClick={() => {
+                setDescription(project.description)
+                setDescriptionEditing(true)
+              }}
+            >
+              <Pencil size={13} />
+            </button>
+          </div>
+        )}
         {error && <Message text={error} error />}
         <div className="project-dashboard-grid">
           <section
@@ -633,9 +465,6 @@ function ProjectDashboard({
                           <strong>{doc.title}</strong>
                           <small>
                             {doc.label} · {doc.edition}
-                            {doc.projectArtifact
-                              ? ' · Synthetic demonstration document'
-                              : ''}
                           </small>
                         </span>
                         <span className="document-pages">{doc.pages} pp.</span>
@@ -660,8 +489,9 @@ function ProjectDashboard({
           <aside className="project-sidebar">
             <section className="project-panel" aria-label="Potential issues">
               <div className="project-panel-heading">
-                <h2>Potential issues</h2>
-                <span className="project-badge">Prepared findings</span>
+                <h2 title="Source-verified example findings requiring engineering review">
+                  Potential issues
+                </h2>
               </div>
               <div className="project-panel-tabs">
                 <button
@@ -751,12 +581,8 @@ function ProjectDashboard({
                   <a href={route('/query/' + query.id)} onClick={navigateLink}>
                     <span>{query.question}</span>
                     <small>
-                      {query.prepared
-                        ? 'Prepared comparison'
-                        : query.state === 'completed'
-                          ? 'Completed'
-                          : query.state}{' '}
-                      · {date(query.createdAt)}
+                      {query.state !== 'completed' ? query.state + ' · ' : ''}
+                      {date(query.createdAt)}
                       {query.stale ? ' · Documents changed' : ''}
                     </small>
                   </a>
@@ -787,6 +613,7 @@ function ProjectDashboard({
       {editing && (
         <ProjectEditor
           project={project}
+          existingDocuments={documents}
           onClose={() => setEditing(false)}
           onSaved={() => {
             setEditing(false)

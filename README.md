@@ -22,7 +22,7 @@ The deployed frontend is https://streichholzschachtel.vercel.app. Its `/local-ap
 - Backend-enforced project scope through retrieval, expansions, model context, citations, caches and history. Empty selections stay empty.
 - Ordinary project deletion preserves shared reference PDFs. Startup restores missing demo projects and disposable demo PDF copies.
 
-Prepared comparisons are labeled, grounded in actual standards and clearly distinguished from live queries. Synthetic client/design/calculation PDFs are labeled demonstration documents and not for construction. Findings require engineering review. General uploads and general automatic discrepancy detection are deferred. This shared-device prototype does not provide production multi-tenant authentication.
+Prepared comparisons are labeled, grounded in actual standards and clearly distinguished from live queries. Synthetic client/design/calculation PDFs are labeled demonstration documents and not for construction. Findings require engineering review. PDF files and folders can be imported and indexed locally (12 MB per PDF). General automatic discrepancy detection remains deferred. This shared-device prototype does not provide production multi-tenant authentication.
 
 ## Development and integration
 

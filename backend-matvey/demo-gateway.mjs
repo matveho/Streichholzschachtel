@@ -30,7 +30,7 @@ http
         res.end(
           JSON.stringify({
             service: 'basis-gateway',
-            version: 5,
+            version: 6,
             targetPort: Number(targetUrl.port),
           }),
         )
@@ -77,7 +77,7 @@ http
       }
       const allowed =
         (['GET', 'POST', 'PATCH', 'DELETE'].includes(req.method) &&
-          /^\/v1\/projects(?:\/[a-zA-Z0-9-]+(?:\/(?:reset|queries(?:\/[a-f0-9-]{36})?|issues\/[a-z0-9-]+|documents\/doc-[a-f0-9]+\/file))?)?$/.test(
+          /^\/v1\/projects(?:\/[a-zA-Z0-9-]+(?:\/(?:reset|queries(?:\/[a-f0-9-]{36})?|issues\/[a-z0-9-]+|documents\/(?:import|doc-[a-f0-9]+\/file)))?)?$/.test(
             url.pathname,
           )) ||
         (req.method === 'GET' &&
@@ -111,7 +111,11 @@ http
           ? { body: req, duplex: 'half' }
           : {}),
         signal: AbortSignal.timeout(
-          url.pathname.endsWith('/file') ? 120000 : 30000,
+          url.pathname.endsWith('/documents/import')
+            ? 300000
+            : url.pathname.endsWith('/file')
+              ? 120000
+              : 30000,
         ),
       })
       res.statusCode = upstream.status

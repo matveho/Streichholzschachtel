@@ -404,7 +404,7 @@ export function QueryWorkspace({
         >
           <div className="result-header">
             <h1>Query result</h1>
-            {settings.mode !== 'static' && (
+            {settings.mode !== 'static' && !entry.projectId && (
               <span className="live-mode">
                 {entry.projectId
                   ? 'Project sources'
@@ -549,7 +549,10 @@ export function QueryWorkspace({
               </>
             )}
             {live.data?.notes?.length ? (
-              <p className="result-notes">{live.data.notes.join(' ')}</p>
+              <details className="result-notes">
+                <summary>Source notes</summary>
+                <p>{live.data.notes.join(' ')}</p>
+              </details>
             ) : null}
           </div>
         </section>

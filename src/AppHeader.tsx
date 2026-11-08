@@ -1,5 +1,6 @@
 import { House, Plus } from 'lucide-react'
 import { navigateLink } from './navigation'
+import { WorkspaceSettings } from './WorkspaceSettings'
 
 export function AppHeader({
   onNew,
@@ -41,6 +42,7 @@ export function AppHeader({
         <Plus size={14} />
         New query
       </button>
+      <WorkspaceSettings />
     </header>
   )
 }

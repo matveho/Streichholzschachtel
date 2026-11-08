@@ -41,6 +41,8 @@ const engineVersion = createHash('sha256')
       'local-evidence.mjs',
       'query-suggestions.mjs',
       'project-api.mjs',
+      'project-imports.mjs',
+      'project-description.mjs',
       'project-store.mjs',
       'project-evidence.mjs',
       'reference-collections.mjs',
@@ -207,7 +209,14 @@ async function body(req) {
   for await (const chunk of req) {
     chunks.push(chunk)
     size += chunk.length
-    if (size > 40000) {
+    if (
+      size >
+      (new URL(req.url, 'http://localhost').pathname.endsWith(
+        '/documents/import',
+      )
+        ? 17 * 1024 * 1024
+        : 40000)
+    ) {
       const e = new Error('Request is too large')
       e.status = 413
       throw e
@@ -301,6 +310,14 @@ export const server = http.createServer(async (req, res) => {
         service: 'basis-backend-matvey',
         version: 1,
         ...indexing,
+        ...(indexing.ready && projectApi
+          ? {
+              completed: projectApi.store.corpus.documents.length,
+              total:
+                projectApi.store.corpus.documents.length +
+                (corpus?.failures.length || 0),
+            }
+          : {}),
         stage: sameToken(supplied)
           ? indexing.stage
           : indexing.ready
@@ -309,7 +326,10 @@ export const server = http.createServer(async (req, res) => {
         documents: searchIndex?.corpus.documents.length || 0,
         passages: searchIndex?.corpus.passages.length || 0,
         projectDocuments:
-          corpus?.documents.filter((d) => d.projectArtifact).length || 0,
+          (projectApi?.store.corpus || corpus)?.documents.filter(
+            (d) => d.projectArtifact,
+          ).length || 0,
+        importing: !!projectApi?.importing,
         failures: corpus?.failures.length || 0,
         model:
           config.provider === 'extractive'
@@ -324,7 +344,9 @@ export const server = http.createServer(async (req, res) => {
         units: corpus?.units?.length || 0,
         provider: config.provider,
         activeQueries: Number(!!activeJob) + Number(!!projectApi?.active),
-        queuedQueries: queue.filter((j) => j.state === 'queued').length + (projectApi?.queue.length || 0),
+        queuedQueries:
+          queue.filter((j) => j.state === 'queued').length +
+          (projectApi?.queue.length || 0),
       })
     if (!sameToken(supplied))
       return json(401, { error: 'Connection key is missing or incorrect.' })

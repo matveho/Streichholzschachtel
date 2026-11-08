@@ -10,6 +10,8 @@ import { randomUUID, createHash } from 'node:crypto'
 import { demoProjects } from '../demo/manifest.mjs'
 import { referenceCollections } from './reference-collections.mjs'
 import { SearchIndex } from './search.mjs'
+import { describeProject } from './project-description.mjs'
+import { finishImport } from './project-imports.mjs'
 
 export function problem(status, message) {
   return Object.assign(new Error(message), { status })
@@ -34,6 +36,16 @@ export class ProjectStore {
     this.collections = referenceCollections(corpus)
     this.documents = new Map(corpus.documents.map((d) => [d.id, d]))
     this.restoreSeeds()
+    const pending = corpus.documents.filter(
+      (d) => d.importPending && d.ownerProjectId,
+    )
+    for (const doc of pending) {
+      const project = this.list().find((p) => p.id === doc.ownerProjectId)
+      if (!project) continue
+      if (!project.documentIds.includes(doc.id))
+        this.attach(project.id, [doc], corpus)
+      finishImport(project.id, doc.filePath)
+    }
   }
   read() {
     if (!existsSync(this.file)) return { version: 1, projects: [] }
@@ -95,6 +107,7 @@ export class ProjectStore {
       name: spec.name,
       client: spec.client,
       description: spec.description,
+      descriptionMode: 'manual',
       location: spec.location,
       discipline: spec.discipline,
       protectedDemo: true,
@@ -145,6 +158,16 @@ export class ProjectStore {
         collectionIds,
         issueStates: previous.issueStates || {},
         savedQueryIds: previous.savedQueryIds || [],
+        description:
+          previous.descriptionMode === 'auto'
+            ? describeProject(
+                documentIds.map((id) => this.documents.get(id)),
+                this.collections.filter((c) => collectionIds.includes(c.id)),
+              )
+            : previous.descriptionMode === 'manual'
+              ? previous.description
+              : canonical.description,
+        descriptionMode: previous.descriptionMode || 'manual',
         revision: previous.revision || 1,
         createdAt: previous.createdAt || canonical.createdAt,
         updatedAt: previous.updatedAt || canonical.updatedAt,
@@ -185,10 +208,17 @@ export class ProjectStore {
       location: String(input.location || '')
         .trim()
         .slice(0, 150),
-      description: String(input.description || '')
+      description: String(
+        input.description ||
+          describeProject(
+            documentIds.map((id) => this.documents.get(id)),
+            this.collections.filter((c) => collectionIds.includes(c.id)),
+          ),
+      )
         .trim()
         .slice(0, 1000),
       discipline: 'Engineering research',
+      descriptionMode: input.description?.trim() ? 'manual' : 'auto',
       protectedDemo: false,
       collectionIds: [...new Set(collectionIds)],
       documentIds,
@@ -234,7 +264,7 @@ export class ProjectStore {
     }
     for (const field of ['name', 'client', 'description', 'location'])
       if (input[field] !== undefined) {
-        if (project.protectedDemo)
+        if (project.protectedDemo && field !== 'description')
           throw problem(403, 'Demonstration metadata is protected.')
         if (
           typeof input[field] !== 'string' ||
@@ -242,8 +272,15 @@ export class ProjectStore {
         )
           throw problem(400, 'Invalid project metadata.')
         next[field] = input[field].trim()
+        if (field === 'description')
+          next.descriptionMode = next.description ? 'manual' : 'auto'
       }
     if (!next.name) throw problem(400, 'Project name is required.')
+    if (next.descriptionMode === 'auto')
+      next.description = describeProject(
+        documentIds.map((id) => this.documents.get(id)),
+        this.collections.filter((c) => collections.includes(c.id)),
+      )
     const data = this.read()
     data.projects = data.projects.map((p) => (p.id === id ? next : p))
     this.write(data)
@@ -256,6 +293,28 @@ export class ProjectStore {
     const data = this.read()
     data.projects = data.projects.filter((p) => p.id !== id)
     this.write(data)
+  }
+  attach(id, records, corpus) {
+    if (records.some((d) => d.ownerProjectId !== id))
+      throw problem(400, 'Imported documents must belong to this project.')
+    const data = this.read(),
+      project = data.projects.find((p) => p.id === id)
+    if (!project) throw problem(404, 'Project not found.')
+    project.documentIds = [
+      ...new Set([...project.documentIds, ...records.map((d) => d.id)]),
+    ]
+    project.revision++
+    if (project.descriptionMode === 'auto')
+      project.description = describeProject(
+        project.documentIds.map((id) =>
+          corpus.documents.find((d) => d.id === id),
+        ),
+        this.collections.filter((c) => project.collectionIds.includes(c.id)),
+      )
+    this.write(data)
+    this.corpus = corpus
+    this.documents = new Map(corpus.documents.map((d) => [d.id, d]))
+    return project
   }
   reset(id) {
     const spec = demoProjects.find((p) => p.id === id)
@@ -321,7 +380,7 @@ export class ProjectStore {
       .update(
         JSON.stringify([
           project.id,
-          project.revision,
+          [...project.documentIds].sort(),
           corpus.documents.map((d) => [d.id, d.version]).sort(),
         ]),
       )
@@ -345,7 +404,7 @@ export class ProjectStore {
     const { filePath, ...record } = doc
     return {
       ...record,
-      filename: basename(filePath),
+      filename: doc.originalFilename || basename(filePath),
       category: doc.projectArtifact ? doc.category : 'reference',
       file: `/v1/projects/${id}/documents/${docId}/file`,
     }

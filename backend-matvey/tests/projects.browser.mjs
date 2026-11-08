@@ -12,6 +12,7 @@ try {
   page.on('pageerror', (e) => errors.push(e.message))
   page.on('dialog', (d) => d.accept())
   await page.goto(origin + '/#projects')
+  await page.locator('.project-card').nth(1).waitFor()
   await page.evaluate(async () => {
     for (const id of ['demo-mill-creek', 'demo-willow-creek']) {
       const response = await fetch('/local-api/v1/projects/' + id + '/reset', {
@@ -105,6 +106,7 @@ try {
     .getByRole('button', { name: 'Saved', exact: true })
     .click()
   await expect(page.locator('.project-query-row')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
   await page.getByRole('button', { name: 'Reset demo', exact: true }).click()
   await page.getByRole('button', { name: 'Open 2', exact: true }).waitFor()
   await page.screenshot({ path: 'test-results/project-dashboard.png' })
@@ -138,17 +140,18 @@ try {
   await page
     .getByRole('textbox', { name: 'Project name', exact: true })
     .fill('QA browser project')
+  await page.getByText('Project details', { exact: true }).click()
   await page
     .getByRole('textbox', { name: 'Client / owner', exact: true })
     .fill('Test owner')
-  const collection = page
-    .locator('.collection-option')
+  await page
+    .getByRole('combobox', { name: 'Reference Collections' })
+    .fill('water infrastructure')
+  await page
+    .getByRole('option')
     .filter({ hasText: 'Water Infrastructure' })
-  await collection.getByRole('checkbox').first().check()
-  await collection
-    .getByText('Choose individual documents', { exact: false })
     .click()
-  await collection.locator('.collection-document input').first().uncheck()
+  await page.locator('.selected-documents input').first().uncheck()
   await page
     .getByRole('button', { name: 'Create project', exact: true })
     .click()
@@ -157,22 +160,21 @@ try {
     .waitFor()
   createdId = page.url().split('#project/')[1]
   assert.equal(await page.locator('.project-document-row').count(), 2)
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
   await page
     .getByRole('button', { name: 'Manage project', exact: true })
     .click()
-  const water = page
-    .locator('.collection-option')
-    .filter({ hasText: 'Water Infrastructure' })
-  await water.getByText('Choose individual documents', { exact: false }).click()
-  for (const input of await water.locator('.collection-document input').all())
+  await expect(page.locator('.selected-documents input')).toHaveCount(3)
+  for (const input of await page.locator('.selected-documents input').all())
     if (await input.isChecked()) await input.uncheck()
   await page.getByRole('button', { name: 'Save project', exact: true }).click()
-  await page.getByText('0 documents in search scope', { exact: true }).waitFor()
+  await expect(page.locator('.project-document-row')).toHaveCount(0)
   assert.ok(
     await page
       .getByRole('button', { name: 'New query', exact: true })
       .isDisabled(),
   )
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
   await page
     .getByRole('button', { name: 'Delete project', exact: true })
     .click()

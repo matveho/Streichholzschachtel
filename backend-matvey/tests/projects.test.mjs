@@ -178,6 +178,44 @@ test('ordinary project creation, individual document selection, updates and dele
   assert.throws(() => store.get(project.id), { status: 404 })
   assert.ok(corpus.documents.some((d) => d.id === collection.documentIds[0]))
 })
+
+test('descriptions generate from documents, remain editable and do not invalidate document-scoped answers', (t) => {
+  const { store, folder } = fresh(t)
+  const project = store.create({
+    name: 'Bridge review',
+    collectionIds: ['alberta-bridges'],
+  })
+  assert.equal(project.descriptionMode, 'auto')
+  assert.match(project.description, /bridge/i)
+  const version = store.scope(project.id).version
+  store.update(project.id, { description: 'Custom bridge scope' })
+  assert.equal(store.scope(project.id).version, version)
+  assert.equal(
+    new ProjectStore(corpus, folder).get(project.id).description,
+    'Custom bridge scope',
+  )
+  store.update(project.id, { collectionIds: ['edmonton-water'] })
+  assert.equal(store.get(project.id).description, 'Custom bridge scope')
+  store.update(project.id, { description: '' })
+  assert.match(store.get(project.id).description, /water infrastructure/i)
+  const seededVersion = store.scope('demo-mill-creek').version
+  store.update('demo-mill-creek', { description: 'Adjusted concept scope' })
+  assert.equal(store.scope('demo-mill-creek').version, seededVersion)
+  assert.equal(
+    new ProjectStore(corpus, folder).get('demo-mill-creek').description,
+    'Adjusted concept scope',
+  )
+  store.reset('demo-mill-creek')
+  assert.equal(
+    store.get('demo-mill-creek').description,
+    demoProjects[0].description,
+  )
+  assert.throws(
+    () =>
+      store.update('demo-mill-creek', { name: 'Changed protected identity' }),
+    { status: 403 },
+  )
+})
 test('Reference Collections contain actual relevant references and exclude private project artifacts', (t) => {
   const { store } = fresh(t)
   const drainage = store.collections.find((c) => c.id === 'edmonton-drainage'),

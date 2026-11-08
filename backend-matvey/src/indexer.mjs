@@ -14,7 +14,11 @@ import { root, stateDir, knownFiles, config } from './config.mjs'
 import { catalogEntry, annotateVersions } from './catalog.mjs'
 import { buildPageUnits } from './units.mjs'
 import { demoProjects } from '../demo/manifest.mjs'
-import { restoreDemoDocuments, demoDocumentDirectory } from './demo-documents.mjs'
+import { importedDocuments } from './project-imports.mjs'
+import {
+  restoreDemoDocuments,
+  demoDocumentDirectory,
+} from './demo-documents.mjs'
 
 const run = promisify(execFile)
 export function readPdfCache(file) {
@@ -323,19 +327,24 @@ async function tableLayout(file, hash) {
   return layout
 }
 
-export async function buildIndex(progress = () => {}) {
+export async function buildIndex(progress = () => {}, onlyFiles) {
   restoreDemoDocuments()
   mkdirSync(config.pdfCacheDir, { recursive: true })
   const files = new Map()
-  for (const dir of [
-    resolve(root, '../public/documents'),
-    resolve(root, 'documents'),
-    demoDocumentDirectory,
-  ]) {
+  for (const dir of onlyFiles
+    ? []
+    : [
+        resolve(root, '../public/documents'),
+        resolve(root, 'documents'),
+        demoDocumentDirectory,
+      ]) {
     if (existsSync(dir))
       for (const name of readdirSync(dir).filter((n) => /\.pdf$/i.test(n)))
         files.set(resolve(dir, name), name)
   }
+  const imported = importedDocuments()
+  for (const [file, meta] of imported)
+    if (!onlyFiles || onlyFiles.includes(file)) files.set(file, meta.name)
   const documents = [],
     passages = [],
     units = [],
@@ -349,7 +358,12 @@ export async function buildIndex(progress = () => {}) {
       // Warm caches must still yield so health checks and controls stay responsive.
       await new Promise((done) => setImmediate(done))
       const hash = createHash('sha256').update(readFileSync(file)).digest('hex')
-      const duplicate = documents.find((d) => d.version === hash)
+      const upload = imported.get(file)
+      const duplicate = documents.find(
+        (d) =>
+          d.version === hash &&
+          (d.ownerProjectId || '') === (upload?.ownerProjectId || ''),
+      )
       if (duplicate) {
         duplicate.filenames = [
           ...new Set([...(duplicate.filenames || []), name]),
@@ -377,7 +391,9 @@ export async function buildIndex(progress = () => {}) {
         ...(catalogEntry(hash) || {}),
       }
       const owner = demoProjects.find((p) =>
-        p.documents.some((d) => resolve(demoDocumentDirectory, d.file) === file),
+        p.documents.some(
+          (d) => resolve(demoDocumentDirectory, d.file) === file,
+        ),
       )
       if (owner) {
         const artifact = owner.documents.find(
@@ -393,7 +409,42 @@ export async function buildIndex(progress = () => {}) {
           source: '',
         })
       }
-      const id = `doc-${hash.slice(0, 12)}`
+      if (upload)
+        Object.assign(metadata, {
+          title: basename(upload.name, '.pdf').replace(/[_-]+/g, ' '),
+          label: basename(upload.name, '.pdf'),
+          edition: 'Project document',
+          projectArtifact: true,
+          ownerProjectId: upload.ownerProjectId,
+          category: upload.category,
+          source: '',
+          originalFilename: upload.name,
+          importPending: upload.pending,
+          descriptionSubject: (() => {
+            const text = extracted.pages
+              .slice(0, 2)
+              .flatMap((p) => p.words.map((w) => w[4]))
+              .join(' ')
+              .slice(0, 5000)
+            return /\bbridge\b/i.test(text)
+              ? 'Bridge'
+              : /\bdrainage\b|\bstormwater\b/i.test(text)
+                ? 'Drainage'
+                : /\bhighway\b|\broadway\b/i.test(text)
+                  ? 'Transportation'
+                  : /\bwater\b/i.test(text)
+                    ? 'Water'
+                    : ''
+          })(),
+        })
+      const id = `doc-${
+        upload
+          ? createHash('sha256')
+              .update(upload.ownerProjectId + hash)
+              .digest('hex')
+              .slice(0, 12)
+          : hash.slice(0, 12)
+      }`
       const record = {
         id,
         ...metadata,

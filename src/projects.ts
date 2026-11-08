@@ -6,6 +6,7 @@ export type Project = {
   client: string
   location: string
   description: string
+  descriptionMode?: 'auto' | 'manual'
   discipline: string
   protectedDemo: boolean
   documentIds: string[]

@@ -13,7 +13,7 @@ if (existsSync(resolve(root, '.env'))) {
       process.env[match[1]] = match[2].replace(/^['"]|['"]$/g, '')
   }
 }
-export const stateDir = resolve(root, 'state')
+export const stateDir = resolve(process.env.BASIS_STATE_DIR || resolve(root, 'state'))
 mkdirSync(stateDir, { recursive: true })
 const tokenFile = resolve(stateDir, 'session-token.txt')
 if (!existsSync(tokenFile))
