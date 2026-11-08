@@ -1,9 +1,15 @@
-import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
+import {
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  mkdirSync,
+} from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve, basename } from 'node:path'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { root, stateDir, knownFiles } from './config.mjs'
+import { root, stateDir, knownFiles, config } from './config.mjs'
 import { catalogEntry, annotateVersions } from './catalog.mjs'
 import { buildPageUnits } from './units.mjs'
 
@@ -285,7 +291,11 @@ async function tableLayout(file, hash) {
     .update(readFileSync(resolve(root, 'native-table-layout.py')))
     .digest('hex')
     .slice(0, 10)
-  const cache = resolve(stateDir, `${hash}-layout-${version}.json`)
+  const name = `${hash}-layout-${version}.json`
+  const legacyCache = resolve(stateDir, name)
+  const cache = existsSync(legacyCache)
+    ? legacyCache
+    : resolve(config.pdfCacheDir, name)
   if (existsSync(cache)) return JSON.parse(readFileSync(cache, 'utf8'))
   const { stdout } = await run(
     python,
@@ -298,6 +308,7 @@ async function tableLayout(file, hash) {
 }
 
 export async function buildIndex(progress = () => {}) {
+  mkdirSync(config.pdfCacheDir, { recursive: true })
   const files = new Map()
   for (const dir of [
     resolve(root, '../public/documents'),
@@ -319,7 +330,11 @@ export async function buildIndex(progress = () => {}) {
       progress(`Reading ${name}`, documents.length, files.size)
       const hash = createHash('sha256').update(readFileSync(file)).digest('hex')
       if (documents.some((d) => d.version === hash)) continue
-      const cache = resolve(stateDir, `${hash}-${cacheVersion}.json`)
+      const name = `${hash}-${cacheVersion}.json`
+      const legacyCache = resolve(stateDir, name)
+      const cache = existsSync(legacyCache)
+        ? legacyCache
+        : resolve(config.pdfCacheDir, name)
       const extracted = existsSync(cache)
         ? JSON.parse(readFileSync(cache, 'utf8'))
         : await extract(file)

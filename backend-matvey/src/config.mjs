@@ -21,6 +21,7 @@ if (!existsSync(tokenFile))
     mode: 0o600,
   })
 export const config = {
+  pdfCacheDir: resolve(process.env.PDF_CACHE_DIR || stateDir),
   port: Number(process.env.PORT || 8787),
   token: process.env.BASIS_TOKEN || readFileSync(tokenFile, 'utf8').trim(),
   ollamaUrl: process.env.OLLAMA_URL || 'http://127.0.0.1:11435',

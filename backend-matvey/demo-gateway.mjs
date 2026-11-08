@@ -6,7 +6,14 @@ const key = readFileSync(
   new URL('./state/session-token.txt', import.meta.url),
   'utf8',
 ).trim()
-const target = 'http://127.0.0.1:8787'
+const target = process.env.BASIS_GATEWAY_TARGET || 'http://127.0.0.1:8787'
+const targetUrl = new URL(target)
+if (
+  targetUrl.protocol !== 'http:' ||
+  !['127.0.0.1', 'localhost', '[::1]'].includes(targetUrl.hostname)
+)
+  throw new Error('The demo gateway must target a loopback HTTP API.')
+const port = Number(process.env.BASIS_GATEWAY_PORT || 8789)
 http
   .createServer(async (req, res) => {
     try {
@@ -65,6 +72,6 @@ http
       )
     }
   })
-  .listen(8789, '127.0.0.1', () =>
-    console.log('Public demo gateway ready on port 8789'),
+  .listen(port, '127.0.0.1', () =>
+    console.log(`Public demo gateway ready on port ${port}`),
   )

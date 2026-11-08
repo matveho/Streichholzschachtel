@@ -11,6 +11,7 @@ import { seriesInQuestion, foreignJurisdiction } from './catalog.mjs'
 
 // Domain vocabulary that differs between how people ask and how standards write.
 const rewrites = [
+  [/\bthermal movement\b/gi, ' thermal expansion contraction '],
   [/\bI\s*&\s*I\b/gi, ' inflow infiltration '],
   [/\bmanholes?\b/gi, ' maintenance hole '],
   [/\bper capita\b/gi, ' per capita person '],

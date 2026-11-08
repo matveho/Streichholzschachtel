@@ -22,6 +22,14 @@ The extractor retains page dimensions, text and original page coordinates. Each 
 
 ## Answering behavior
 
+The `conversation-layer` branch is merged. It adds table/provision units, engineering-term aliases and a publication catalog keyed by PDF hashes. The newest known edition is preferred within the indexed collection; this is not a claim that an edition is legally current outside that collection. Local Ollama remains the default; finding an Anthropic credential never changes providers automatically.
+
+When a completed query has no supported answer, the API may return up to three `suggestions`. Each question is checked with the offline lookup before being offered. The frontend shows the proposed query, source label/page and a source preview. Selecting one creates a separate history entry and submits `sourceOnly: true`; it returns original cited source text without calling a model. These are visibly broader source queries, not approvals of the original project or silent changes to its figures. Unrelated queries and unsupported jurisdictions do not receive misleading alternatives.
+
+For local frontend development, run this API plus `node demo-gateway.mjs`, then `npm run dev` from the repository root. Vite proxies `/local-api` to the gateway on 8789. For an isolated test, set `BASIS_GATEWAY_TARGET=http://127.0.0.1:8790` and `BASIS_GATEWAY_PORT=8791` for the gateway, and `BASIS_DEV_BACKEND_URL=http://127.0.0.1:8791` for Vite. The frontend never needs the private API key. `PDF_CACHE_DIR` can place new extraction caches on E: while retaining compatibility with existing caches in `state/`.
+
+Feature checks: `node --test tests/query-suggestions.test.mjs`, `node --test tests/query-suggestions.integration.mjs` (API on 8790), and `node tests/query-suggestions.browser.mjs` (frontend on 5178 with the proxy above).
+
 **Default engine (offline, no model).** Each page is split into evidence units — table rows (cells sharing a row, with the table title and column headings as context) and sentences — each with its exact PDF regions. A question is routed:
 
 - _Edition questions_ ("which edition is in effect", "when was X last updated") → the catalog's current edition, cited to the cover and the Terms of Use "effective as of" sentence, with older editions listed as superseded.

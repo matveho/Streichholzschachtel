@@ -62,6 +62,11 @@ function QueryWorkspace({
       : (live.data?.references ?? [])
   const sourceIds =
     settings.mode === 'static' ? queryCase.documentIds : Object.keys(documents)
+  const noAnswer =
+    settings.mode !== 'static' &&
+    !!live.data &&
+    ['no_evidence', 'insufficient_evidence'].includes(live.data.mode) &&
+    sourceIds.length === 0
   const datasetKey =
     settings.mode === 'static' ? entry.caseId : (live.data?.id ?? 'pending')
 
@@ -208,7 +213,7 @@ function QueryWorkspace({
   return (
     <DocumentContext.Provider value={documents}>
       <main
-        className={`workspace ${expanded ? 'report-expanded' : ''}`}
+        className={`workspace ${expanded || noAnswer ? 'report-expanded' : ''}`}
         style={
           { '--result-height': `${resultHeight}px` } as React.CSSProperties
         }
@@ -381,7 +386,21 @@ function QueryWorkspace({
                 {settings.mode === 'matvey'
                   ? 'Matvey’s backend'
                   : 'Backend (main)'}
-                {live.data ? ' · ' + live.data.mode.replaceAll('_', ' ') : ''}
+                {live.data
+                  ? ' · ' +
+                    ([
+                      'extractive_answer',
+                      'source_lookup',
+                      'version_answer',
+                      'source_evidence',
+                    ].includes(live.data.mode)
+                      ? 'Source text'
+                      : ['no_evidence', 'insufficient_evidence'].includes(
+                            live.data.mode,
+                          )
+                        ? 'No supported answer'
+                        : 'Cited findings')
+                  : ''}
               </span>
             )}
             <div className="result-actions">
@@ -406,15 +425,17 @@ function QueryWorkspace({
                   {copied ? 'Copied' : 'Copy'}
                 </button>
               )}
-              <button
-                onClick={() => setExpanded((v) => !v)}
-                aria-label={
-                  expanded ? 'Restore result panel' : 'Expand result panel'
-                }
-                title={expanded ? 'Restore panel' : 'Expand panel'}
-              >
-                {expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-              </button>
+              {!noAnswer && (
+                <button
+                  onClick={() => setExpanded((v) => !v)}
+                  aria-label={
+                    expanded ? 'Restore result panel' : 'Expand result panel'
+                  }
+                  title={expanded ? 'Restore panel' : 'Expand panel'}
+                >
+                  {expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                </button>
+              )}
             </div>
           </div>
           <div
