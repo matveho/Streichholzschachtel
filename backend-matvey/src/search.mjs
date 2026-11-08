@@ -19,7 +19,7 @@ function stem(word) {
     .replace(/s$/, '')
     .replace(/e$/, '')
 }
-export function tokens(text) {
+export function tokens(text, stopwords = stop) {
   return (
     normalize(text)
       .toLowerCase()
@@ -27,12 +27,37 @@ export function tokens(text) {
       .replace(/\bm[³3]\b/g, 'cubicmetres')
       .replace(/\bm[²2]\b/g, 'squaremetres')
       .match(/[\p{L}][\p{L}\d-]{1,}|\d+(?:\.\d+)?/gu)
-      ?.filter((t) => !stop.has(t))
+      ?.filter((t) => !stopwords.has(t))
       .map((t) =>
         t.length > 4 ? stem(t) : t.length === 4 ? t.replace(/e$/, '') : t,
       ) ?? []
   )
 }
+// Lookup keeps words such as "review", "design" and "requirements" because a
+// precise provision often turns on them; inverse document frequency weighs them.
+export const lookupStopwords = new Set(
+  [...stop]
+    .filter(
+      (w) =>
+        !/^(review|design|use|using|requirements?|apply|applies|applicable|needed|need|standards?|guidelines?|guide|documents?|project|proposed)$/.test(
+          w,
+        ),
+    )
+    .concat([
+      'will',
+      'want',
+      'know',
+      'like',
+      'get',
+      'go',
+      'my',
+      'me',
+      'any',
+      'all',
+      'there',
+      'here',
+    ]),
+)
 const concepts = [
   ['cover', 'burial', 'depth', 'frost', 'freezing', 'insulation'],
   ['compaction', 'compacted', 'traffic', 'vehicles', 'infiltration'],
@@ -60,16 +85,26 @@ export function rankProvisions(units, question) {
       for (const word of group)
         for (const t of tokens(word)) if (!terms.has(t)) terms.set(t, 0.35)
   const bodies = units.map((u) => new Set(tokens(u.excerpt)))
+  const headings = units.map((u) => new Set(tokens(u.heading || '')))
   const frequencies = new Map()
-  for (const words of bodies)
-    for (const word of words)
+  for (let i = 0; i < bodies.length; i++)
+    for (const word of new Set([...bodies[i], ...headings[i]]))
       frequencies.set(word, (frequencies.get(word) || 0) + 1)
   return units
     .map((unit, i) => {
       let score = 0
       for (const [term, weight] of terms)
-        if (bodies[i].has(term))
-          score += weight * Math.log(1 + units.length / frequencies.get(term))
+        if (bodies[i].has(term) || headings[i].has(term))
+          score +=
+            (bodies[i].has(term) ? 1 : 0.35) *
+            weight *
+            Math.log(1 + units.length / frequencies.get(term))
+      if (
+        /\b(?:shall|must|not (?:be )?(?:allowed|permitted|approved))\b/i.test(
+          unit.excerpt,
+        )
+      )
+        score += 0.8
       return { unit, score, i }
     })
     .sort((a, b) => b.score - a.score || a.i - b.i)
@@ -79,6 +114,7 @@ export function rankProvisions(units, question) {
 export class SearchIndex {
   constructor(corpus) {
     this.corpus = corpus
+    this.status = new Map(corpus.documents.map((d) => [d.id, d.status]))
     this.entries = corpus.passages.map((p) => {
       const list = tokens(p.text)
       const counts = new Map()
@@ -103,6 +139,8 @@ export class SearchIndex {
       .map((s) => s.trim())
       .filter((s) => s.length > 25 && tokens(s).length >= 3)
       .slice(0, 6)
+    if (/\bprivate\s+storm[ -]servic/i.test(question))
+      parts.push('private storm sewer systems')
     if (parts.length < 2) return this.withReferencedSections(baseline)
     const groups = parts.map((part) =>
       this.searchSingle(part, selectedIds).slice(0, 3),
@@ -154,6 +192,68 @@ export class SearchIndex {
       if (chosen.length >= 14) break
     }
     return chosen
+  }
+  withAdjacentPassages(passages) {
+    const chosen = [...passages]
+    let characters = chosen.reduce((n, p) => n + p.text.length, 0)
+    for (const source of passages) {
+      const position = this.corpus.passages.findIndex((p) => p.id === source.id)
+      if (position < 0) continue
+      for (const neighbor of [
+        this.corpus.passages[position - 1],
+        this.corpus.passages[position + 1],
+      ]) {
+        if (
+          !neighbor ||
+          neighbor.doc !== source.doc ||
+          neighbor.page !== source.page ||
+          chosen.some((p) => p.id === neighbor.id)
+        )
+          continue
+        if (characters + neighbor.text.length > 18000) continue
+        chosen.push(neighbor)
+        characters += neighbor.text.length
+      }
+    }
+    return chosen
+  }
+  withPageContext(passages) {
+    const contexts = [],
+      seenPages = new Set()
+    let characters = 0
+    for (const source of passages) {
+      const key = source.doc + ':' + source.page
+      if (seenPages.has(key)) continue
+      seenPages.add(key)
+      const seenLines = new Set(),
+        lines = []
+      for (const passage of this.corpus.passages.filter(
+        (p) => p.doc === source.doc && p.page === source.page,
+      )) {
+        for (const line of passage.lines) {
+          const lineKey = JSON.stringify([line.rect, line.text])
+          if (!seenLines.has(lineKey)) {
+            seenLines.add(lineKey)
+            lines.push(line)
+          }
+        }
+      }
+      const text = lines.map((line) => line.text).join(' ')
+      const context =
+        text.length <= 18000
+          ? {
+              ...source,
+              id: `${source.doc}-p${source.page}-context`,
+              lines,
+              text,
+              section: lines[0]?.section || source.section,
+            }
+          : source
+      if (characters + context.text.length > 24000) continue
+      contexts.push(context)
+      characters += context.text.length
+    }
+    return contexts
   }
   searchSingle(question, selectedIds) {
     const original = [...new Set(tokens(question))]
@@ -210,12 +310,21 @@ export class SearchIndex {
           salient.filter((t) => e.counts.has(t)).length /
           Math.max(1, salient.length)
         score *= 0.65 + coverage
+        if (
+          e.passage.overview &&
+          !/\b(?:preface|introduction|purpose|audience|overview)\b/i.test(
+            question,
+          )
+        )
+          score *= 0.2
         // Prefer actual question phrases over pages that merely repeat common
         // terms or happen to contain the project's numerical assumptions.
         const phraseTerms = original.filter((t) => !/^\d/.test(t))
         const body = tokens(e.passage.text).join(' ')
         for (let i = 0; i < phraseTerms.length - 1; i++)
           if (body.includes(phraseTerms.slice(i, i + 2).join(' '))) score += 3
+        // Older editions repeat current text; prefer the edition in force.
+        if (this.status?.get(e.passage.doc) === 'superseded') score *= 0.5
         // Low-quality glyph maps are withheld rather than silently rewritten.
         if (
           [...e.passage.text].filter((c) => {

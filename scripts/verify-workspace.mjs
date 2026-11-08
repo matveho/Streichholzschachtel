@@ -227,13 +227,35 @@ try {
       .getByRole('button', { name: 'Search', exact: true })
       .isDisabled(),
   )
+  await page.route('**/local-api/v1/queries', async (route) => {
+    await route.fulfill({
+      json: {
+        id: crypto.randomUUID(),
+        state: 'completed',
+        result: {
+          mode: 'no_evidence',
+          documents: [],
+          references: [],
+          notes: [],
+          suggestions: [],
+          report: [
+            {
+              heading: 'No supported answer',
+              sentences: [{ text: 'No applicable source text was found.' }],
+            },
+          ],
+        },
+      },
+    })
+  })
   await page.locator('#query').fill('Another question')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await page
-    .getByText('Search processing is not connected.', { exact: false })
+    .getByRole('heading', { name: 'No supported answer', exact: true })
     .waitFor()
   assert.equal(await page.locator('.source-highlight').count(), 0)
-  await page.getByRole('button', { name: 'Load example' }).click()
+  await page.goto('http://127.0.0.1:5173/#query/storm')
+  await page.getByRole('article', { name: 'Query report' }).waitFor()
   await page.setViewportSize({ width: 390, height: 844 })
   await page.screenshot({ path: 'test-results/mobile.png' })
   assert.ok(

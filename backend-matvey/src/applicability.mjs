@@ -1,5 +1,53 @@
 import { normalizeMeasurements } from './indexer.mjs'
 
+// A duty conditional on a component's existence does not require that component.
+export function requiresOptionalComponent(claim, quotes, question = '') {
+  const text = quotes.join(' ')
+  for (const match of text.matchAll(
+    /\bif\s+(?:an?\s+|the\s+)?([a-z]+(?:[ -][a-z]+){0,3})\s+is\s+(?:present|used|installed|provided)\b/gi,
+  )) {
+    const component = match[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const existence = new RegExp(
+      `\\b(?:includes?|contains?|incorporates?|must have|shall have|requires?)\\s+(?:an?\\s+|the\\s+)?${component}\\b`,
+      'i',
+    )
+    if (!existence.test(claim)) continue
+    const explicit = new RegExp(
+      `\\b(?:has|includes?|contains?|with)\\s+(?:an?\\s+|the\\s+)?${component}\\b`,
+      'i',
+    )
+    const conditional = new RegExp(
+      `\\b(?:if|when|where)\\s+(?:an?\\s+|the\\s+)?${component}\\b|\\b${component}\\b[^.!?;]{0,30}\\bif (?:present|used|installed|provided)\\b`,
+      'i',
+    )
+    if (explicit.test(question) || conditional.test(claim)) continue
+    const otherSentences = [
+      ...new Intl.Segmenter('en', { granularity: 'sentence' }).segment(text),
+    ]
+      .map((s) => s.segment)
+      .filter((s) => !/\bif\b/i.test(s))
+    if (otherSentences.some((s) => existence.test(s))) continue
+    return true
+  }
+  return false
+}
+
+function lidTypes(text) {
+  return new Set(
+    [
+      ['box-planter', /\bbox[ -]planters?\b/i],
+      ['basin', /\bbioretention basins?\b/i],
+      ['garden', /\bbioretention gardens?\b/i],
+      ['bioswale', /\bbioswales?\b/i],
+      ['soil-cell', /\bsoil[ -]cells?\b/i],
+      ['permeable-pavement', /\bpermeable pavement\b/i],
+      ['naturalized-drainageway', /\bnaturalized drainageways?\b/i],
+    ]
+      .filter(([, pattern]) => pattern.test(text || ''))
+      .map(([type]) => type),
+  )
+}
+
 const units = '(mm|cm|km|ha|m2|m3|m|%)(?![\\p{L}\\d])'
 const number = '(\\d+(?:\\.\\d+)?)'
 function quantities(text) {
@@ -35,6 +83,8 @@ export function falseComparisons(text) {
     ].filter((q) => dimensions[q[2]]?.[0] === rightDimension[0])
     if (!earlier.length) continue
     const left = earlier.at(-1)
+    const bridge = before.slice(left.index + left[0].length)
+    if (/[,;.!?]|\b(?:with|that|which|and|or)\b/i.test(bridge)) continue
     const a = Number(left[1]) * dimensions[left[2]][1],
       b = Number(m[2]) * rightDimension[1]
     const less = /less|smaller|shallower|below/i.test(m[1])
@@ -49,6 +99,47 @@ export function falseComparisons(text) {
 }
 
 export function applicableEvidence(question, evidence) {
+  const requestedLidTypes = lidTypes(question)
+  const constructionOnly =
+    /\bconstruct(?:ion|ing|ed)?\b|\binstall(?:ation|ing)?\b|\bbefore excavation\b/i.test(
+      question,
+    ) && !/\bmaintenance\b|\bwarranty\b|\bfinal acceptance\b/i.test(question)
+  const storm =
+    /\bstorm(?:water)?(?:\s+and\s+sanitary)?\s+(?:sewers?|mains?|services?|drainage)\b|\bdetention ponds?\b/i
+  const sanitary = /\bsanitary\b/i
+  const requestedStorm = storm.test(question),
+    requestedSanitary = sanitary.test(question)
+  const storage = /\bstorage\b|\b(?:detention|retention)\s+ponds?\b/i
+  const conveyance = /\b(?:sewers?|conveyance)\b|\bminor\s+drainage\b/i
+  const countWords = [
+    'zero',
+    'one',
+    'two',
+    'three',
+    'four',
+    'five',
+    'six',
+    'seven',
+    'eight',
+    'nine',
+    'ten',
+    'eleven',
+    'twelve',
+  ]
+  const residentialOnly =
+    /\b(?:infill|residential|housing|lot)\b/i.test(question) &&
+    !/\b(?:commercial|industrial|institutional|mixed.use)\b/i.test(question)
+  const counts = residentialOnly
+    ? [
+        ...question.matchAll(
+          /\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)[ -](?:units?|plex)\b/gi,
+        ),
+      ].map((m) =>
+        /^\d/.test(m[1])
+          ? Number(m[1])
+          : countWords.indexOf(m[1].toLowerCase()),
+      )
+    : []
   const values = new Map()
   for (const m of quantities(question).matchAll(
     new RegExp(number + '\\s*' + units, 'giu'),
@@ -104,7 +195,10 @@ export function applicableEvidence(question, evidence) {
     },
     {
       re: new RegExp(
-        number + '\\s*' + units + '\\s+or\\s+(?:less|smaller|shallower)',
+        number +
+          '\\s*' +
+          units +
+          '\\s+(?:or|and)\\s+(?:less|smaller|shallower)',
         'giu',
       ),
       test: (v, t) => v <= t,
@@ -118,9 +212,73 @@ export function applicableEvidence(question, evidence) {
     },
   ]
   for (const unit of evidence) {
+    if (
+      constructionOnly &&
+      /\bmaintenance\b/i.test(
+        [...(unit.scope || []), unit.heading || ''].join(' '),
+      )
+    ) {
+      excluded.push(unit)
+      continue
+    }
+    // An unnamed component inherits its nearest actual section's asset type.
+    // Explicitly mixed provisions and general LID requirements remain eligible.
+    let sourceLidTypes = lidTypes(unit.excerpt)
+    if (!sourceLidTypes.size) sourceLidTypes = lidTypes(unit.heading)
+    if (!sourceLidTypes.size) {
+      for (const ancestor of [...(unit.scope || [])].reverse()) {
+        sourceLidTypes = lidTypes(ancestor)
+        if (sourceLidTypes.size) break
+      }
+    }
+    if (
+      requestedLidTypes.size &&
+      sourceLidTypes.size &&
+      ![...sourceLidTypes].some((type) => requestedLidTypes.has(type))
+    ) {
+      excluded.push(unit)
+      continue
+    }
+    // These are sibling systems, not interchangeable engineering synonyms.
+    // Retain mixed/universal provisions and ambiguous questions for review.
+    const sourceStorm = storm.test(unit.excerpt),
+      sourceSanitary = sanitary.test(unit.excerpt)
+    if (
+      requestedStorm &&
+      conveyance.test(question) &&
+      !storage.test(question) &&
+      storage.test(unit.excerpt) &&
+      !conveyance.test(unit.excerpt)
+    ) {
+      excluded.push(unit)
+      continue
+    }
+    if (
+      (requestedStorm &&
+        !requestedSanitary &&
+        sourceSanitary &&
+        !sourceStorm) ||
+      (requestedSanitary && !requestedStorm && sourceStorm && !sourceSanitary)
+    ) {
+      excluded.push(unit)
+      continue
+    }
     const text = quantities(unit.excerpt)
     const checks = [],
       evaluatedConditions = []
+    const dwellingFloor = unit.excerpt.match(
+      /\b(\d+)[ -]plex\s+and\s+(?:larger|greater)\b/i,
+    )
+    if (dwellingFloor && new Set(counts).size === 1) {
+      const matches = counts[0] >= Number(dwellingFloor[1])
+      checks.push(matches)
+      evaluatedConditions.push({
+        suppliedValue: counts[0],
+        unit: 'dwellings',
+        sourceCondition: dwellingFloor[0],
+        matches,
+      })
+    }
     for (const { re, test } of patterns) {
       for (const m of text.matchAll(re)) {
         // Compare applicability qualifiers, not required minima or measured offsets.

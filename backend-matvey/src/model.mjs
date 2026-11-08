@@ -1,4 +1,41 @@
 import { config } from './config.mjs'
+import { readFileSync } from 'node:fs'
+
+function localConnection() {
+  const url = new URL(config.llamaUrl)
+  if (!['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname))
+    throw new Error('The local model runtime must use a loopback address')
+  const key = config.llamaKeyFile
+    ? readFileSync(config.llamaKeyFile, 'utf8').trim()
+    : ''
+  return {
+    url,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(key ? { Authorization: 'Bearer ' + key } : {}),
+    },
+  }
+}
+
+export async function waitForLocalModelSleep(signal) {
+  if (config.provider !== 'llamacpp' || !config.releaseForVerifier) return
+  const { url, headers } = localConnection()
+  const deadline = Date.now() + 20000
+  while (Date.now() < deadline) {
+    const response = await fetch(new URL('/props', url), {
+      headers,
+      signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
+    })
+    if (!response.ok)
+      throw new Error('Cannot confirm the local runtime memory state')
+    if ((await response.json()).is_sleeping === true) return
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    signal.throwIfAborted()
+  }
+  throw new Error(
+    'The local runtime did not release memory for the independent verifier',
+  )
+}
 
 export async function generate(
   system,
@@ -30,6 +67,54 @@ export async function generate(
     { role: 'system', content: system },
     { role: 'user', content: JSON.stringify(input) },
   ]
+  if (config.provider === 'llamacpp') {
+    const { url, headers } = localConnection()
+    const response = await fetch(new URL('/v1/chat/completions', url), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: config.llamaModel,
+        messages,
+        stream: false,
+        response_format: {
+          type: 'json_schema',
+          json_schema: { name: 'basis_response', strict: true, schema: format },
+        },
+        max_tokens: limit,
+        temperature: options.temperature ?? 0,
+        top_p: options.top_p ?? 0.8,
+        top_k: options.top_k ?? 20,
+        min_p: 0,
+        seed: options.seed ?? 42,
+        chat_template_kwargs: { enable_thinking: false },
+      }),
+      signal: AbortSignal.any([signal, AbortSignal.timeout(180000)]),
+    })
+    if (!response.ok) throw new Error(`Local model returned ${response.status}`)
+    const data = await response.json(),
+      choice = data.choices?.[0]
+    if (process.env.BASIS_DEBUG_RETRIEVAL === '1')
+      console.log(
+        'Local model context',
+        JSON.stringify({
+          provider: 'llamacpp',
+          inputCharacters: JSON.stringify(messages).length,
+          promptTokens: data.usage?.prompt_tokens,
+          outputTokens: data.usage?.completion_tokens,
+          limit,
+          doneReason: choice?.finish_reason,
+        }),
+      )
+    if (
+      !choice ||
+      choice.finish_reason !== 'stop' ||
+      typeof choice.message?.content !== 'string'
+    )
+      throw new Error(
+        'The local model did not complete a reliable structured response',
+      )
+    return JSON.parse(choice.message.content)
+  }
   const raw = /^qwen3-vl/i.test(config.model)
   // This installed Qwen model's chat template always starts a thinking block.
   // Complete that block explicitly to produce the constrained answer directly.
@@ -62,5 +147,20 @@ export async function generate(
   if (!response.ok) throw new Error(`Local model returned ${response.status}`)
   const data = await response.json()
   if (data.error) throw new Error(data.error)
+  if (process.env.BASIS_DEBUG_RETRIEVAL === '1')
+    console.log(
+      'Local model context',
+      JSON.stringify({
+        inputCharacters: JSON.stringify(messages).length,
+        promptTokens: data.prompt_eval_count,
+        outputTokens: data.eval_count,
+        limit,
+        doneReason: data.done_reason,
+      }),
+    )
+  if (data.done_reason === 'length')
+    throw new Error(
+      'Local model output reached its token limit before completing reliably',
+    )
   return JSON.parse(raw ? data.response : data.message.content)
 }

@@ -7,18 +7,29 @@ export const engineeringScenarios = [
       /5[- ]year|1:5/i,
       /Rational/i,
       /Manning/i,
-      /0\.013/,
+      /Smooth.Wall Pipe\s+0\.013/i,
       /300\s*mm/,
       /250\s*mm/,
-      /0\.6/,
+      /(?:below|less than|minimum)[^.]{0,60}0\.6\s*m\/s/i,
     ],
     minSources: 2,
+    findingTerms: [/5[- ]year|1:5/i, /Rational/i],
+    forbidden: [/minor storm sewers?[^.]{0,150}critical storage/i],
   },
   {
     id: 'infill-servicing',
     question:
       'For a four-unit corner-lot infill, can a box planter replace conventional storm servicing, and what design and construction checks are needed?',
-    terms: [/private.*storm|storm.*private/i, /combined/i, /compact/i, /week/i],
+    terms: [
+      /private.*storm|storm.*private/i,
+      /combined/i,
+      /compact/i,
+      /weekly documented ESC inspections/i,
+    ],
+    findingTerms: [
+      /private.*storm|storm.*private/i,
+      /(?:(?:confirm|resolve|clarif|EPCOR|remain|still|separat)[^.]{0,150}(?:servic|obligation|requirement)|(?:servic|obligation)[^.]{0,150}(?:confirm|resolve|clarif|EPCOR|remain|still|separat))/i,
+    ],
     minSources: 3,
   },
   {
@@ -32,6 +43,10 @@ export const engineeringScenarios = [
       /confirm|resolve|notify|EPCOR/i,
     ],
     minSources: 2,
+    findingTerms: [
+      /1\.7\s*m|0\.3\s*m|300\s*mm/,
+      /insulat|confirm|resolve|EPCOR|approv/i,
+    ],
   },
   {
     id: 'expanded-capacity',
@@ -45,6 +60,7 @@ export const engineeringScenarios = [
       /100[- ]year|100 years/i,
     ],
     minSources: 2,
+    findingTerms: [/1\.5(?:0)?/, /0\.6(?:0)?/, /computer|model|simulat/i],
   },
   {
     id: 'damaged-lid',
@@ -60,6 +76,11 @@ export const engineeringScenarios = [
       /sediment/i,
     ],
     minSources: 3,
+    findingTerms: [
+      /QA\/QC|quality assurance/i,
+      /halfway|half.?depth/i,
+      /compact|scarif|sediment/i,
+    ],
     forbidden: [/(?:growing media|LID soil).{0,50}(?:minimum of )?95%/i],
   },
   {

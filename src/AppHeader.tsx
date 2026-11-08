@@ -1,12 +1,17 @@
 import { House, Plus } from 'lucide-react'
 import { navigateLink } from './navigation'
+import { WorkspaceSettings } from './WorkspaceSettings'
 
 export function AppHeader({
   onNew,
   home = false,
+  homeHref = '#home',
+  context,
 }: {
   onNew: () => void
   home?: boolean
+  homeHref?: string
+  context?: string
 }) {
   return (
     <header className="app-header">
@@ -20,18 +25,26 @@ export function AppHeader({
       <strong>Basis</strong>
       <a
         className={`home-link ${home ? 'active' : ''}`}
-        href="#home"
+        href={homeHref}
         onClick={navigateLink}
-        aria-label="Home"
+        aria-label={
+          homeHref.startsWith('#project/') ? 'Project dashboard' : 'Home'
+        }
         aria-current={home ? 'page' : undefined}
-        title="Query history"
+        title={
+          homeHref.startsWith('#project/') ? 'Project dashboard' : 'Projects'
+        }
       >
         <House size={15} />
       </a>
+      {context && <span className="workspace-context">{context}</span>}
       <button className="new-query" onClick={onNew}>
         <Plus size={14} />
         New query
       </button>
+      <WorkspaceSettings
+        projectId={homeHref.match(/^#project\/([a-zA-Z0-9-]+)/)?.[1]}
+      />
     </header>
   )
 }

@@ -15,39 +15,55 @@ import {
 import { documents as staticDocuments, referenceSets, queryCases } from './data'
 import { DocumentContext } from './DocumentContext'
 import { readSettings, useLiveQuery } from './backend'
-import type { BackendSettings } from './backend'
+import type { BackendSettings, DocumentRecord } from './backend'
 import { navigate } from './navigation'
 import type { DocId } from './data'
 import { PdfPane } from './PdfPane'
 import { QueryReport } from './QueryReport'
+import { QuerySuggestions } from './QuerySuggestions'
 import { QueryHome } from './QueryHome'
 import { AppHeader } from './AppHeader'
 import { readHistory, saveHistory } from './history'
 import type { HistoryEntry } from './history'
 
-function QueryWorkspace({
+export function QueryWorkspace({
   entry,
   onRun,
   settings,
   onNew,
+  projectName,
+  projectDocuments,
 }: {
   entry: HistoryEntry
   settings: BackendSettings
-  onRun: (prompt: string, caseId: string) => void
+  onRun: (prompt: string, caseId: string, sourceOnly?: boolean) => void
   onNew: () => void
+  projectName?: string
+  projectDocuments?: Record<string, DocumentRecord>
 }) {
   const queryCase = queryCases.find((c) => c.id === entry.caseId)!
   const exampleQuery = queryCase.prompt
   settings =
-    entry.id === entry.caseId && entry.prompt === exampleQuery
+    !entry.projectId &&
+    entry.id === entry.caseId &&
+    entry.prompt === exampleQuery
       ? { ...settings, mode: 'static' }
       : settings
   const [query, setQuery] = useState(entry.prompt)
   const [submitted, setSubmitted] = useState(entry.prompt)
   const [retry, setRetry] = useState(0)
-  const live = useLiveQuery(settings, submitted, retry)
+  const live = useLiveQuery(
+    settings,
+    submitted,
+    retry,
+    entry.sourceOnly === true,
+    entry.projectId,
+    entry.queryId,
+  )
   const documents =
-    settings.mode === 'static' ? staticDocuments : (live.data?.documents ?? {})
+    settings.mode === 'static'
+      ? staticDocuments
+      : (live.data?.documents ?? projectDocuments ?? {})
   const report =
     settings.mode === 'static' ? queryCase.report : (live.data?.report ?? [])
   const references =
@@ -56,6 +72,11 @@ function QueryWorkspace({
       : (live.data?.references ?? [])
   const sourceIds =
     settings.mode === 'static' ? queryCase.documentIds : Object.keys(documents)
+  const noAnswer =
+    settings.mode !== 'static' &&
+    !!live.data &&
+    ['no_evidence', 'insufficient_evidence'].includes(live.data.mode) &&
+    sourceIds.length === 0
   const datasetKey =
     settings.mode === 'static' ? entry.caseId : (live.data?.id ?? 'pending')
 
@@ -87,8 +108,9 @@ function QueryWorkspace({
   const ids = hover ?? pinned
   const active = references.filter((r) => ids.includes(r.id))
   const isPrepared = (text: string) =>
+    !entry.projectId &&
     text.toLowerCase().replace(/\s+/g, ' ') ===
-    exampleQuery.toLowerCase().replace(/\s+/g, ' ')
+      exampleQuery.toLowerCase().replace(/\s+/g, ' ')
   const supported =
     settings.mode === 'static' ? isPrepared(submitted) : !!live.data
   useEffect(() => () => clearTimeout(timer.current), [])
@@ -143,6 +165,10 @@ function QueryWorkspace({
   }
   function search() {
     if (!query.trim() || busy) return
+    if (entry.projectId) {
+      onRun(query.trim(), entry.caseId, false)
+      return
+    }
     setBusy(true)
     timer.current = setTimeout(() => {
       if (query.trim() === entry.prompt) {
@@ -202,12 +228,16 @@ function QueryWorkspace({
   return (
     <DocumentContext.Provider value={documents}>
       <main
-        className={`workspace ${expanded ? 'report-expanded' : ''}`}
+        className={`workspace ${expanded || noAnswer ? 'report-expanded' : ''}`}
         style={
           { '--result-height': `${resultHeight}px` } as React.CSSProperties
         }
       >
-        <AppHeader onNew={newQuery} />
+        <AppHeader
+          onNew={newQuery}
+          homeHref={entry.projectId ? '#project/' + entry.projectId : '#home'}
+          context={projectName}
+        />
         <form
           className="query-bar"
           onSubmit={(e) => {
@@ -225,7 +255,11 @@ function QueryWorkspace({
               id="query"
               rows={2}
               value={query}
-              placeholder="Enter a query…"
+              placeholder={
+                entry.projectId
+                  ? "Search this project's documents…"
+                  : 'Enter a query…'
+              }
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -370,12 +404,30 @@ function QueryWorkspace({
         >
           <div className="result-header">
             <h1>Query result</h1>
-            {settings.mode !== 'static' && (
+            {settings.mode !== 'static' && !entry.projectId && (
               <span className="live-mode">
-                {settings.mode === 'matvey'
-                  ? 'Matvey’s backend'
-                  : 'Backend (main)'}
-                {live.data ? ' · ' + live.data.mode.replaceAll('_', ' ') : ''}
+                {entry.projectId
+                  ? 'Project sources'
+                  : settings.mode === 'matvey'
+                    ? 'Matvey’s backend'
+                    : 'Backend (main)'}
+                {live.data
+                  ? ' · ' +
+                    ([
+                      'extractive_answer',
+                      'source_lookup',
+                      'version_answer',
+                      'source_evidence',
+                    ].includes(live.data.mode)
+                      ? 'Source text'
+                      : ['no_evidence', 'insufficient_evidence'].includes(
+                            live.data.mode,
+                          )
+                        ? 'No supported answer'
+                        : live.data.mode === 'related_evidence'
+                          ? 'Related source text'
+                          : 'Cited findings')
+                  : ''}
               </span>
             )}
             <div className="result-actions">
@@ -400,15 +452,17 @@ function QueryWorkspace({
                   {copied ? 'Copied' : 'Copy'}
                 </button>
               )}
-              <button
-                onClick={() => setExpanded((v) => !v)}
-                aria-label={
-                  expanded ? 'Restore result panel' : 'Expand result panel'
-                }
-                title={expanded ? 'Restore panel' : 'Expand panel'}
-              >
-                {expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-              </button>
+              {!noAnswer && (
+                <button
+                  onClick={() => setExpanded((v) => !v)}
+                  aria-label={
+                    expanded ? 'Restore result panel' : 'Expand result panel'
+                  }
+                  title={expanded ? 'Restore panel' : 'Expand panel'}
+                >
+                  {expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                </button>
+              )}
             </div>
           </div>
           <div
@@ -420,23 +474,37 @@ function QueryWorkspace({
                 <span>{live.error || live.phase}</span>
                 {live.busy && <button onClick={live.cancel}>Cancel</button>}
                 {live.error && (
-                  <button onClick={() => setRetry((r) => r + 1)}>Retry</button>
+                  <button
+                    onClick={() =>
+                      entry.projectId
+                        ? onRun(submitted, entry.caseId, entry.sourceOnly)
+                        : setRetry((r) => r + 1)
+                    }
+                  >
+                    Retry
+                  </button>
                 )}
               </div>
             ) : !submitted ? (
               <div className="empty-result">
                 <Search size={20} />
-                <span>Enter a query to inspect the local documents.</span>
-                <button
-                  onClick={() => {
-                    setQuery(exampleQuery)
-                    setSubmitted(exampleQuery)
-                    setPinned(queryCase.initialReferences)
-                  }}
-                >
-                  Load example
-                  <ArrowUpRight size={14} />
-                </button>
+                <span>
+                  {entry.projectId
+                    ? 'Enter a query to inspect the project documents.'
+                    : 'Enter a query to inspect the local documents.'}
+                </span>
+                {!entry.projectId && (
+                  <button
+                    onClick={() => {
+                      setQuery(exampleQuery)
+                      setSubmitted(exampleQuery)
+                      setPinned(queryCase.initialReferences)
+                    }}
+                  >
+                    Load example
+                    <ArrowUpRight size={14} />
+                  </button>
+                )}
               </div>
             ) : !supported ? (
               <div className="empty-result">
@@ -457,16 +525,34 @@ function QueryWorkspace({
                 </button>
               </div>
             ) : (
-              <QueryReport
-                blocks={report}
-                sourceReferences={references}
-                selected={ids}
-                onPreview={(refs) => (refs ? reveal(refs) : setHover(null))}
-                onSelect={(refs) => reveal(refs, true)}
-              />
+              <>
+                <QueryReport
+                  blocks={report}
+                  sourceReferences={references}
+                  selected={ids}
+                  onPreview={(refs) => (refs ? reveal(refs) : setHover(null))}
+                  onSelect={(refs) => reveal(refs, true)}
+                />
+                {live.data &&
+                  [
+                    'no_evidence',
+                    'insufficient_evidence',
+                    'related_evidence',
+                  ].includes(live.data.mode) && (
+                    <QuerySuggestions
+                      suggestions={live.data.suggestions ?? []}
+                      onSelect={(suggestion) =>
+                        onRun(suggestion.question, entry.caseId, true)
+                      }
+                    />
+                  )}
+              </>
             )}
             {live.data?.notes?.length ? (
-              <p className="result-notes">{live.data.notes.join(' ')}</p>
+              <details className="result-notes">
+                <summary>Source notes</summary>
+                <p>{live.data.notes.join(' ')}</p>
+              </details>
             ) : null}
           </div>
         </section>
@@ -499,15 +585,19 @@ export default function App() {
     setDraftCase(caseId)
     navigate('new')
   }
-  function runQuery(prompt: string, caseId: string) {
+  function runQuery(prompt: string, caseId: string, sourceOnly = false) {
     const previous = history.find(
-      (entry) => entry.id !== entry.caseId && entry.prompt === prompt,
+      (entry) =>
+        entry.id !== entry.caseId &&
+        entry.prompt === prompt &&
+        (entry.sourceOnly === true) === sourceOnly,
     )
     const entry: HistoryEntry = {
       id: previous?.id ?? crypto.randomUUID(),
       title: prompt,
       prompt,
       caseId,
+      sourceOnly,
     }
     setHistory((prev) => {
       const next = [entry, ...prev.filter((item) => item.id !== entry.id)]

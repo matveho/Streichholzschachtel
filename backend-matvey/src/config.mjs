@@ -13,7 +13,7 @@ if (existsSync(resolve(root, '.env'))) {
       process.env[match[1]] = match[2].replace(/^['"]|['"]$/g, '')
   }
 }
-export const stateDir = resolve(root, 'state')
+export const stateDir = resolve(process.env.BASIS_STATE_DIR || resolve(root, 'state'))
 mkdirSync(stateDir, { recursive: true })
 const tokenFile = resolve(stateDir, 'session-token.txt')
 if (!existsSync(tokenFile))
@@ -21,14 +21,24 @@ if (!existsSync(tokenFile))
     mode: 0o600,
   })
 export const config = {
+  pdfCacheDir: resolve(process.env.PDF_CACHE_DIR || stateDir),
   port: Number(process.env.PORT || 8787),
   token: process.env.BASIS_TOKEN || readFileSync(tokenFile, 'utf8').trim(),
   ollamaUrl: process.env.OLLAMA_URL || 'http://127.0.0.1:11435',
   model: process.env.OLLAMA_MODEL || 'qwen3:4b-instruct-2507-q4_K_M',
   provider: process.env.GENERATION_PROVIDER || 'ollama',
+  llamaUrl: process.env.LOCAL_MODEL_URL || 'http://127.0.0.1:11436',
+  llamaModel: process.env.LOCAL_MODEL_NAME || 'basis-qwen35',
+  llamaKeyFile: process.env.LOCAL_MODEL_KEY_FILE || '',
+  llamaManifest: process.env.LOCAL_MODEL_MANIFEST || '',
+  releaseForVerifier: process.env.LOCAL_MODEL_RELEASE_FOR_VERIFIER === '1',
   gatewayModel: process.env.AI_GATEWAY_MODEL || 'google/gemini-4-argon',
+  anthropicModel: process.env.ANTHROPIC_MODEL || 'claude-opus-5-5',
+  anthropicEffort: process.env.ANTHROPIC_EFFORT || 'medium',
   extractiveOnly: process.env.EXTRACTIVE_ONLY === '1',
   localSynthesis: process.env.LOCAL_SYNTHESIS === '1',
+  entailmentDir: process.env.ENTAILMENT_MODEL_DIR || '',
+  entailmentPython: process.env.ENTAILMENT_PYTHON || '',
   frontendUrl:
     process.env.FRONTEND_URL || 'https://streichholzschachtel.vercel.app',
   extraOrigins: (process.env.ALLOWED_ORIGINS || '')
@@ -36,8 +46,13 @@ export const config = {
     .map((s) => s.trim())
     .filter(Boolean),
 }
-if (!['ollama', 'gateway'].includes(config.provider))
-  throw new Error('GENERATION_PROVIDER must be ollama or gateway.')
+if (
+  !['extractive', 'anthropic', 'ollama', 'llamacpp', 'gateway'].includes(
+    config.provider,
+  )
+)
+  throw new Error('Unknown GENERATION_PROVIDER.')
+if (config.extractiveOnly) config.provider = 'extractive'
 
 export const knownFiles = {
   'design-guidelines.pdf': {

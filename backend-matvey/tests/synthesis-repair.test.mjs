@@ -1,0 +1,79 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {
+  scopedRepair,
+  mergeApprovedSynthesis,
+} from '../src/synthesis-repair.mjs'
+
+test('repair instructions stay with their own check and preserve unrelated cached findings', () => {
+  const cached = [
+    { check: 'construction', text: 'Inspect ESC weekly.', evidence: ['A'] },
+  ]
+  const issues = [
+    {
+      check: 'servicing',
+      claim: 'A service is not required.',
+      reason: 'The source requires it.',
+    },
+  ]
+  assert.deepEqual(scopedRepair(cached, issues, 'construction'), {
+    issues: [],
+    retained: cached,
+  })
+  const failed = scopedRepair(
+    cached,
+    [
+      {
+        check: 'construction',
+        claim: 'Inspect ESC weekly.',
+        reason: 'Wrong scope.',
+      },
+    ],
+    'construction',
+  )
+  assert.equal(failed.retained.length, 0)
+})
+
+test('a repair preserves previously approved conclusions when other findings fail another audit', () => {
+  const approved = {
+    check: 'construction',
+    text: 'Inspect ESC weekly.',
+    evidence: [{ excerpt: 'Original weekly inspection rule.' }],
+  }
+  const corrected = {
+    check: 'servicing',
+    text: 'Confirm the separate service obligation.',
+    evidence: [{ excerpt: 'Original service requirement.' }],
+  }
+  const previous = {
+    sections: [{ heading: '', claims: [approved] }],
+    issues: [],
+    rejected: 0,
+  }
+  const repaired = {
+    sections: [{ heading: '', claims: [corrected] }],
+    issues: [{ claim: approved.text, reason: 'Later inconsistent verdict.' }],
+    rejected: 1,
+  }
+  const merged = mergeApprovedSynthesis(previous, repaired)
+  assert.deepEqual(merged.sections[0].claims, [approved, corrected])
+  assert.equal(merged.sections[0].claims[0].evidence, approved.evidence)
+  assert.deepEqual(merged.issues, [])
+  assert.deepEqual(previous.sections[0].claims, [approved])
+})
+
+test('merging repair results cannot duplicate findings or exceed the per-check budget', () => {
+  const a = { check: 'a', text: 'First fact.', evidence: [] },
+    b = { check: 'a', text: 'Second fact.', evidence: [] }
+  const merged = mergeApprovedSynthesis(
+    { sections: [{ claims: [a, b] }], issues: [] },
+    {
+      sections: [
+        { claims: [a, { check: 'a', text: 'Third fact.', evidence: [] }] },
+      ],
+      issues: [],
+      rejected: 0,
+    },
+  )
+  assert.deepEqual(merged.sections[0].claims, [a, b])
+})

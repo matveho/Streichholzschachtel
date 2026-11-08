@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
-const base = 'http://127.0.0.1:8787',
+const base = process.env.BASIS_TEST_URL || 'http://127.0.0.1:8787',
   token = readFileSync(
     new URL('../state/session-token.txt', import.meta.url),
     'utf8',
@@ -41,7 +41,11 @@ test('PDF bytes and range requests retain original file contents', async () => {
   const { documents } = await (
     await fetch(base + '/v1/documents', { headers })
   ).json()
-  assert.equal(documents.length, 5)
+  const health = await (await fetch(base + '/health')).json()
+  assert.equal(health.ready, true)
+  assert.equal(health.failures, 0)
+  assert.ok(documents.length > 0)
+  assert.equal(documents.length, health.documents)
   assert.equal(
     documents.some((d) => 'filePath' in d),
     false,

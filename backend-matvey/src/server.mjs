@@ -15,8 +15,21 @@ import { config, stateDir } from './config.mjs'
 import { buildIndex } from './indexer.mjs'
 import { SearchIndex } from './search.mjs'
 import { answer } from './answer.mjs'
+import { suggestQueries } from './query-suggestions.mjs'
+import { readFrontendLocation } from './frontend-location.mjs'
+import { ProjectApi } from './project-api.mjs'
+import { scopedCorpus } from './project-store.mjs'
 
 const historyDir = resolve(stateDir, 'queries')
+const localModelManifest =
+  config.llamaManifest && existsSync(config.llamaManifest)
+    ? readFileSync(config.llamaManifest, 'utf8')
+    : ''
+const verifierManifest =
+  config.entailmentDir &&
+  existsSync(resolve(config.entailmentDir, 'source.json'))
+    ? readFileSync(resolve(config.entailmentDir, 'source.json'), 'utf8')
+    : ''
 const engineVersion = createHash('sha256')
   .update(
     [
@@ -26,25 +39,51 @@ const engineVersion = createHash('sha256')
       'config.mjs',
       'model.mjs',
       'local-evidence.mjs',
+      'query-suggestions.mjs',
+      'project-api.mjs',
+      'project-imports.mjs',
+      'project-description.mjs',
+      'project-store.mjs',
+      'project-evidence.mjs',
+      'reference-collections.mjs',
+      'demo-documents.mjs',
+      '../demo/manifest.mjs',
+      '../demo/project-packages.mjs',
+      '../demo/reference-sources.mjs',
       'local-synthesis.mjs',
+      'synthesis-repair.mjs',
       'evidence-units.mjs',
       'applicability.mjs',
       'retrieval-plan.mjs',
       'calculations.mjs',
       'source-lookup.mjs',
+      'entailment.mjs',
+      'entailment.py',
+      'catalog.mjs',
+      'units.mjs',
+      'lookup.mjs',
+      'claude.mjs',
       '../extract.py',
+      '../native-table-layout.py',
     ]
       .map((file) => readFileSync(new URL(file, import.meta.url), 'utf8'))
       .join('') +
       config.provider +
       config.model +
       config.gatewayModel +
+      config.llamaModel +
+      config.llamaUrl +
+      config.releaseForVerifier +
+      localModelManifest +
       config.extractiveOnly +
-      config.localSynthesis,
+      config.localSynthesis +
+      config.entailmentDir +
+      config.entailmentPython +
+      verifierManifest,
   )
   .digest('hex')
 const corpusVersion = () =>
-  corpus?.documents
+  searchIndex?.corpus.documents
     .map((d) => d.version)
     .sort()
     .join(':')
@@ -54,6 +93,7 @@ const jobs = new Map(),
 const cancellations = new Map()
 let corpus,
   searchIndex,
+  projectApi,
   activeJob = null
 let indexing = {
   ready: false,
@@ -90,6 +130,7 @@ const sameToken = (value) => {
 const serialize = (job) => ({
   id: job.id,
   question: job.question,
+  sourceOnly: job.sourceOnly === true,
   state: job.state,
   stage: job.stage,
   createdAt: job.createdAt,
@@ -136,8 +177,15 @@ async function work() {
       publicBase: '',
       token: config.token,
       signal: job.controller.signal,
+      sourceOnly: job.sourceOnly === true,
       progress: (stage) => (job.stage = stage),
     })
+    if (
+      ['no_evidence', 'insufficient_evidence', 'related_evidence'].includes(
+        job.result.mode,
+      )
+    )
+      job.result.suggestions = suggestQueries(job.question, searchIndex)
     job.engineVersion = engineVersion
     job.corpusVersion = corpusVersion()
     if (job.controller.signal.aborted) throw new Error('Cancelled')
@@ -163,7 +211,14 @@ async function body(req) {
   for await (const chunk of req) {
     chunks.push(chunk)
     size += chunk.length
-    if (size > 40000) {
+    if (
+      size >
+      (new URL(req.url, 'http://localhost').pathname.endsWith(
+        '/documents/import',
+      )
+        ? 17 * 1024 * 1024
+        : 40000)
+    ) {
       const e = new Error('Request is too large')
       e.status = 413
       throw e
@@ -202,7 +257,7 @@ export const server = http.createServer(async (req, res) => {
   }
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
-      'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Authorization, Content-Type, Range',
       'Access-Control-Allow-Private-Network': 'true',
       'Access-Control-Max-Age': '600',
@@ -217,7 +272,7 @@ export const server = http.createServer(async (req, res) => {
       (['/app', '/app/', '/basis.svg'].includes(url.pathname) ||
         /^\/(assets|documents)\//.test(url.pathname))
     ) {
-      const frontend = resolve(stateDir, 'frontend'),
+      const frontend = readFrontendLocation(),
         file = resolve(
           frontend,
           url.pathname.startsWith('/app')
@@ -257,25 +312,58 @@ export const server = http.createServer(async (req, res) => {
         service: 'basis-backend-matvey',
         version: 1,
         ...indexing,
+        ...(indexing.ready && projectApi
+          ? {
+              completed: projectApi.store.corpus.documents.length,
+              total:
+                projectApi.store.corpus.documents.length +
+                (corpus?.failures.length || 0),
+            }
+          : {}),
         stage: sameToken(supplied)
           ? indexing.stage
           : indexing.ready
             ? 'Ready'
             : 'Indexing documents',
-        documents: corpus?.documents.length || 0,
-        passages: corpus?.passages.length || 0,
+        documents: searchIndex?.corpus.documents.length || 0,
+        passages: searchIndex?.corpus.passages.length || 0,
+        projectDocuments:
+          (projectApi?.store.corpus || corpus)?.documents.filter(
+            (d) => d.projectArtifact,
+          ).length || 0,
+        importing: !!projectApi?.importing,
         failures: corpus?.failures.length || 0,
-        model: config.extractiveOnly
-          ? 'disabled'
-          : config.provider === 'gateway'
-            ? config.gatewayModel
-            : config.model,
+        model:
+          config.provider === 'extractive'
+            ? 'none (offline source lookup)'
+            : config.provider === 'gateway'
+              ? config.gatewayModel
+              : config.provider === 'llamacpp'
+                ? config.llamaModel
+                : config.provider === 'anthropic'
+                  ? config.anthropicModel
+                  : config.model,
+        units: corpus?.units?.length || 0,
         provider: config.provider,
-        activeQueries: activeJob ? 1 : 0,
-        queuedQueries: queue.filter((j) => j.state === 'queued').length,
+        activeQueries: Number(!!activeJob) + Number(!!projectApi?.active),
+        queuedQueries:
+          queue.filter((j) => j.state === 'queued').length +
+          (projectApi?.queue.length || 0),
       })
     if (!sameToken(supplied))
       return json(401, { error: 'Connection key is missing or incorrect.' })
+    if (
+      url.pathname === '/v1/reference-collections' ||
+      url.pathname === '/v1/demo/reset' ||
+      /^\/v1\/projects(?:\/|$)/.test(url.pathname)
+    ) {
+      if (!projectApi || !indexing.ready)
+        return json(503, {
+          error: 'Project documents are still indexing.',
+          stage: indexing.stage,
+        })
+      return await projectApi.handle(req, url, res, json, body)
+    }
     if (url.pathname === '/v1/documents' && req.method === 'GET') {
       if (!indexing.ready)
         return json(503, {
@@ -288,17 +376,21 @@ export const server = http.createServer(async (req, res) => {
           error:
             'PDF text extraction failed or returned no usable passages. See the local index log.',
         })),
-        documents: corpus.documents.map(({ filePath: _filePath, ...d }) => ({
-          ...d,
-          file: `/v1/documents/${d.id}/file?token=${encodeURIComponent(config.token)}`,
-        })),
+        documents: searchIndex.corpus.documents.map(
+          ({ filePath: _filePath, ...d }) => ({
+            ...d,
+            file: `/v1/documents/${d.id}/file?token=${encodeURIComponent(config.token)}`,
+          }),
+        ),
       })
     }
     const fileMatch = url.pathname.match(
       /^\/v1\/documents\/([a-z0-9-]+)\/file$/,
     )
     if (fileMatch && req.method === 'GET') {
-      const doc = corpus?.documents.find((d) => d.id === fileMatch[1])
+      const doc = searchIndex?.corpus.documents.find(
+        (d) => d.id === fileMatch[1],
+      )
       if (!doc) return json(404, { error: 'Document not found.' })
       const size = statSync(doc.filePath).size,
         headers = {
@@ -354,6 +446,11 @@ export const server = http.createServer(async (req, res) => {
           error: 'Enter a question between 1 and 6000 characters.',
         })
       if (
+        input.sourceOnly !== undefined &&
+        typeof input.sourceOnly !== 'boolean'
+      )
+        return json(400, { error: 'sourceOnly must be a boolean.' })
+      if (
         input.id !== undefined &&
         !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
           input.id,
@@ -363,7 +460,8 @@ export const server = http.createServer(async (req, res) => {
       const id = input.id || randomUUID(),
         previous = findJob(id)
       if (previous)
-        return previous.question === question
+        return previous.question === question &&
+          (previous.sourceOnly === true) === (input.sourceOnly === true)
           ? json(202, serialize(previous))
           : json(409, {
               error: 'Request id already belongs to another question.',
@@ -382,6 +480,7 @@ export const server = http.createServer(async (req, res) => {
       const job = {
         id,
         question,
+        sourceOnly: input.sourceOnly === true,
         state: 'queued',
         stage: 'Waiting for the local reviewer',
         createdAt: new Date().toISOString(),
@@ -464,7 +563,13 @@ buildIndex((stage, completed, total) => {
 })
   .then((result) => {
     corpus = result
-    searchIndex = new SearchIndex(corpus)
+    searchIndex = new SearchIndex(
+      scopedCorpus(
+        corpus,
+        corpus.documents.filter((d) => !d.projectArtifact).map((d) => d.id),
+      ),
+    )
+    projectApi = new ProjectApi(corpus, stateDir, engineVersion)
     indexing = {
       ready: corpus.documents.length > 0,
       stage: corpus.documents.length ? 'Ready' : 'No readable documents found',

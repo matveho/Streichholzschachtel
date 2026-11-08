@@ -1,0 +1,563 @@
+{
+  "verifiedOn": "2026-11-08",
+  "projects": [
+    {
+      "projectId": "parkview-exchange",
+      "projectNumber": "PX-26017",
+      "origin": "fictional-engineering-project",
+      "consultant": "Cairnfield Civil Studio Ltd. (fictional)",
+      "protected": true,
+      "documents": [
+        {
+          "id": "doc-ad1aa8236ea0",
+          "filename": "2024-09_design-guidelines.pdf",
+          "title": "Design Guidelines: Sanitary Flow Generation for NDR, Water Consumption and Fire Flow for HNA",
+          "edition": "September 2024",
+          "pageCount": 12,
+          "sha256": "ad1aa8236ea063b32e0c6f8636e50367a56ec0e4a4c8edc3815bcf8b26bfbcf7",
+          "source": "https://www.epcor.com/ca/en/ab/edmonton/operations/service-connections/guides-checklists-forms.html",
+          "origin": "official",
+          "sourceType": "publisher-catalogue"
+        },
+        {
+          "id": "doc-9f6b74f9dcc6",
+          "filename": "2024_water_design-standards_volume-4.pdf",
+          "title": "Design and Construction Standards Volume 4: Water",
+          "edition": "December 2024",
+          "pageCount": 197,
+          "sha256": "9f6b74f9dcc6a9ffe3afa4da73438c1c3a54bcdab77093fc25456b32754e8bc9",
+          "source": "https://www.epcor.com/ca/en/ab/edmonton/operations/service-connections/guides-checklists-forms.html",
+          "origin": "official",
+          "sourceType": "publisher-catalogue"
+        },
+        {
+          "id": "doc-e2a14079bf7c",
+          "filename": "COE-IM-GUIDE-0046-CSDCS-2-01-standards.pdf",
+          "title": "Complete Streets Design and Construction Standards, Volume 2-01",
+          "edition": "Version 06, November 2025",
+          "pageCount": 246,
+          "sha256": "e2a14079bf7ce607f08ad6396fafb602af9c3e0177bc8fc56379b4fe114abd12",
+          "source": "https://www.edmonton.ca/city_government/urban_planning_and_design/city-design-construction-standards",
+          "origin": "official"
+        },
+        {
+          "id": "doc-379438043053",
+          "filename": "COE-IM-GUIDE-0048-CSDCS-2-03.pdf",
+          "title": "Complete Streets Standard Details, Volume 2-03",
+          "edition": "Version 06, November 2025",
+          "pageCount": 236,
+          "sha256": "379438043053ed5d0f02a8ba79548b5bcb2b41fb1d4f972699ce3b1506fad79c",
+          "source": "https://www.edmonton.ca/city_government/urban_planning_and_design/city-design-construction-standards",
+          "origin": "official"
+        },
+        {
+          "id": "doc-09e07f57e7a3",
+          "filename": "design-guidelines.pdf",
+          "title": "Design Guidelines",
+          "edition": "May 2025",
+          "pageCount": 125,
+          "sha256": "09e07f57e7a30c87ec77fd8ab066cad99cef47e332af889c0a3c9126688a7a55",
+          "source": "https://www.epcor.com/content/dam/epcor/documents/supporting-documents/volume-3-03-design-guidelines%E2%80%8B%E2%80%8B.pdf",
+          "origin": "official"
+        },
+        {
+          "id": "doc-34f8f723c71f",
+          "filename": "hydraulic-network-analysis-process-overview.pdf",
+          "title": "Microsoft Word - HNA Process",
+          "edition": "Edition not supplied",
+          "pageCount": 6,
+          "sha256": "34f8f723c71f8a6b4a9b7e1d89e8398f8af3431523582b4ee3905f1a6577548a",
+          "source": "https://www.epcor.com/ca/en/ab/edmonton/operations/service-connections/guides-checklists-forms.html",
+          "origin": "official",
+          "sourceType": "publisher-catalogue"
+        },
+        {
+          "id": "doc-eb651c8aa7d3",
+          "filename": "stormwater-manual.pdf",
+          "title": "Stormwater Management & Design Manual",
+          "edition": "April 2025",
+          "pageCount": 109,
+          "sha256": "eb651c8aa7d3f6f4b4aaf717b7fde03d19f7c8f27ce0c01beeebea9b6cbe3672",
+          "source": "https://www.epcor.com/content/dam/epcor/documents/supporting-documents/volume-3-02-stormwater-management-and-design-manual.pdf",
+          "origin": "official"
+        },
+        {
+          "id": "doc-851846770fd9",
+          "filename": "volume-3-01-development-planning-procedure-and-framework.pdf",
+          "title": "Development Planning Procedure and Framework",
+          "edition": "April 2025",
+          "pageCount": 32,
+          "sha256": "851846770fd91a557050ad80828f3ccd349aa502d499d065c07c6b15a74df0e1",
+          "source": "https://www.epcor.com/ca/en/ab/edmonton/operations/service-connections/guides-checklists-forms.html",
+          "origin": "official",
+          "sourceType": "publisher-catalogue"
+        },
+        {
+          "id": "doc-787b1218443e",
+          "filename": "volume-3-05-drawing-requirements-approvals-and-asset-acceptance-transfer.pdf",
+          "title": "Drawing Requirements, Approvals and Asset Acceptance/Transfer",
+          "edition": "May 2025",
+          "pageCount": 17,
+          "sha256": "787b1218443e5e64d81bb69a097da9072bb05ec4346d01ba850bc2e5786ae822",
+          "source": "https://www.epcor.com/ca/en/ab/edmonton/operations/service-connections/guides-checklists-forms.html",
+          "origin": "official",
+          "sourceType": "publisher-catalogue"
+        },
+        {
+          "id": "doc-da424a924abd",
+          "filename": "volume-3-06-construction-specifications-and-standard-drawings.pdf",
+          "title": "Construction Specifications and Standard Drawings",
+          "edition": "May 2025",
+          "pageCount": 154,
+          "sha256": "da424a924abd57855885430c3fc4175562b9d0f64eaf861238292a74aea9e679",
+          "source": "https://www.epcor.com/ca/en/ab/edmonton/operations/service-connections/guides-checklists-forms.html",
+          "origin": "official",
+          "sourceType": "publisher-catalogue"
+        },
+        {
+          "id": "doc-ede1832e22f5",
+          "filename": "pxr_client-design-brief_rev0_2026-09-18.pdf",
+          "title": "Client design brief",
+          "edition": "Issued for review \u00c2\u00b7 2026-09-18",
+          "pageCount": 2,
+          "sha256": "ede1832e22f543b8dc1bd99dcafccbc9c20066063691bf5d7b2db21c52f93f07",
+          "source": "",
+          "origin": "synthetic-project-artifact"
+        },
+        {
+          "id": "doc-78c8e4d3cbb4",
+          "filename": "pxr_design-coordination-memo_2026-10-07.pdf",
+          "title": "Civil design coordination register",
+          "edition": "Issued for review \u00c2\u00b7 2026-10-07",
+          "pageCount": 1,
+          "sha256": "78c8e4d3cbb44cdd33f2df14b72320dab9fc30c509da8166e08b25cd2ae4304f",
+          "source": "",
+          "origin": "synthetic-project-artifact"
+        },
+        {
+          "id": "doc-fd479745e2a5",
+          "filename": "pxr_existing-conditions-survey_rev0_2026-09-22.pdf",
+          "title": "Existing conditions and survey summary",
+          "edition": "Issued for review \u00c2\u00b7 2026-09-22",
+          "pageCount": 2,
+          "sha256": "fd479745e2a5a1afabc5e68ecadd47642761e4a21faccdc2c7176c3ef5efb236",
+          "source": "",
+          "origin": "synthetic-project-artifact"
+        },
+        {
+          "id": "doc-0ee53acf3b25",
+          "filename": "pxr_servicing-design-memo_rev1_2026-10-03.pdf",
+          "title": "Servicing design basis and calculations",
+          "edition": "Issued for review \u00c2\u00b7 2026-10-03",
+          "pageCount": 2,
+          "sha256": "0ee53acf3b25cdbde6e7cf92e2cde00941c1ba13778b805c6b5cdadaf18b2879",
+          "source": "",
+          "origin": "synthetic-project-artifact"
+        },
+        {
+          "id": "doc-7f328f329ffd",
+          "filename": "pxr_site-grading-plan_ifr_2026-10-02.pdf",
+          "title": "Site grading and drainage details",
+          "edition": "Issued for review \u00c2\u00b7 2026-10-02",
+          "pageCount": 2,
+          "sha256": "7f328f329ffd69784b6163c70f4a561fcee59a4b5c12cab7a4c4b05bed9461f1",
+          "source": "",
+          "origin": "synthetic-project-artifact"
+        },
+        {
+          "id": "doc-f961fe8a4049",
+          "filename": "pxr_site-servicing-plan_ifr_2026-10-02.pdf",
+          "title": "Site servicing plan and utility profile",
+          "edition": "Issued for review \u00c2\u00b7 2026-10-02",
+          "pageCount": 2,
+          "sha256": "f961fe8a40497eaf33ef89dbaa458887f22c2c98eceba4bae698968d4626e812",
+          "source": "",
+          "origin": "synthetic-project-artifact"
+        }
+      ],
+      "findings": [
+        {
+          "id": "sanitary-upstream-grade",
+          "title": "Sanitary upstream grade needs revision",
+          "proofs": [
+            [
+              "pxr_site-servicing-plan_ifr_2026-10-02.pdf",
+              "S1 is a 200 mm PVC upstream sanitary reach, 43 m long at 0.30% grade, with peak DWF 0.34 L/s."
+            ],
+            [
+              "design-guidelines.pdf",
+              "For the upstream reaches of the sanitary system, where peak dry weather flow (DWF) is equal to or less than 1.5 L/s, the designer is to follow slopes per Table 1.1."
+            ],
+            ["design-guidelines.pdf", "0.25\u00e2\u20ac\u201c0.40 | 1.00", 8]
+          ]
+        },
+        {
+          "id": "storm-upstream-grade",
+          "title": "Terminal storm reach is below the upstream slope",
+          "proofs": [
+            [
+              "pxr_site-servicing-plan_ifr_2026-10-02.pdf",
+              "ST1 is the most upstream storm reach, from the terminal maintenance hole to the first downstream maintenance hole: 300 mm nominal diameter, 38 m long at 0.25% grade."
+            ],
+            [
+              "design-guidelines.pdf",
+              "The minimum slope shall be 0.4% for the most upstream leg of any storm system"
+            ]
+          ]
+        },
+        {
+          "id": "storm-cover",
+          "title": "Shallow storm cover has no insulation detail",
+          "proofs": [
+            [
+              "pxr_site-servicing-plan_ifr_2026-10-02.pdf",
+              "At ST1 chainage 0+018, finished grade is 671.300 m and outside pipe crown is 669.650 m, providing 1.650 m cover."
+            ],
+            [
+              "pxr_site-servicing-plan_ifr_2026-10-02.pdf",
+              "No insulation detail is included in this issue."
+            ],
+            [
+              "design-guidelines.pdf",
+              "A minimum cover from finished grade to pipe obvert of 2.0 m"
+            ],
+            [
+              "design-guidelines.pdf",
+              "If this cover cannot be achieved then provide adequate pipe insulation"
+            ]
+          ]
+        },
+        {
+          "id": "crossing-clearance",
+          "title": "Water and sewer-service clearance needs review",
+          "proofs": [
+            [
+              "pxr_site-servicing-plan_ifr_2026-10-02.pdf",
+              "At crossing X1, sewer service S2 passes below the watermain with 0.220 m vertical clearance between outside surfaces."
+            ],
+            [
+              "design-guidelines.pdf",
+              "Sewer services below the water main: a minimum of 300 mm separation between the top of the"
+            ],
+            [
+              "design-guidelines.pdf",
+              "sewer service pipe and the bottom of the water main."
+            ]
+          ]
+        }
+      ],
+      "queries": [
+        {
+          "id": "sanitary-upstream-grade",
+          "issueId": "sanitary-upstream-grade",
+          "question": "Does upstream sanitary branch S1 meet the applicable minimum slope?"
+        },
+        {
+          "id": "storm-upstream-grade",
+          "issueId": "storm-upstream-grade",
+          "question": "Does the terminal storm reach ST1 meet the upstream slope criterion?"
+        },
+        {
+          "id": "storm-cover",
+          "issueId": "storm-cover",
+          "question": "Can the shallow storm cover be retained without insulation?"
+        },
+        {
+          "id": "crossing-clearance",
+          "issueId": "crossing-clearance",
+          "question": "What needs review at water and sewer crossing X1?"
+        },
+        {
+          "id": "sanitary-diameter",
+          "question": "What is the proposed pipe diameter for sanitary branch S1?",
+          "sourceOnly": true
+        },
+        {
+          "id": "finished-floor",
+          "question": "What is the proposed finished floor elevation?",
+          "sourceOnly": true
+        }
+      ]
+    },
+    {
+      "projectId": "north-ridge-highway",
+      "projectNumber": "NRH-26104",
+      "origin": "fictional-engineering-project",
+      "consultant": "Cairnfield Civil Studio Ltd. (fictional)",
+      "protected": true,
+      "documents": [
+        {
+          "id": "doc-a48df412387b",
+          "filename": "trans-highway-geometric-design-guide-chapter-b-2020-09.pdf",
+          "title": "Highway Geometric Design Guide - Chapter B: Alignment Elements",
+          "edition": "September 2020",
+          "pageCount": 97,
+          "sha256": "a48df412387b3ad11dc1f26724db38e57c3e7a49bcc0097ffa85e4e6bb37d31d",
+          "source": "https://www.alberta.ca/highway-geometric-design-guide",
+          "origin": "official",
+          "sourceType": "publisher-catalogue"
+        },
+        {
+          "id": "doc-b54d0cb29331",
+          "filename": "trans-highway-geometric-design-guide-chapter-c-2022-02.pdf",
+          "title": "Highway Geometric Design Guide - Chapter C: Cross-Section Elements",
+          "edition": "February 2022",
+          "pageCount": 102,
+          "sha256": "b54d0cb29331ed0f57b1218874ca50ee73936b71dd3877c822ddeb43ba8e673d",
+          "source": "https://www.alberta.ca/highway-geometric-design-guide",
+          "origin": "official",
+          "sourceType": "publisher-catalogue"
+        },
+        {
+          "id": "doc-6fb4b95f0688",
+          "filename": "design-bulletin-77-march-2017.pdf",
+          "title": "Amendments to pavement design manual. Re: updated requirements for agency practice, design inputs and design report contents (Revised March 2017)",
+          "edition": "March 2017",
+          "pageCount": 10,
+          "sha256": "6fb4b95f06885df6746c151bb0053c61b447401c0a750cb8de8ea84e90301156",
+          "source": "https://open.alberta.ca/dataset/d0e3371d-4bf2-4733-9e0a-be2f61c60b46/resource/99206bcf-212d-4752-8234-e7164af79830/download/design-bulletin-77-march-2017.pdf",
+          "origin": "official"
+        },
+        {
+          "id": "doc-72b9b461a1a1",
+          "filename": "pavedm2.pdf",
+          "title": "Pavement design manual : edition 1",
+          "edition": "Edition 1, June 1997",
+          "pageCount": 157,
+          "sha256": "72b9b461a1a102dc898673edcb7d065b6446e72397cf6fcd1bc036ac22f98de2",
+          "source": "https://open.alberta.ca/dataset/b7a69f09-bc18-4a65-b280-923dfe51a1c1/resource/92f6366e-dc96-49a1-b7d4-8a600164c958/download/pavedm2.pdf",
+          "origin": "official"
+        },
+        {
+          "id": "doc-d5031a8e1af8",
+          "filename": "tec-design-exceptions-guideline-2026-09.pdf",
+          "title": "Design Exceptions Guideline [September 2026]",
+          "edition": "September 2026",
+          "pageCount": 32,
+          "sha256": "d5031a8e1af83050f20321b88d13e3a062d10349b3b4abd9a4c8a06e89325ad0",
+          "source": "https://open.alberta.ca/dataset/d0e5cc03-3c0c-44cc-9356-3648b6b3506b/resource/6648013b-f27d-461e-99bd-4df17148f5aa/download/tec-design-exceptions-guideline-2026-09.pdf",
+          "origin": "official"
+        },
+        {
+          "id": "doc-6cc1438dea76",
+          "filename": "tec-traffic-accommodation-in-work-zones-2025.pdf",
+          "title": "Traffic Accommodation in Work Zones 2025",
+          "edition": "2025",
+          "pageCount": 198,
+          "sha256": "6cc1438dea76f6c83e0d70c60d908007b1d709442ffdeda877326a1cd798cda7",
+          "source": "https://open.alberta.ca/dataset/7f2a421d-feb6-4606-a26b-0b702339681c/resource/40168898-1067-486c-b464-8ab4c38a8a5c/download/tec-traffic-accommodation-in-work-zones-2025.pdf",
+          "origin": "official"
+        },
+        {
+          "id": "doc-92fb08dda344",
+          "filename": "trans-design-bulletin-99-revision-8-2023-04.pdf",
+          "title": "Revisions/updates to the Alberta Transportation \"Highway Geometric Design Guide\" and CB6 highway standard plates [Revision 8 - April 2023]",
+          "edition": "Revision 8, April 2023",
+          "pageCount": 11,
+          "sha256": "92fb08dda34468cd296f49e19b186885e470091b3672c961019b9c143d0ae726",
+          "source": "https://open.alberta.ca/dataset/4cf85b84-cc0a-4813-bf06-61ebe4b4a848/resource/dffc2979-630d-4c30-99dc-e95c2a238794/download/trans-design-bulletin-99-revision-8-2023-04.pdf",
+          "origin": "official"
+        },
+        {
+          "id": "doc-50b292018fc6",
+          "filename": "trans-highway-geometric-design-guide-chapter-a-2022-02.pdf",
+          "title": "Chapter A. Basic design principles [February 2022]",
+          "edition": "February 2022",
+          "pageCount": 52,
+          "sha256": "50b292018fc63952819f561d29ff83732dcda9ebf2c7f25e3c55f8b2c7752374",
+          "source": "https://open.alberta.ca/dataset/2b5c861b-3de9-41f5-9d80-522f0c34550c/resource/dd4963a8-331e-4fbe-aea7-1845eee31f8a/download/trans-highway-geometric-design-guide-chapter-a-2022-02.pdf",
+          "origin": "official"
+        },
+        {
+          "id": "doc-2f9a71c9c0dc",
+          "filename": "trans-highway-geometric-design-guide-chapter-d-1999-08.pdf",
+          "title": "Chapter D. At-grade intersections [August 1999]",
+          "edition": "August 1999",
+          "pageCount": 162,
+          "sha256": "2f9a71c9c0dca041fec5b7967c8f9d179b6c5b575a7740948d6c20ba0397f757",
+          "source": "https://open.alberta.ca/dataset/2b5c861b-3de9-41f5-9d80-522f0c34550c/resource/42d3e544-4d88-4c0a-a14a-f03c2b2550c0/download/trans-highway-geometric-design-guide-chapter-d-1999-08.pdf",
+          "origin": "official"
+        },
+        {
+          "id": "doc-4a7e30a9f2d7",
+          "filename": "trans-highway-geometric-design-guide-chapter-i-2005-10.pdf",
+          "title": "Chapter I. Access management guidelines (Issued under design bulletin #28) [October 2005]",
+          "edition": "October 2005",
+          "pageCount": 35,
+          "sha256": "4a7e30a9f2d736f047c9c2ff3b2beb78d671994c95e51e7821b3a569ea7f0cdb",
+          "source": "https://open.alberta.ca/dataset/2b5c861b-3de9-41f5-9d80-522f0c34550c/resource/73eaa710-f187-4b1d-9579-41d99f3b75ef/download/trans-highway-geometric-design-guide-chapter-i-2005-10.pdf",
+          "origin": "official"
+        },
+        {
+          "id": "doc-5388af719605",
+          "filename": "trans-traffic-impact-assessment-guidelines-2021-02.pdf",
+          "title": "Traffic impact assessment guidelines (February 2021)",
+          "edition": "February 2021",
+          "pageCount": 34,
+          "sha256": "5388af71960533fa38e023f9f73ed5ce2a59cc1c973e57c374eb0739fa87eba4",
+          "source": "https://open.alberta.ca/dataset/0bdbdd46-06f4-4345-8768-d68b8306444e/resource/d5996230-5d08-40d9-a8dc-bec68018b1a4/download/trans-traffic-impact-assessment-guidelines-2021-02.pdf",
+          "origin": "official"
+        },
+        {
+          "id": "doc-3d91ddf53090",
+          "filename": "nrh_existing-conditions-survey-geotech_2026-08-28.pdf",
+          "title": "Existing conditions and ground summary",
+          "edition": "Issued for review \u00c2\u00b7 2026-08-28",
+          "pageCount": 2,
+          "sha256": "3d91ddf530902b345a1ede6d451bd383022d32a116bbcc83a6e06eaeba49500f",
+          "source": "",
+          "origin": "synthetic-project-artifact"
+        },
+        {
+          "id": "doc-0d80f61bace4",
+          "filename": "nrh_geometric-design-plan-profile_ifr_2026-09-12.pdf",
+          "title": "Geometric design plan and profile",
+          "edition": "Issued for review \u00c2\u00b7 2026-09-12",
+          "pageCount": 3,
+          "sha256": "0d80f61bace4933fda284f6972e35abbd24a0c2706bca5a118df0e850caa4692",
+          "source": "",
+          "origin": "synthetic-project-artifact"
+        },
+        {
+          "id": "doc-a0d81ef01708",
+          "filename": "nrh_owner-design-brief_rev0_2026-08-14.pdf",
+          "title": "Owner design brief",
+          "edition": "Issued for review \u00c2\u00b7 2026-08-14",
+          "pageCount": 2,
+          "sha256": "a0d81ef017089acbc2cba0a5860b9f28a2e0b7b738771248615e4f19cb2ebef5",
+          "source": "",
+          "origin": "synthetic-project-artifact"
+        },
+        {
+          "id": "doc-d0a7aeda5f3e",
+          "filename": "nrh_pavement-design-memo_rev0_2026-09-19.pdf",
+          "title": "Preliminary pavement design memorandum",
+          "edition": "Issued for review \u00c2\u00b7 2026-09-19",
+          "pageCount": 2,
+          "sha256": "d0a7aeda5f3e815d85fe74d323ebc450fc9d13ee63da2ddfe1b45aa9eeb713ec",
+          "source": "",
+          "origin": "synthetic-project-artifact"
+        },
+        {
+          "id": "doc-4e1fde5c2ba7",
+          "filename": "nrh_traffic-accommodation-plan_ifr_2026-09-22.pdf",
+          "title": "Traffic accommodation concept",
+          "edition": "Issued for review \u00c2\u00b7 2026-09-22",
+          "pageCount": 2,
+          "sha256": "4e1fde5c2ba75d2a43471617dc29a597b3c7c3e993409735d5748ffe0d501d7a",
+          "source": "",
+          "origin": "synthetic-project-artifact"
+        },
+        {
+          "id": "doc-3c0534bfa723",
+          "filename": "nrh_traffic-impact-assessment_rev1_2026-09-15.pdf",
+          "title": "Traffic impact assessment",
+          "edition": "Issued for review \u00c2\u00b7 2026-09-15",
+          "pageCount": 2,
+          "sha256": "3c0534bfa723d4da7fe04610f54bd22287de2380d9b263ebd2014631322dd6e2",
+          "source": "",
+          "origin": "synthetic-project-artifact"
+        }
+      ],
+      "findings": [
+        {
+          "id": "through-lane-width",
+          "title": "Through-lane marking differs from the rural section",
+          "proofs": [
+            [
+              "nrh_geometric-design-plan-profile_ifr_2026-09-12.pdf",
+              "The existing 12.0 m paved surface retains two 3.5 m painted through lanes and two 2.5 m shoulders in this issue."
+            ],
+            [
+              "trans-highway-geometric-design-guide-chapter-c-2022-02.pdf",
+              "A 3.7 m wide through lane is painted for all rural undivided highways where the surface width exceeds 10 metres."
+            ]
+          ]
+        },
+        {
+          "id": "stopping-sight-distance",
+          "title": "Crest sight distance is below the screening value",
+          "proofs": [
+            [
+              "nrh_geometric-design-plan-profile_ifr_2026-09-12.pdf",
+              "Available eastbound stopping sight distance at the crest is 165 m for the preliminary 100 km/h design speed."
+            ],
+            [
+              "nrh_owner-design-brief_rev0_2026-08-14.pdf",
+              "The owner adopts 185 m as the initial stopping-sight-distance screening value."
+            ],
+            [
+              "trans-highway-geometric-design-guide-chapter-b-2020-09.pdf",
+              "100 | 69.4 | 113.5 | 182.92 | 185",
+              9
+            ]
+          ]
+        },
+        {
+          "id": "traffic-horizon",
+          "title": "Twenty-year traffic horizon is missing",
+          "proofs": [
+            [
+              "nrh_traffic-impact-assessment_rev1_2026-09-15.pdf",
+              "No 2047 twenty-year combined-traffic analysis is included."
+            ],
+            [
+              "trans-traffic-impact-assessment-guidelines-2021-02.pdf",
+              "the combined traffic should be projected to at least the 10-year and 20-year horizons"
+            ]
+          ]
+        },
+        {
+          "id": "pavement-traffic-inputs",
+          "title": "Traffic and pavement inputs are inconsistent",
+          "proofs": [
+            [
+              "nrh_traffic-impact-assessment_rev1_2026-09-15.pdf",
+              "The 2026 base-year traffic dataset is AADT 7,800 vehicles/day and 14% heavy vehicles."
+            ],
+            [
+              "nrh_pavement-design-memo_rev0_2026-09-19.pdf",
+              "The pavement draft assumes 2026 AADT 7,200 vehicles/day, 10% trucks and 1.0% annual non-compounded growth."
+            ],
+            [
+              "pavedm2.pdf",
+              "truck traffic is the major consideration in the structural design of pavements."
+            ]
+          ]
+        }
+      ],
+      "queries": [
+        {
+          "id": "through-lane-width",
+          "issueId": "through-lane-width",
+          "question": "Do the proposed through-lane markings match the rural highway guidance?"
+        },
+        {
+          "id": "stopping-sight-distance",
+          "issueId": "stopping-sight-distance",
+          "question": "Is the available crest sight distance consistent with the design basis?"
+        },
+        {
+          "id": "traffic-horizon",
+          "issueId": "traffic-horizon",
+          "question": "Which traffic study horizon is missing?"
+        },
+        {
+          "id": "pavement-traffic-inputs",
+          "issueId": "pavement-traffic-inputs",
+          "question": "Are traffic inputs consistent between the TIA and pavement memo?"
+        },
+        {
+          "id": "available-sight-distance",
+          "question": "What stopping sight distance is available eastbound at the crest?",
+          "sourceOnly": true
+        },
+        {
+          "id": "traffic-basis",
+          "question": "What is the 2026 base-year traffic dataset?",
+          "sourceOnly": true
+        }
+      ]
+    }
+  ]
+}

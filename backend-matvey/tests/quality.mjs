@@ -8,6 +8,13 @@ const key = readFileSync('state/session-token.txt', 'utf8').trim(),
   }
 const smokeCases = [
   {
+    // New water and power sources mention fire protection and buildings.
+    // Retrieval candidates must not become an invented hospital stair rating.
+    question:
+      'What fire resistance rating is required for a hospital staircase?',
+    noAnswer: true,
+  },
+  {
     question:
       'What inspection frequency is required for erosion and sediment control while LID is being constructed?',
     terms: [/week/i, /rain/i],
@@ -47,10 +54,15 @@ const smokeCases = [
     terms: [/1(?:\.0)?\s*%/],
   },
 ]
-const cases =
+const suite =
   process.env.BASIS_QUALITY_SUITE === 'engineering'
     ? engineeringScenarios
     : smokeCases
+const caseId = process.env.BASIS_QUALITY_CASE
+if (caseId && !/^[a-z0-9-]+$/.test(caseId))
+  throw new Error('Invalid quality case ID')
+const cases = caseId ? suite.filter((c) => c.id === caseId) : suite
+if (!cases.length) throw new Error('No quality cases matched the selected ID')
 mkdirSync('test-results', { recursive: true })
 const outputs = []
 for (const c of cases) {
@@ -62,18 +74,32 @@ for (const c of cases) {
       body: JSON.stringify({ question: c.question }),
     })
   ).json()
-  for (let i = 0; i < 200 && ['queued', 'running'].includes(job.state); i++) {
+  const deadline = Date.now() + 600000
+  for (; Date.now() < deadline && ['queued', 'running'].includes(job.state);) {
     await new Promise((r) => setTimeout(r, 1000))
     job = await (
       await fetch(testBase + '/v1/queries/' + job.id, { headers })
     ).json()
   }
+  const timedOut = ['queued', 'running'].includes(job.state)
+  if (timedOut) {
+    job = await (
+      await fetch(testBase + '/v1/queries/' + job.id, {
+        method: 'DELETE',
+        headers,
+      })
+    ).json()
+  }
+  const findings = JSON.stringify(
+    job.result?.report?.filter((block) => !block.heading) || [],
+  )
   const text = JSON.stringify(job.result?.report),
     evidenceChecksPassed =
       job.state === 'completed' &&
       (c.noAnswer
         ? ['no_evidence', 'insufficient_evidence'].includes(job.result?.mode)
         : c.terms.every((t) => t.test(text)) &&
+          (c.findingTerms || []).every((t) => t.test(findings)) &&
           !(c.forbidden || []).some((t) => t.test(text)) &&
           new Set(job.result?.references.map((r) => r.doc)).size >=
             (c.minSources || 1)),
@@ -85,6 +111,8 @@ for (const c of cases) {
   outputs.push({
     question: c.question,
     passed,
+    state: job.state,
+    timedOut,
     evidenceChecksPassed,
     seconds: Math.round((Date.now() - start) / 1000),
     mode: job.result?.mode,
@@ -105,7 +133,7 @@ for (const c of cases) {
   )
 }
 writeFileSync(
-  `test-results/quality${process.env.BASIS_QUALITY_SUITE === 'engineering' ? '-engineering' : ''}.json`,
+  `test-results/quality${process.env.BASIS_QUALITY_SUITE === 'engineering' ? '-engineering' : ''}${caseId ? '-' + caseId : ''}.json`,
   JSON.stringify(outputs, null, 2),
 )
 if (outputs.some((o) => !o.passed)) process.exitCode = 1

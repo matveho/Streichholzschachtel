@@ -7,3 +7,4 @@ test-results/
 tools/
 .venv/
 __pycache__/
+tmp/
