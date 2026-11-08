@@ -251,7 +251,27 @@ button.primary-action:hover {
   letter-spacing: 0.65px;
   color: var(--color-secondary);
   margin: 0;
-  padding: 16px 15px 7px;
+}
+.project-document-group > summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 15px;
+  cursor: pointer;
+  background: var(--surface-muted);
+}
+.project-document-group > summary::-webkit-details-marker {
+  display: none;
+}
+.project-document-group[open] > summary > svg {
+  transform: rotate(90deg);
+}
+.project-document-group > summary:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: -2px;
+}
+.project-document-group .project-document-entry {
+  padding-inline-start: 22px;
 }
 .project-document-row {
   display: flex;

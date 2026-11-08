@@ -1,6 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import {
   FolderOpen,
+  ChevronRight,
   Plus,
   Search,
   ArrowLeft,
@@ -437,10 +438,17 @@ function ProjectDashboard({
               (type) => {
                 const group = shown.filter((d) => d.category === type)
                 return group.length ? (
-                  <section className="project-document-group" key={type}>
-                    <h3>
-                      {labels[type]} <span>{group.length}</span>
-                    </h3>
+                  <details
+                    className="project-document-group"
+                    key={type + category + filter}
+                    open
+                  >
+                    <summary>
+                      <ChevronRight size={15} aria-hidden="true" />
+                      <h3>
+                        {labels[type]} <span>{group.length}</span>
+                      </h3>
+                    </summary>
                     {group.map((doc) => (
                       <div className="project-document-entry" key={doc.id}>
                         <a
@@ -473,7 +481,7 @@ function ProjectDashboard({
                         )}
                       </div>
                     ))}
-                  </section>
+                  </details>
                 ) : null
               },
             )}
