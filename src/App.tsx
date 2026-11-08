@@ -93,6 +93,7 @@ export function QueryWorkspace({
     entry.projectId,
     entry.queryId,
     preloadedJob,
+    projectDocuments,
   )
   const documents =
     settings.mode === 'static'

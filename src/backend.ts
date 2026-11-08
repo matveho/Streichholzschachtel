@@ -93,6 +93,9 @@ export async function api(
   const secret = connectionKey(s)
   const response = await fetch(base + path, {
     ...init,
+    signal: init.signal
+      ? AbortSignal.any([init.signal, AbortSignal.timeout(120000)])
+      : AbortSignal.timeout(120000),
     headers: {
       ...(secret ? { Authorization: 'Bearer ' + secret } : {}),
       ...(init.body ? { 'Content-Type': 'application/json' } : {}),
@@ -116,17 +119,45 @@ export async function api(
   return body
 }
 /** A finished query job as the backend returns it. */
-export type QueryJob = { id: string; state: string; result?: unknown }
+export type QueryJob = {
+  projectId?: string
+  documentIds?: string[]
+  id: string
+  state: string
+  result?: unknown
+}
 
 type RawResult = Omit<LiveResult, 'documents' | 'id'> & {
   documents: (DocumentRecord & { id: string })[]
 }
 
 /** Turns a completed job into a result, pinning document links to the backend. */
-function liveResult(settings: BackendSettings, job: QueryJob): LiveResult {
+function liveResult(
+  settings: BackendSettings,
+  job: QueryJob,
+  projectId?: string,
+  projectDocuments?: Record<string, DocumentRecord>,
+): LiveResult {
   const result = job.result as RawResult,
     docs: Record<string, DocumentRecord> = {}
+  if (projectId && job.projectId !== projectId)
+    throw new Error('Query belongs to a different project.')
   for (const record of result.documents) {
+    if (projectId) {
+      const scoped = projectDocuments?.[record.id]
+      if (!scoped || (job.documentIds && !job.documentIds.includes(record.id)))
+        throw new Error('A query source is unavailable in this project.')
+      docs[record.id] = {
+        ...scoped,
+        initialPage:
+          Number.isInteger(record.initialPage) &&
+          record.initialPage >= 1 &&
+          record.initialPage <= scoped.pages
+            ? record.initialPage
+            : scoped.initialPage,
+      }
+      continue
+    }
     const file = new URL(record.file, baseUrl(settings))
     if (file.origin !== new URL(baseUrl(settings)).origin)
       throw new Error('The backend returned a document on a different server.')
@@ -134,7 +165,44 @@ function liveResult(settings: BackendSettings, job: QueryJob): LiveResult {
     if (secret) file.searchParams.set('token', secret)
     docs[record.id] = { ...record, file: file.href }
   }
-  return { ...result, documents: docs, id: job.id }
+  const validRect = (rect: Reference['rect']) =>
+    Array.isArray(rect) &&
+    rect.length === 4 &&
+    rect.every(Number.isFinite) &&
+    rect[0] >= 0 &&
+    rect[1] >= 0 &&
+    rect[2] > 0 &&
+    rect[3] > 0
+  const references = result.references.flatMap((ref) => {
+    const regions = (ref.regions ?? [ref.rect]).filter(validRect)
+    if (
+      !regions.length ||
+      !docs[ref.doc] ||
+      !Number.isInteger(ref.page) ||
+      ref.page < 1 ||
+      ref.page > docs[ref.doc].pages
+    )
+      return []
+    return [{ ...ref, regions, rect: regions[0] }]
+  })
+  if (references.length === result.references.length)
+    return { ...result, references, documents: docs, id: job.id }
+  const available = new Set(references.map((ref) => ref.id))
+  const report = result.report.map((block) => ({
+    ...block,
+    sentences: block.sentences.map((sentence) => ({
+      ...sentence,
+      refs: sentence.refs?.filter((id) => available.has(id)),
+    })),
+  }))
+  return {
+    ...result,
+    report,
+    references,
+    documents: docs,
+    id: job.id,
+    notes: [...result.notes, 'Some citation locations are unavailable.'],
+  }
 }
 
 export function useLiveQuery(
@@ -146,6 +214,7 @@ export function useLiveQuery(
   existingJobId?: string,
   /** An already fetched job, shown immediately instead of fetched again. */
   preloaded?: QueryJob,
+  projectDocuments?: Record<string, DocumentRecord>,
 ) {
   const path = projectId
     ? `/v1/projects/${encodeURIComponent(projectId)}/queries`
@@ -170,14 +239,25 @@ export function useLiveQuery(
     )
       return null
     try {
-      return { data: liveResult(settings, preloaded), error: '' }
+      return {
+        data: liveResult(settings, preloaded, projectId, projectDocuments),
+        error: '',
+      }
     } catch (error) {
       return {
         data: null,
         error: error instanceof Error ? error.message : 'Unusable result.',
       }
     }
-  }, [settings, question, retry, existingJobId, preloaded])
+  }, [
+    settings,
+    question,
+    retry,
+    existingJobId,
+    preloaded,
+    projectId,
+    projectDocuments,
+  ])
   const cancelRef = useRef<() => void>(() => {})
   const [state, setState] = useState<{
     key: string
@@ -216,6 +296,8 @@ export function useLiveQuery(
           job = await api(settings, `${path}/${existingJobId}`, {
             signal: controller.signal,
           })
+          if (job.id !== existingJobId)
+            throw new Error('Unexpected query response. Please retry.')
           if (job.stale)
             throw new Error(
               'Project documents changed. Run this query again from the project dashboard.',
@@ -243,6 +325,13 @@ export function useLiveQuery(
             body: JSON.stringify({
               question,
               sourceOnly,
+              ...(projectId
+                ? {
+                    documentIds:
+                      preloaded?.documentIds ??
+                      Object.keys(projectDocuments ?? {}),
+                  }
+                : {}),
               ...(requestedId ? { id: requestedId } : {}),
             }),
             signal: controller.signal,
@@ -250,9 +339,16 @@ export function useLiveQuery(
         }
         jobId = job.id
         cancellable = ['queued', 'running'].includes(job.state)
+        const deadline = Date.now() + 120000
         while (!controller.signal.aborted) {
+          if (Date.now() > deadline)
+            throw new Error(
+              'Query is taking longer than expected. Reopen it from history to check its progress.',
+            )
+          if (job.id !== jobId || (projectId && job.projectId !== projectId))
+            throw new Error('Unexpected query response. Please retry.')
           if (job.state === 'completed') {
-            const data = liveResult(settings, job)
+            const data = liveResult(settings, job, projectId, projectDocuments)
             try {
               localStorage.setItem(cacheKey, job.id)
             } catch {}
@@ -318,6 +414,8 @@ export function useLiveQuery(
     projectId,
     existingJobId,
     path,
+    projectDocuments,
+    preloaded,
     ready,
   ])
   if (ready)

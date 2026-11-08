@@ -71,7 +71,19 @@ function create(state: TabState, target: string): TabState {
 }
 
 /** Brings the tab state in line with the query the route is showing. */
-function reconcile(state: TabState, target: string | null): TabState {
+function reconcile(
+  state: TabState,
+  target: string | null,
+  scope: string,
+): TabState {
+  // Drafts share /new. The history entry identifies the draft to restore on Back.
+  const remembered = history.state?.basisDraft
+  if (
+    target === 'new' &&
+    remembered?.scope === scope &&
+    state.tabs.some((tab) => tab.key === remembered.key && tab.target === 'new')
+  )
+    return { ...state, active: remembered.key, retarget: null }
   if (target === null)
     return state.retarget ? { ...state, retarget: null } : state
   const active = state.tabs.find((tab) => tab.key === state.active)
@@ -110,8 +122,7 @@ function reconcile(state: TabState, target: string | null): TabState {
       retarget: null,
     }
   }
-  if (existing && target !== 'new')
-    return { ...state, active: existing.key, retarget: null }
+  if (existing) return { ...state, active: existing.key, retarget: null }
   return create(state, target)
 }
 
@@ -130,14 +141,25 @@ export function useQueryTabs({
   open: (target: string) => void
   onEmpty: () => void
 }) {
-  const [state, setState] = useState(() => reconcile(load(scope), target))
+  const [state, setState] = useState(() =>
+    reconcile(load(scope), target, scope),
+  )
   const [seen, setSeen] = useState(target)
   if (target !== seen) {
     setSeen(target)
-    setState((current) => reconcile(current, target))
+    setState((current) => reconcile(current, target, scope))
   }
   useEffect(() => {
     try {
+      const savedDraft = history.state?.basisDraft
+      if (
+        target === 'new' &&
+        (savedDraft?.scope !== scope || savedDraft?.key !== state.active)
+      )
+        history.replaceState(
+          { ...history.state, basisDraft: { scope, key: state.active } },
+          '',
+        )
       sessionStorage.setItem(
         storageKey(scope),
         JSON.stringify({
@@ -149,7 +171,7 @@ export function useQueryTabs({
     } catch {
       /* Tabs still work for this page view when storage is unavailable. */
     }
-  }, [scope, state.tabs, state.active, state.next])
+  }, [scope, target, state.tabs, state.active, state.next])
 
   return {
     tabs: state.tabs,

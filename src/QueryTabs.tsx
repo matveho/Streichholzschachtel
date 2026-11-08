@@ -34,6 +34,14 @@ export function QueryTabBar({ tabs }: { tabs: QueryTabsApi }) {
                   onChange={(e) => setDraft(e.target.value)}
                   onBlur={() => commit(tab.key)}
                   onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === 'Escape') {
+                      const tab = e.currentTarget.closest('.query-tab')
+                      requestAnimationFrame(() =>
+                        tab
+                          ?.querySelector<HTMLButtonElement>('.query-tab-name')
+                          ?.focus(),
+                      )
+                    }
                     if (e.key === 'Enter') e.currentTarget.blur()
                     if (e.key === 'Escape') {
                       e.stopPropagation()
@@ -46,7 +54,13 @@ export function QueryTabBar({ tabs }: { tabs: QueryTabsApi }) {
                 <button
                   aria-current={selected ? 'page' : undefined}
                   className="query-tab-name"
-                  title="Double-click to rename"
+                  title="Double-click or press F2 to rename"
+                  onKeyDown={(event) => {
+                    if (event.key !== 'F2') return
+                    event.preventDefault()
+                    setDraft(tab.name)
+                    setEditing(tab.key)
+                  }}
                   onClick={() => tabs.select(tab.key)}
                   onDoubleClick={() => {
                     setDraft(tab.name)
@@ -68,7 +82,13 @@ export function QueryTabBar({ tabs }: { tabs: QueryTabsApi }) {
           )
         })}
       </div>
-      <button aria-label="Open new query tab" title="Open new query tab" onClick={tabs.openNew}><Plus size={15} /></button>
+      <button
+        aria-label="Open new query tab"
+        title="Open new query tab"
+        onClick={tabs.openNew}
+      >
+        <Plus size={15} />
+      </button>
     </nav>
   )
 }

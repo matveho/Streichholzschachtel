@@ -18,6 +18,7 @@ export type Project = {
 export type ProjectDocument = DocumentRecord & {
   id: string
   category: string
+  ownerProjectId?: string
   projectArtifact?: boolean
   filename?: string
 }
@@ -32,6 +33,7 @@ export type Collection = {
   missingFiles?: string[]
 }
 export type ProjectQuery = {
+  documentIds?: string[]
   id: string
   projectId: string
   question: string

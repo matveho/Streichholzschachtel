@@ -1,4 +1,10 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react'
 import {
   FolderOpen,
   TriangleAlert,
@@ -32,8 +38,6 @@ import { useQueryTabs } from './useQueryTabs'
 import './projects.css'
 
 const emptyReferences: Reference[] = []
-/** Finished jobs fetched while a search ran, so their page opens instantly. */
-const settledJobs = new Map<string, ProjectQuery>()
 const unansweredLabels: Record<string, string> = {
   not_found: 'Not found',
   partial: 'No direct answer',
@@ -65,18 +69,16 @@ function useResource<T>(path: string, context = '', keepStale = false) {
   const identity = JSON.stringify([path, context])
   useEffect(() => {
     const controller = new AbortController()
-    let retry: ReturnType<typeof setTimeout> | undefined
-    api(settings, path, { signal: controller.signal })
+    const timeout = AbortSignal.timeout(30000)
+    api(settings, path, {
+      signal: AbortSignal.any([controller.signal, timeout]),
+    })
       .then((data) => {
         if (!controller.signal.aborted)
           setState({ key: identity, data, error: '', status: 200 })
       })
       .catch((error) => {
         if (!controller.signal.aborted) {
-          if (error instanceof ApiError && error.status === 503) {
-            retry = setTimeout(() => setVersion((v) => v + 1), 1500)
-            return
-          }
           setState({
             key: identity,
             data: null,
@@ -87,7 +89,6 @@ function useResource<T>(path: string, context = '', keepStale = false) {
       })
     return () => {
       controller.abort()
-      clearTimeout(retry)
     }
   }, [path, key, identity, settings])
   return {
@@ -717,6 +718,7 @@ function QueryReader({
   onRun,
   onNew,
   thread,
+  projectDocuments,
 }: {
   data: ProjectData
   id: string
@@ -724,14 +726,14 @@ function QueryReader({
     question: string,
     sourceOnly?: boolean,
     context?: RunContext,
+    documentIds?: string[],
   ) => Promise<void>
   onNew: () => void
+  projectDocuments: ReturnType<typeof projectDocumentMap>
   thread?: ThreadTurn[]
 }) {
   const resource = useResource<ProjectQuery>(
     projectPath(data.project.id) + '/queries/' + id,
-    '',
-    true,
   )
   if (resource.error)
     return (
@@ -739,10 +741,17 @@ function QueryReader({
         <Message text={resource.error} error onRetry={resource.refresh} />
       </Shell>
     )
-  const job =
-    resource.data?.id === id
-      ? resource.data
-      : (settledJobs.get(id) ?? resource.data)
+  const job = resource.data
+  if (job && (job.id !== id || job.projectId !== data.project.id))
+    return (
+      <Shell>
+        <Message
+          text="The returned query does not belong to this workspace."
+          error
+          onRetry={resource.refresh}
+        />
+      </Shell>
+    )
   if (!job)
     return (
       <Shell title={data.project.name}>
@@ -758,7 +767,9 @@ function QueryReader({
           </p>
           <button
             className="primary-action"
-            onClick={() => onRun(job.question, job.sourceOnly)}
+            onClick={() =>
+              onRun(job.question, job.sourceOnly, undefined, job.documentIds)
+            }
           >
             Run with current documents
           </button>
@@ -782,8 +793,10 @@ function QueryReader({
       }}
       settings={readSettings()}
       projectName={data.project.name}
-      projectDocuments={projectDocumentMap(data.documents)}
-      onRun={(q, _case, sourceOnly, context) => onRun(q, sourceOnly, context)}
+      projectDocuments={projectDocuments}
+      onRun={(q, _case, sourceOnly, context) =>
+        onRun(q, sourceOnly, context, job.documentIds)
+      }
       preloadedJob={job}
       onNew={onNew}
       thread={thread}
@@ -810,7 +823,7 @@ function ProjectPage({
       `${section || ''}/${record || ''}`,
       true,
     ),
-    [error, setError] = useState('')
+    [notice, setNotice] = useState({ scope: '', text: '' })
   const tabs = useQueryTabs({
     scope: 'project:' + id,
     target:
@@ -821,6 +834,9 @@ function ProjectPage({
       ),
     onEmpty: () => navigate('project/' + id),
   })
+  const scope = JSON.stringify([section, record, tabs.active])
+  const error = notice.scope === scope ? notice.text : ''
+  const setError = (text: string) => setNotice({ scope, text })
   const onQueryRoute = section === 'new' || (section === 'query' && !!record)
   // Keep the tab buttons mounted while navigation replaces the query pane.
   function withTabs(content: React.ReactNode) {
@@ -833,46 +849,59 @@ function ProjectPage({
       content
     )
   }
+  const pendingRequest = useRef<AbortController | null>(null)
+  useLayoutEffect(() => {
+    return () => pendingRequest.current?.abort()
+  }, [id, section, record, tabs.active])
+
   async function run(
     question: string,
     sourceOnly = false,
     context?: RunContext,
+    selection?: string[],
   ) {
+    pendingRequest.current?.abort()
+    const controller = new AbortController()
+    pendingRequest.current = controller
+    const signal = AbortSignal.any([
+      controller.signal,
+      AbortSignal.timeout(120000),
+    ])
+    const path = projectPath(id) + '/queries'
     setError('')
-    const startedAt = location.hash
     try {
-      const job = await requestProject(projectPath(id) + '/queries', 'POST', {
-        question,
-        sourceOnly,
-        id: crypto.randomUUID(),
+      let job = await api(readSettings(), path, {
+        method: 'POST',
+        signal,
+        body: JSON.stringify({
+          question,
+          sourceOnly,
+          id: crypto.randomUUID(),
+          documentIds:
+            selection?.filter((doc) =>
+              resource.data?.project.documentIds.includes(doc),
+            ) ??
+            resource.data?.project.documentIds ??
+            [],
+        }),
       })
-      await settle(job)
-      // The user moved elsewhere meanwhile; the result waits in history.
-      if (location.hash !== startedAt) return
+      const submittedId = job.id
+      while (job.state === 'queued' || job.state === 'running') {
+        await new Promise((resolve) => setTimeout(resolve, 700))
+        signal.throwIfAborted()
+        job = await api(readSettings(), path + '/' + submittedId, { signal })
+      }
+      signal.throwIfAborted()
+      if (job.state !== 'completed')
+        throw new Error(job.error || 'Query ' + job.state + '. Please retry.')
+      if (job.id !== submittedId || job.projectId !== id)
+        throw new Error('Unexpected query response. Please retry.')
       tabs.markRun(context && { ...context, to: question })
       navigate('project/' + id + '/query/' + job.id)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not run the query.')
+      if (!controller.signal.aborted)
+        setError(e instanceof Error ? e.message : 'Could not run the query.')
     }
-  }
-  /** Waits until a submitted query finishes, so the result appears at once. */
-  async function settle(job: { id: string; state: string }) {
-    const deadline = Date.now() + 120000
-    let current = job
-    while (['queued', 'running'].includes(current.state)) {
-      if (Date.now() > deadline) return
-      await new Promise((resolve) => setTimeout(resolve, 700))
-      try {
-        current = await requestProject(
-          projectPath(id) + '/queries/' + job.id,
-          'GET',
-        )
-      } catch {
-        return
-      }
-    }
-    if (current.state === 'completed')
-      settledJobs.set(job.id, current as ProjectQuery)
   }
   if (resource.error)
     return withTabs(
@@ -887,11 +916,39 @@ function ProjectPage({
         <Message text="Opening project documents…" />
       </Shell>,
     )
+  let projectDocuments
+  try {
+    if (
+      data.project.id !== id ||
+      data.documents.some(
+        (doc) =>
+          !data.project.documentIds.includes(doc.id) ||
+          (doc.ownerProjectId && doc.ownerProjectId !== id),
+      )
+    )
+      throw new Error('Document metadata does not belong to this project.')
+    projectDocuments = projectDocumentMap(data.documents)
+  } catch (cause) {
+    return withTabs(
+      <Shell>
+        <Message
+          error
+          text={
+            cause instanceof Error
+              ? cause.message
+              : 'Invalid document metadata.'
+          }
+          onRetry={resource.refresh}
+        />
+      </Shell>,
+    )
+  }
   let content
   if (section === 'query' && record)
     content = (
       <QueryReader
         data={data}
+        projectDocuments={projectDocuments}
         id={record}
         onRun={run}
         onNew={tabs.openNew}
@@ -917,13 +974,13 @@ function ProjectPage({
         }}
         settings={readSettings()}
         projectName={data.project.name}
-        projectDocuments={projectDocumentMap(data.documents)}
+        projectDocuments={projectDocuments}
         onRun={(q, _case, sourceOnly, context) => run(q, sourceOnly, context)}
         onNew={tabs.openNew}
       />
     )
   } else if (section === 'document' && record) {
-    const documents = projectDocumentMap(data.documents)
+    const documents = projectDocuments
     content = documents[record] ? (
       <DocumentContext.Provider value={documents}>
         <main className="workspace">
