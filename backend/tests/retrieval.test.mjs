@@ -597,3 +597,16 @@ test('replacement questions independently retrieve the existing service requirem
     null,
   )
 })
+
+test('a sanitary velocity limit cannot be recast as a storm sewer finding', () => {
+  const unit = evidenceUnits(corpus.passages.filter(p => p.doc === 'doc-09e07f57e7a3' && p.page === 7), 30000)
+    .find(u => u.excerpt.includes('maximum flow velocity shall be limited to 3.0 m/s'))
+  assert.ok(unit, 'Real sanitary provision and its section scope remain available')
+  const draft = {answerable:true, sections:[{heading:'Finding',claims:[{
+    text:'The maximum flow velocity for storm sewers is limited to 3.0 m/s.',
+    evidence:[{passageId:unit.passage.id,quote:unit.excerpt}],
+  }]}]}
+  const result = validateSynthesis(draft, [unit.passage], 'What maximum flow velocity applies to storm sewers?')
+  assert.equal(result.sections.length, 0)
+  assert.ok(result.issues.some(issue=>/different sewer system/.test(issue.reason)))
+})

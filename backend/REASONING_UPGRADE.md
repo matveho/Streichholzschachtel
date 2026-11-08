@@ -87,3 +87,21 @@ imports, strict isolation and restart persistence. A new full seven-case 32B
 non-thinking evaluation is running; inspect `/tmp/basis-reasoning-seven-current.log`
 and its reported state directory before starting another GPU job. Live services
 remain extractive until a candidate passes broader engineering validation.
+
+## Source-section system scope
+
+The subsequent seven-case run `run-gpu-PYSUeYUF` uses the comparison-repair
+snapshot and is still being evaluated. Its first minor-system answer failed
+roughness coverage and its original-source table included a generic 3.0 m/s
+clause inherited from the sanitary sewer section (Design Guidelines PDF p. 7).
+The frost-cover case passed in 73 seconds. Inspect the completed run before
+reporting an overall score.
+
+Fixed generic conveyance clauses to inherit the nearest explicit source system
+from their heading/ancestor scope. Storm questions cannot select sanitary-only
+velocity rules, and synthesis validation independently rejects such recast
+claims using the original evidence-unit scope. Explicit mixed-system comparisons
+and clauses remain eligible. This fix was added after that GPU run started and
+is not covered by its model results. Regression `run-u68RrDUL`: 188/188 tests plus
+isolated API/import/isolation/restart checks passed, including the real sanitary
+provision being rejected as a storm finding. Live inference remains extractive.

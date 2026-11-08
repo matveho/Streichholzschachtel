@@ -10,6 +10,7 @@ import { selectEvidence } from './local-evidence.mjs'
 import {
   falseComparisons,
   incompatibleLidAsset,
+  incompatibleConveyanceEvidence,
   applicableEvidence,
   requiresOptionalComponent,
 } from './applicability.mjs'
@@ -220,6 +221,17 @@ export function validateSynthesis(output, passages, question) {
         continue
       }
 
+      const foreignSystem = evidence.some(e => {
+        const units = evidenceUnits([e.passage], 30000)
+        const unit = units.find(u => normalize(u.excerpt).includes(normalize(e.excerpt)) || normalize(e.excerpt).includes(normalize(u.excerpt)))
+        return incompatibleConveyanceEvidence(question, unit || {excerpt:e.excerpt, heading:e.passage.section})
+      })
+      if (foreignSystem) {
+        rejected++
+        issues.push({ ...(claim.check ? {check:claim.check} : {}), claim:claim.text,
+          reason:'The cited provision belongs to a different sewer system in its governing source section. Preserve storm/sanitary scope.' })
+        continue
+      }
       const interpretationIssue = evidenceInterpretationIssue(claim.text, sourceText, question)
       if (interpretationIssue) {
         rejected++

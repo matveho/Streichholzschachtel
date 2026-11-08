@@ -103,6 +103,22 @@ export function falseComparisons(text) {
   return issues
 }
 
+const stormAsset = /\bstorm(?:water)?(?:\s+and\s+sanitary)?\s+(?:sewers?|mains?|services?|drainage)\b|\bdetention ponds?\b/i
+const sanitaryAsset = /\bsanitary\b/i
+export function conveyanceScope(unit) {
+  for (const text of [unit.excerpt, unit.heading, ...[...(unit.scope || [])].reverse()]) {
+    const storm = stormAsset.test(text || ''), sanitary = sanitaryAsset.test(text || '')
+    if (storm || sanitary) return {storm, sanitary}
+  }
+  return {storm:false, sanitary:false}
+}
+export function incompatibleConveyanceEvidence(question, unit) {
+  const requestedStorm = stormAsset.test(question), requestedSanitary = sanitaryAsset.test(question)
+  const source = conveyanceScope(unit)
+  return (requestedStorm && !requestedSanitary && source.sanitary && !source.storm) ||
+    (requestedSanitary && !requestedStorm && source.storm && !source.sanitary)
+}
+
 export function applicableEvidence(question, evidence) {
   const requestedLidTypes = lidTypes(question)
   const constructionOnly =
@@ -246,8 +262,7 @@ export function applicableEvidence(question, evidence) {
     }
     // These are sibling systems, not interchangeable engineering synonyms.
     // Retain mixed/universal provisions and ambiguous questions for review.
-    const sourceStorm = storm.test(unit.excerpt),
-      sourceSanitary = sanitary.test(unit.excerpt)
+    const {storm: sourceStorm, sanitary: sourceSanitary} = conveyanceScope(unit)
     if (
       requestedStorm &&
       conveyance.test(question) &&
