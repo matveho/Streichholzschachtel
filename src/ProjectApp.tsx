@@ -17,7 +17,6 @@ import {
   Star,
   X,
   FileText,
-  BookOpen,
   Pencil,
 } from 'lucide-react'
 import LegacyApp, { QueryWorkspace } from './App'
@@ -516,13 +515,6 @@ function ProjectDashboard({
             {documents.length > 0 && !shown.length && (
               <Message text="No matching documents." />
             )}
-            <div className="project-collection-summary">
-              <BookOpen size={14} />
-              <span>
-                {data.collections.map((c) => c.title).join(' · ') ||
-                  'No Reference Collections selected'}
-              </span>
-            </div>
           </section>
           <aside className="project-sidebar">
             <button

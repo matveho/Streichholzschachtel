@@ -343,20 +343,6 @@ button.primary-action:hover {
   font-size: 13px;
   white-space: nowrap;
 }
-.project-collection-summary {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 14px 15px;
-  color: var(--color-secondary);
-  font-size: 13px;
-  line-height: 1.6;
-  border-top: 1px solid var(--line);
-}
-.project-collection-summary svg {
-  flex-shrink: 0;
-  margin-top: 2px;
-}
 .project-sidebar {
   display: flex;
   flex-direction: column;
