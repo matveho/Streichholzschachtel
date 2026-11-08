@@ -11,7 +11,8 @@
     "index": "node src/index-cli.mjs",
     "test": "node --test tests/*.test.mjs",
     "demo": "node tests/run-demo.mjs",
-    "demo:api": "node tests/demo.e2e.mjs"
+    "demo:api": "node tests/demo.e2e.mjs",
+    "test:ifc-contradictions": "node tests/fixtures/ifc-contradictions/run.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",

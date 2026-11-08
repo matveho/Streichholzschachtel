@@ -1,0 +1,52 @@
+[
+  {
+    "category": "reference",
+    "file": "speed-standard.pdf",
+    "element": "R1",
+    "property": "DesignSpeed_kph",
+    "actual": 60,
+    "expected": 50,
+    "comparison": "max",
+    "page": 1
+  },
+  {
+    "category": "client",
+    "file": "client-brief.pdf",
+    "element": "S1",
+    "property": "NominalPipeDiameter_mm",
+    "actual": 200,
+    "expected": 250,
+    "comparison": "min",
+    "page": 1
+  },
+  {
+    "category": "design",
+    "file": "pipe-schedule.pdf",
+    "element": "S1",
+    "property": "Length_m",
+    "actual": 35,
+    "expected": 43,
+    "comparison": "exact",
+    "page": 2
+  },
+  {
+    "category": "report",
+    "file": "access-review.pdf",
+    "element": "D1",
+    "property": "Width_m",
+    "actual": 0.9,
+    "expected": 1.2,
+    "comparison": "min",
+    "page": 1
+  },
+  {
+    "category": "supporting",
+    "file": "model-register.pdf",
+    "element": "R1",
+    "property": "DesignSpeed_kph",
+    "actual": 60,
+    "expected": 40,
+    "comparison": "exact",
+    "page": 1
+  }
+]

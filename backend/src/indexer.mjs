@@ -135,7 +135,7 @@ export function quantityUnits(text, dense = false) {
     .map((m) => `${Number(m[1])}:${m[2]}`)
 }
 
-async function extract(file) {
+export async function extractPdf(file) {
   const python = extractionPython
   if (existsSync(python)) {
     const { stdout } = await run(
@@ -425,7 +425,7 @@ export async function buildIndex(progress = () => {}, onlyFiles) {
       const cached = readPdfCache(cache)
       const extracted = reusablePdfCache(cached, canOcr)
         ? cached
-        : await extract(file)
+        : await extractPdf(file)
       if (extracted !== cached) writePdfCache(cache, extracted)
       const layout = await tableLayout(file, hash)
       const metadata = {
