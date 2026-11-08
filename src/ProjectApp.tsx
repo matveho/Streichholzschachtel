@@ -554,15 +554,15 @@ function ProjectDashboard({
                 </h2>
                 <button
                   disabled={pending}
-                  onClick={() => void action('/compare-ifc', 'POST')}
+                  onClick={() => void action('/rescan', 'POST')}
                 >
-                  {pending ? 'Working…' : 'Compare IFC'}
+                  {pending ? 'Scanning…' : 'Rescan'}
                 </button>
               </div>
               {data.comparison && (
                 <details className="project-empty">
                   <summary>
-                    IFC comparison: {data.comparison.modelCount} model(s),{' '}
+                    IFC scan: {data.comparison.modelCount} model(s),{' '}
                     {
                       data.comparison.coverage.filter((d) => d.checks > 0)
                         .length

@@ -88,7 +88,7 @@ http
       const allowed =
         (req.method === 'POST' && url.pathname === '/v1/demo/reset') ||
         (['GET', 'POST', 'PATCH', 'DELETE'].includes(req.method) &&
-          /^\/v1\/projects(?:\/[a-zA-Z0-9-]+(?:\/(?:reset|compare-ifc|queries(?:\/[a-f0-9-]{36})?|issues\/[a-z0-9-]+|documents\/(?:import|doc-[a-f0-9]+\/(?:file|model))))?)?$/.test(
+          /^\/v1\/projects(?:\/[a-zA-Z0-9-]+(?:\/(?:reset|rescan|compare-ifc|queries(?:\/[a-f0-9-]{36})?|issues\/[a-z0-9-]+|documents\/(?:import|doc-[a-f0-9]+\/(?:file|model))))?)?$/.test(
             url.pathname,
           )) ||
         (req.method === 'GET' &&

@@ -115,3 +115,16 @@ The installer audit exposed and fixed invalid quoting of systemd WorkingDirector
 Repository changes comprise Linux installers/management/test runners, explicit TSV OCR validation with regression coverage, shared gateway token configuration, portable test paths/browser selection, and this operational record. No frontend production behavior or API contract was replaced. All changes are on deployment/ubuntu-gpu. Runtime state, test artifacts, secrets and model weights remain ignored/untracked outside commits.
 
 This completes local deployment and GPU feasibility evaluation. Public hosting authorization, institution-managed persistence/quotas and post-logout uptime are external prerequisites for a later public cutover, not verified properties of this local installation. Current synthesis quality is a documented limitation, not a passing result.
+
+Project dashboards automatically scan associated IFC models against scoped
+project documents. **Rescan** revalidates prepared document findings and refreshes
+IFC checks without resetting dismissed findings. Protected project packages in
+`backend/IFC/` are checked alongside associated generated models, including
+filenames containing mixed spaces and underscores. The scan checks identified
+numeric statements and exact classification rows in extracted standards tables
+with explicit numeric minimum/maximum columns. Findings retain the IFC object,
+property, actual value, expected value, document page and table cell coordinates.
+Table notes, exceptions, unsupported properties and geometry still require
+engineering review; zero findings does not establish compliance.
+The gateway permits `POST /v1/projects/:id/rescan`; the older `/compare-ifc`
+endpoint remains available for API compatibility.

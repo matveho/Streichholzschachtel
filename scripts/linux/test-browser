@@ -15,7 +15,8 @@ BASIS_GATEWAY_PORT=8842 BASIS_GATEWAY_TARGET=http://127.0.0.1:8840 node backend/
 gateway_pid=$!
 trap 'kill "$gateway_pid" "$api_pid" 2>/dev/null || true; wait "$gateway_pid" "$api_pid" 2>/dev/null || true' EXIT
 node --input-type=module - <<'JS'
-for(let i=0;i<180;i++) {
+// A cold OCR cache can take several minutes; health stays responsive.
+for(let i=0;i<Number(process.env.BASIS_BROWSER_READY_SECONDS || 600);i++) {
  try { const h=await(await fetch('http://127.0.0.1:8842/local-api/health')).json(); if(h.ready && !h.failures) process.exit(0); }catch{}
  await new Promise(r=>setTimeout(r,1000));
 }

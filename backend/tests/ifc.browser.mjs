@@ -26,16 +26,24 @@ try {
     const model = data.documents.find((d) => d.model)
     assert.ok(model)
     await page.goto(frontend + '/#project/' + id)
+    await page.getByRole('region', { name: 'Potential issues', exact: true }).waitFor()
+    assert.equal(data.comparison.modelCount, 2, 'Both project models scanned automatically')
+    if (id === 'parkview-exchange') {
+      const automatic = data.issues.find((issue) => !issue.prepared)
+      assert.ok(automatic, 'Actual IFC discrepancy exists before clicking Rescan')
+      await page.getByRole('heading', { name: automatic.title, exact: true }).first().waitFor()
+    }
+    assert.equal(await page.getByRole('button', { name: 'Compare IFC', exact: true }).count(), 0)
     const scanResponse = page.waitForResponse(
       (response) =>
-        response.url().endsWith('/projects/' + id + '/compare-ifc') &&
+        response.url().endsWith('/projects/' + id + '/rescan') &&
         response.request().method() === 'POST',
     )
-    await page.getByRole('button', { name: 'Compare IFC', exact: true }).click()
+    await page.getByRole('button', { name: 'Rescan', exact: true }).click()
     const response = await scanResponse
     assert.equal(response.status(), 200)
     const scan = await response.json()
-    assert.equal(scan.modelCount, 1)
+    assert.equal(scan.modelCount, 2)
     assert.deepEqual(
       [...new Set(scan.coverage.map((d) => d.category))].sort(),
       ['client', 'design', 'reference', 'report', 'supporting'],
@@ -48,19 +56,26 @@ try {
       name: 'Potential issues',
       exact: true,
     })
-    await panel.getByText(/^IFC comparison:/).click()
+    await panel.getByText(/^IFC scan:/).click()
     await panel.getByText('Technical reports', { exact: true }).waitFor()
-    if (scan.issues.length) {
+    const dynamicIssues = scan.issues.filter((issue) => !issue.prepared)
+    if (id === 'parkview-exchange') assert.ok(dynamicIssues.length > 0)
+    if (dynamicIssues.length) {
       const finding = panel
         .locator('.project-issue')
-        .filter({ hasText: scan.issues[0].title })
+        .filter({ hasText: dynamicIssues[0].title })
         .first()
       await finding.getByText('Inspect evidence', { exact: true }).click()
-      assert.ok(
-        (await finding.textContent()).includes(
-          scan.issues[0].citations[0].excerpt,
-        ),
-      )
+      assert.ok((await finding.textContent()).includes(dynamicIssues[0].citations[0].excerpt))
+      await finding.getByRole('button', { name: 'Dismiss', exact: true }).click()
+      await panel.getByRole('button', { name: /^Dismissed / }).click()
+      await panel.locator('.project-issue').filter({ hasText: dynamicIssues[0].title }).first().waitFor()
+      const rescanned = await fetch(api + '/projects/' + id + '/rescan', { method: 'POST' })
+      assert.equal(rescanned.status, 200)
+      assert.equal((await rescanned.json()).issues.find((i) => i.id === dynamicIssues[0].id).status, 'dismissed')
+      await panel.locator('.project-issue').filter({ hasText: dynamicIssues[0].title }).first()
+        .getByRole('button', { name: 'Restore', exact: true }).click()
+      await panel.getByRole('button', { name: /^Open / }).click()
     }
     const download = page.waitForEvent('download')
     await page

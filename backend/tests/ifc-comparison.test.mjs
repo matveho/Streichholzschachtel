@@ -282,3 +282,29 @@ test('ambiguous multi-element sentences do not borrow another element value', ()
   assert.equal(result.issues.length, 0)
   assert.equal(result.coverage[0].status, 'needs-review')
 })
+
+test('checks exact classification table cells with explicit limits and source coordinates', () => {
+  const road = elements.find((e) => e.name === 'IND-LOCAL-01')
+  const run = (row, column = 'Minimum centreline curve radii') => compareIfcDocuments(
+    [{ name: 'roads.ifc', elements: [road] }], [docs[0]], [{ doc: 'reference', page: 221,
+      text: 'Geometric standards', lines: [{ tableCell: '0:1:3', tableRowLabel: row,
+        tableColumn: column, text: '90 m', rect: [1, 2, 3, 4] }] }],
+  )
+  const issue = run('Industrial Local').issues[0]
+  assert.equal(issue.actual, 60)
+  assert.equal(issue.expected, 90)
+  assert.equal(issue.comparison, 'min')
+  assert.deepEqual(issue.citations[0].regions, [[1, 2, 3, 4]])
+  assert.equal(run('Residential Local').issues.length, 0)
+  assert.equal(run('Industrial Local', 'Suggested radius').issues.length, 0)
+})
+
+test('generic width does not match another named width property', () => {
+  const model = [{ name: 'road.ifc', elements: [{ elementId: '#1', globalId: 'guid', name: 'RD-EB',
+    properties: [{ name: 'Width_m', value: 3.5, propertyId: '#2' },
+      { name: 'PavedSurfaceWidth_m', value: 12, propertyId: '#3' }] }] }]
+  const result = compareIfcDocuments(model, [docs[2]], [{ doc: 'design', page: 2,
+    text: 'RD-EB Width 3.5 m Paved Surface Width 12.0 m.' }])
+  assert.equal(result.issues.length, 0)
+  assert.equal(result.coverage[0].checks, 2)
+})

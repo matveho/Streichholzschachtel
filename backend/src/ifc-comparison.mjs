@@ -167,6 +167,48 @@ function identifies(element, text) {
   })
 }
 
+const clean = (text) => String(text || '').replace(/[\u200b-\u200d\ufeff]/g, '').replace(/\s+/g, ' ').trim()
+// Only use extracted table cells with an exact IFC classification and an
+// explicit minimum/maximum column. Never infer a rule from flattened numbers.
+function classifiedCells(passage, models) {
+  const cells = new Map()
+  for (const line of passage.lines || []) {
+    if (!line.tableCell) continue
+    const cell = cells.get(line.tableCell) || { lines: [], row: clean(line.tableRowLabel), column: clean(line.tableColumn) }
+    cell.lines.push(line)
+    cells.set(line.tableCell, cell)
+  }
+  const columns = [
+    [/^minimum centreline (?:curve )?radii/i, 'MinCentrelineRadius_m'],
+    [/^minimum horizontal curve lengths/i, 'MinHorizontalCurveLength_m'],
+    [/^maximum gradient/i, 'MaxGradient_percent'],
+    [/^minimum gradient/i, 'MinGradient_percent'],
+    [/^minimum tangent (?:section )?lengths/i, 'MinTangentLength_m'],
+    [/^minimum intersection spacing/i, 'MinIntersectionSpacing_m'],
+  ]
+  const result = []
+  for (const cell of cells.values()) {
+    const propertyName = columns.find(([pattern]) => pattern.test(cell.column))?.[1]
+    if (!propertyName) continue
+    const value = clean(cell.lines.map((l) => l.text).join(' ')).match(/^(\d+(?:\.\d+)?)\s*(m|%)(?:\s*(?:\[\d+(?:\s*,\s*\d+)*\]|\d+(?:\s*,\s*\d+)*))*$/)
+    if (!value) continue
+    for (const model of models) for (const element of model.elements) {
+      const classification = element.properties.find((p) => p.name === 'Classification')?.value
+      if (!classification || clean(classification).toLowerCase() !== cell.row.toLowerCase()) continue
+      const property = element.properties.find((p) => p.name === propertyName)
+      const metric = property && propertyMetric(property)
+      if (!metric) continue
+      result.push({
+        text: `${element.name} ${metric.bound === 'max' ? 'maximum' : 'minimum'} ${metric.words.join(' ')}: ${value[1]} ${value[2]}.`,
+        excerpt: `${cell.row} — ${cell.column}: ${clean(cell.lines.map((l) => l.text).join(' '))}. Table notes and exceptions require engineering review.`,
+        model: model.name, elementId: element.elementId, propertyName,
+        regions: cell.lines.map((l) => l.rect).filter(Boolean),
+      })
+    }
+  }
+  return result
+}
+
 export function compareIfcDocuments(models, documents, passages) {
   const issues = [],
     coverage = []
@@ -177,8 +219,12 @@ export function compareIfcDocuments(models, documents, passages) {
     const seen = new Set()
     for (const passage of passages.filter((p) => p.doc === doc.id)) {
       // Keep each comparison within one sentence or extracted table row.
-      const chunks = passage.text.split(/(?<=[.;])\s+/)
-      for (const chunk of chunks) {
+      const chunks = [
+        ...passage.text.split(/(?<=[.;])\s+/).map((text) => ({ text })),
+        ...classifiedCells(passage, models),
+      ]
+      for (const source of chunks) {
+        const chunk = source.text
         for (const model of models) {
           const mentioned = new Set(
             model.elements
@@ -188,6 +234,7 @@ export function compareIfcDocuments(models, documents, passages) {
           // Do not assign one asset's value to another in a flattened table row.
           if (mentioned.size > 1) continue
           for (const element of model.elements) {
+            if (source.elementId && (source.model !== model.name || source.elementId !== element.elementId)) continue
             const identifiers = element.identifiers || [element.name]
             const identified = mentioned.has(element.elementId)
             if (mentioned.size && !identified) continue
@@ -205,6 +252,7 @@ export function compareIfcDocuments(models, documents, passages) {
             )
             if (!identified && !linkedSource) continue
             for (const property of element.properties) {
+              if (source.propertyName && source.propertyName !== property.name) continue
               const metric = propertyMetric(property)
               if (!metric || !Number.isFinite(metric.value)) continue
               // A source-page link alone cannot disambiguate generic labels like
@@ -232,6 +280,15 @@ export function compareIfcDocuments(models, documents, passages) {
                 'ig',
               )
               for (const match of chunk.matchAll(pattern)) {
+                // A generic Width must not also match Paved Surface Width, etc.
+                const prefix = chunk.slice(0, match.index).toLowerCase()
+                const shadowed = element.properties.some((other) => {
+                  const longer = propertyMetric(other)
+                  if (!longer || longer.words.length <= metric.words.length ||
+                      longer.words.slice(-metric.words.length).join(' ') !== metric.words.join(' ')) return false
+                  return prefix.trimEnd().endsWith(longer.words.slice(0, -metric.words.length).join(' '))
+                })
+                if (shadowed) continue
                 const expected = Number(match[3]),
                   qualifier = match[1] || match[2] || ''
                 const bound = /minimum|^min$|at least/i.test(qualifier)
@@ -270,7 +327,8 @@ export function compareIfcDocuments(models, documents, passages) {
                       doc: doc.id,
                       page: passage.page,
                       label: doc.label || doc.title,
-                      excerpt: chunk,
+                      excerpt: source.excerpt || chunk,
+                      regions: source.regions || [],
                     },
                   ],
                 })

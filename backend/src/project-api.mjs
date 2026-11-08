@@ -221,10 +221,14 @@ export class ProjectApi {
         .map((d) => resolve(demoDocumentDirectory, d.modelFile)),
     )
     // Legacy demonstration projects have their IFC beside the original project packages.
-    if (!files.size && project.protectedDemo) {
-      const name = project.name.replaceAll(' ', '_') + '.ifc'
-      const candidate = resolve(root, 'IFC', name)
-      if (basename(name) === name && existsSync(candidate)) files.add(candidate)
+    if (project.protectedDemo) {
+      const normalized = (name) => name.replace(/[^a-z0-9]/gi, '').toLowerCase()
+      const directory = resolve(root, 'IFC')
+      for (const name of existsSync(directory) ? readdirSync(directory) : []) {
+        if (name.toLowerCase().endsWith('.ifc') &&
+            normalized(name.slice(0, -4)) === normalized(project.name))
+          files.add(resolve(directory, name))
+      }
     }
     const contents = [...files].map((file) => {
       try {
@@ -618,6 +622,15 @@ export class ProjectApi {
         throw problem(400, 'Only demonstration projects have a reset state.')
       this.resetProject(projectId)
       return json(200, { project: this.project(projectId) })
+    }
+    if (route === '/rescan' && req.method === 'POST') {
+      // Revalidate prepared document evidence and recompute current model checks.
+      for (const key of this.evidence.keys())
+        if (key.startsWith(projectId + '/')) this.evidence.delete(key)
+      this.scopeCache.clear()
+      if (project.protectedDemo) this.prepareSeeds(projectId)
+      const comparison = this.comparison(projectId, true)
+      return json(200, { ...comparison, issues: this.issues(projectId) })
     }
     if (route === '/compare-ifc' && req.method === 'POST')
       return json(200, this.comparison(projectId, true))
