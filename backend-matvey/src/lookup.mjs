@@ -372,6 +372,61 @@ function notFound(question, reason) {
   }
 }
 
+// Subjects these drainage and water standards actually cover. A question about
+// one of them gets the closest related provisions even without a direct
+// answer; a question about anything else (stairs, parking, geography) does not.
+const domainTerms = new Set(
+  tokens(
+    'sewer sewers storm stormwater sanitary drainage drain runoff rainfall water main mains service services pipe pipes pond ponds SWMF LID bioretention culvert catch basin maintenance hole forcemain pump station flow infiltration inflow detention storage release rate grading lot lots erosion sediment hydrant valve backflow connection connections fire flow pressure zoning zone outfall overflow swale underdrain foundation weeping sump roof leader downspout trench bedding backfill excavation easement manhole',
+  ),
+)
+
+function relatedEvidence(question, candidates, index) {
+  const subjects = tokens(canon(question)).filter((t) => domainTerms.has(t))
+  if (!subjects.length) return null
+  const content = [...new Set(tokens(canon(question)))].filter(
+    (t) => !generic.has(t) && !/^\d/.test(t) && index.df.has(t),
+  )
+  const needed = Math.min(2, content.length)
+  const picked = []
+  for (const c of candidates) {
+    if (picked.length >= 3 || c.score < 0.25) break
+    const doc = index.docs.get(c.unit.doc)
+    if (doc.status === 'superseded' || c.unit.kind === 'revisions' || c.unit.type === 'heading') continue
+    const words = new Set(tokens(canon(c.unit.text)))
+    if (!subjects.some((t) => words.has(t))) continue
+    if (content.filter((t) => words.has(t)).length < needed) continue
+    if (picked.some((p) => p.unit.doc === c.unit.doc && p.unit.page === c.unit.page)) continue
+    picked.push(c)
+  }
+  if (!picked.length) return null
+  const sections = [
+    {
+      heading: 'No direct answer in the indexed documents',
+      sentences: [
+        {
+          text: 'The documents do not state this directly. The closest related provisions are below; check whether they apply to your situation before relying on them.',
+          units: [],
+        },
+      ],
+    },
+  ]
+  for (const c of picked) {
+    const doc = index.docs.get(c.unit.doc)
+    const where = (c.unit.type === 'row' && c.unit.table) || c.unit.heading || ''
+    sections.push({
+      heading: `Related: ${where ? where.slice(0, 90) + ' — ' : ''}${doc.label}, ${doc.edition}`,
+      sentences: [{ text: c.unit.text, units: [c.unit] }],
+    })
+  }
+  return {
+    mode: 'related_evidence',
+    sections,
+    notes: ['No passage directly answers the question; related source text is shown for reference only.'],
+    candidates: candidates.slice(0, 30),
+  }
+}
+
 const sameTable = (a, b) =>
   a.doc === b.doc &&
   Math.abs(a.page - b.page) <= 1 &&
@@ -401,7 +456,9 @@ export function lookup(question, index) {
     candidates = index.score(question, { allowSuperseded })
   candidates = dedupe(candidates.slice(0, 60), index)
   const top = candidates[0]
-  if (!top || top.score < 0.5)
+  if (!top || top.score < 0.5) {
+    const related = relatedEvidence(question, candidates, index)
+    if (related) return related
     return {
       ...notFound(
         question,
@@ -409,6 +466,7 @@ export function lookup(question, index) {
       ),
       candidates: candidates.slice(0, 30),
     }
+  }
   const chosen = [top]
   for (const c of candidates.slice(1, 20)) {
     if (chosen.length >= 4) break
