@@ -33,6 +33,9 @@ export function QueryWorkspace({
   onNew,
   projectName,
   projectDocuments,
+  tabBar,
+  draft,
+  onDraftChange,
 }: {
   entry: HistoryEntry
   settings: BackendSettings
@@ -40,6 +43,11 @@ export function QueryWorkspace({
   onNew: () => void
   projectName?: string
   projectDocuments?: Record<string, DocumentRecord>
+  /** Open-query tabs shown along the bottom of the workspace. */
+  tabBar?: React.ReactNode
+  /** Unsent text restored when returning to this query's tab. */
+  draft?: string
+  onDraftChange?: (text: string) => void
 }) {
   const queryCase = queryCases.find((c) => c.id === entry.caseId)!
   const exampleQuery = queryCase.prompt
@@ -49,7 +57,7 @@ export function QueryWorkspace({
     entry.prompt === exampleQuery
       ? { ...settings, mode: 'static' }
       : settings
-  const [query, setQuery] = useState(entry.prompt)
+  const [query, setQuery] = useState(draft ?? entry.prompt)
   const [submitted, setSubmitted] = useState(entry.prompt)
   const [retry, setRetry] = useState(0)
   const live = useLiveQuery(
@@ -261,7 +269,10 @@ export function QueryWorkspace({
                   ? "Search this project's documents…"
                   : 'Enter a query…'
               }
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value)
+                onDraftChange?.(e.target.value)
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
@@ -557,6 +568,7 @@ export function QueryWorkspace({
             ) : null}
           </div>
         </section>
+        {tabBar}
       </main>
     </DocumentContext.Provider>
   )

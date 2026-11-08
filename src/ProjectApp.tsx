@@ -23,6 +23,8 @@ import { PdfPane } from './PdfPane'
 import { projectPath, requestProject, projectDocumentMap } from './projects'
 import type { Project, ProjectData, ProjectQuery } from './projects'
 import type { Reference } from './data'
+import { QueryTabBar } from './QueryTabs'
+import { useQueryTabs } from './useQueryTabs'
 import './projects.css'
 
 const emptyReferences: Reference[] = []
@@ -230,9 +232,11 @@ function ProjectsOverview() {
 function ProjectDashboard({
   data,
   onRefresh,
+  onQueryFiles,
 }: {
   data: ProjectData
   onRefresh: () => void
+  onQueryFiles: () => void
 }) {
   const { project, documents, queries, issues } = data
   const [filter, setFilter] = useState(''),
@@ -488,7 +492,7 @@ function ProjectDashboard({
             <button
               className="primary-action query-files"
               disabled={!documents.length}
-              onClick={() => navigate('project/' + project.id + '/new')}
+              onClick={onQueryFiles}
             >
               <Search size={17} />
               Query Files
@@ -634,10 +638,14 @@ function QueryReader({
   data,
   id,
   onRun,
+  onNew,
+  tabBar,
 }: {
   data: ProjectData
   id: string
   onRun: (question: string, sourceOnly?: boolean) => void
+  onNew: () => void
+  tabBar: React.ReactNode
 }) {
   const resource = useResource<ProjectQuery>(
     projectPath(data.project.id) + '/queries/' + id,
@@ -646,6 +654,7 @@ function QueryReader({
     return (
       <Shell title={data.project.name}>
         <Message text={resource.error} error onRetry={resource.refresh} />
+        {tabBar}
       </Shell>
     )
   const job = resource.data
@@ -653,6 +662,7 @@ function QueryReader({
     return (
       <Shell title={data.project.name}>
         <Message text="Opening project query…" />
+        {tabBar}
       </Shell>
     )
   if (job.stale)
@@ -672,6 +682,7 @@ function QueryReader({
             Project dashboard
           </a>
         </div>
+        {tabBar}
       </Shell>
     )
   return (
@@ -690,7 +701,8 @@ function QueryReader({
       projectName={data.project.name}
       projectDocuments={projectDocumentMap(data.documents)}
       onRun={(q, _case, sourceOnly) => onRun(q, sourceOnly)}
-      onNew={() => navigate('project/' + data.project.id + '/new')}
+      onNew={onNew}
+      tabBar={tabBar}
     />
   )
 }
@@ -708,6 +720,18 @@ function ProjectPage({
       `${section || ''}/${record || ''}`,
     ),
     [error, setError] = useState('')
+  const tabs = useQueryTabs({
+    scope: 'project:' + id,
+    target:
+      section === 'new' ? 'new' : section === 'query' && record ? record : null,
+    open: (target) =>
+      navigate(
+        'project/' + id + (target === 'new' ? '/new' : '/query/' + target),
+      ),
+    onEmpty: () => navigate('project/' + id),
+  })
+  const onQueryRoute = section === 'new' || (section === 'query' && !!record)
+  const tabBar = <QueryTabBar tabs={tabs} />
   async function run(question: string, sourceOnly = false) {
     setError('')
     try {
@@ -716,6 +740,7 @@ function ProjectPage({
         sourceOnly,
         id: crypto.randomUUID(),
       })
+      tabs.markRun()
       navigate('project/' + id + '/query/' + job.id)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not run the query.')
@@ -725,6 +750,7 @@ function ProjectPage({
     return (
       <Shell>
         <Message text={resource.error} error onRetry={resource.refresh} />
+        {onQueryRoute && tabBar}
       </Shell>
     )
   const data = resource.data
@@ -732,15 +758,31 @@ function ProjectPage({
     return (
       <Shell>
         <Message text="Opening project documents…" />
+        {onQueryRoute && tabBar}
       </Shell>
     )
   let content
   if (section === 'query' && record)
-    content = <QueryReader key={record} data={data} id={record} onRun={run} />
-  else if (section === 'new')
+    content = (
+      <QueryReader
+        key={record}
+        data={data}
+        id={record}
+        onRun={run}
+        onNew={tabs.openNew}
+        tabBar={tabBar}
+      />
+    )
+  else if (section === 'new') {
+    // Each unsent tab gets its own workspace and keeps its own typed text.
+    const draftTab = tabs.activeTab
     content = (
       <QueryWorkspace
-        key={id + '-new'}
+        key={id + '-new-' + (draftTab?.key ?? '')}
+        draft={draftTab?.draft}
+        onDraftChange={
+          draftTab ? (text) => tabs.setDraft(draftTab.key, text) : undefined
+        }
         entry={{
           id: 'new',
           projectId: id,
@@ -752,10 +794,11 @@ function ProjectPage({
         projectName={data.project.name}
         projectDocuments={projectDocumentMap(data.documents)}
         onRun={(q, _case, sourceOnly) => void run(q, sourceOnly)}
-        onNew={() => navigate('project/' + id + '/new')}
+        onNew={tabs.openNew}
+        tabBar={tabBar}
       />
     )
-  else if (section === 'document' && record) {
+  } else if (section === 'document' && record) {
     const documents = projectDocumentMap(data.documents)
     content = documents[record] ? (
       <DocumentContext.Provider value={documents}>
@@ -797,7 +840,14 @@ function ProjectPage({
         />
       </Shell>
     )
-  } else content = <ProjectDashboard data={data} onRefresh={resource.refresh} />
+  } else
+    content = (
+      <ProjectDashboard
+        data={data}
+        onRefresh={resource.refresh}
+        onQueryFiles={tabs.openNew}
+      />
+    )
   return (
     <>
       {content}
