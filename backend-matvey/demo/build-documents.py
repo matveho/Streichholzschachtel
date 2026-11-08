@@ -1,5 +1,6 @@
 """Reproducible, explicitly synthetic engineering documents for the two demos."""
 import json
+import subprocess
 from pathlib import Path
 from xml.sax.saxutils import escape
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Flowable
@@ -11,7 +12,10 @@ from reportlab import rl_config
 rl_config.invariant = 1  # Identical source content retains its document hash.
 
 ROOT = Path(__file__).resolve().parents[1]
-PROJECTS = json.loads((ROOT / 'state/demo-document-input.json').read_text(encoding='utf-8'))
+PROJECTS = json.loads(subprocess.check_output([
+    'node', '--input-type=module', '-e',
+    "import {demoProjects} from './demo/manifest.mjs'; process.stdout.write(JSON.stringify(demoProjects))"
+], cwd=ROOT, text=True, encoding='utf-8'))
 OUT = ROOT / 'output/pdf'
 OUT.mkdir(parents=True, exist_ok=True)
 INK = colors.HexColor('#173147')
