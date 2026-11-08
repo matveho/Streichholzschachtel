@@ -1,6 +1,7 @@
 // Read-only presenter check: never resets projects, dismissals or query history.
 import assert from 'node:assert/strict'
 import { chromium, expect } from '@playwright/test'
+import { demoProjects } from '../demo/manifest.mjs'
 
 const frontend = process.env.BASIS_FRONTEND_URL || 'http://127.0.0.1:8812/app'
 const base = new URL('/local-api', frontend).href
@@ -18,7 +19,7 @@ assert.ok(
 )
 const projects = (await get('/v1/projects')).projects
 const demos = []
-for (const id of ['demo-mill-creek', 'demo-willow-creek']) {
+for (const { id } of demoProjects) {
   assert.equal(
     projects.filter((p) => p.id === id).length,
     1,
@@ -103,5 +104,5 @@ try {
   await browser.close()
 }
 console.log(
-  'PASS presentation ready: two protected projects, every associated PDF, prepared evidence, rendered citations and dashboard navigation; no project state changed',
+  'PASS presentation ready: all protected projects, every associated PDF, prepared evidence, rendered citations and dashboard navigation; no project state changed',
 )

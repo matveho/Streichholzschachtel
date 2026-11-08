@@ -132,9 +132,9 @@ function fresh(t) {
   })
   return { folder, store: new ProjectStore(corpus, folder) }
 }
-test('both complete protected demonstration projects restore without duplicates', (t) => {
+test('all complete protected demonstration projects restore without duplicates', (t) => {
   const { store, folder } = fresh(t)
-  assert.equal(store.list().length, 2)
+  assert.equal(store.list().length, demoProjects.length)
   for (const project of store.list()) {
     assert.equal(project.protectedDemo, true)
     assert.ok(project.documentIds.length >= 6)
@@ -142,7 +142,7 @@ test('both complete protected demonstration projects restore without duplicates'
       project.documentIds.filter(
         (id) => store.documents.get(id).projectArtifact,
       ).length,
-      3,
+      demoProjects.find((p) => p.id === project.id).documents.length,
     )
     assert.throws(() => store.remove(project.id), { status: 403 })
   }
@@ -155,7 +155,42 @@ test('both complete protected demonstration projects restore without duplicates'
   const data = JSON.parse(readFileSync(store.file, 'utf8'))
   data.projects = data.projects.slice(0, 1)
   writeFileSync(store.file, JSON.stringify(data))
-  assert.equal(new ProjectStore(corpus, folder).list().length, 2)
+  assert.equal(
+    new ProjectStore(corpus, folder).list().length,
+    demoProjects.length,
+  )
+})
+test('researched packages have exact collection memberships and independent artifact scopes', (t) => {
+  const { store } = fresh(t)
+  for (const [id, collectionId, expected] of [
+    ['parkview-exchange', 'edmonton-urban-servicing', 10],
+    ['north-ridge-highway', 'alberta-highway-design', 11],
+  ]) {
+    const collection = store.collections.find((c) => c.id === collectionId)
+    assert.equal(collection.documentCount, expected)
+    assert.deepEqual(collection.missingFiles, [])
+    const scoped = store.scope(id)
+    assert.equal(
+      scoped.corpus.documents.filter((d) => d.projectArtifact).length,
+      6,
+    )
+    assert.ok(
+      scoped.corpus.documents.every(
+        (d) => !d.ownerProjectId || d.ownerProjectId === id,
+      ),
+    )
+    assert.ok(
+      scoped.corpus.documents.every((d) => d.pages > 0 || d.pageCount > 0),
+    )
+    const other = store.scope(
+      id === 'parkview-exchange' ? 'north-ridge-highway' : 'parkview-exchange',
+    )
+    assert.ok(
+      scoped.corpus.documents.every(
+        (d) => !other.project.documentIds.includes(d.id),
+      ),
+    )
+  }
 })
 test('ordinary project creation, individual document selection, updates and deletion persist', (t) => {
   const { store, folder } = fresh(t),
@@ -208,7 +243,7 @@ test('descriptions generate from documents, remain editable and do not invalidat
   store.reset('demo-mill-creek')
   assert.equal(
     store.get('demo-mill-creek').description,
-    demoProjects[0].description,
+    demoProjects.find((p) => p.id === 'demo-mill-creek').description,
   )
   assert.throws(
     () =>
@@ -325,17 +360,17 @@ test('prepared findings and histories are project-bound and anchored to original
     api = new ProjectApi(corpus, folder, 'project-test-engine')
   for (const spec of demoProjects) {
     const issues = api.issues(spec.id)
-    assert.equal(issues.length, 2)
+    assert.equal(issues.length, spec.issues.length)
     assert.ok(
       issues.every((i) => i.verified),
       'Every prepared finding must have original-source anchors',
     )
     const history = api.history(spec.id)
-    assert.equal(history.length, 2)
+    assert.equal(history.length, spec.queries.length)
     for (const query of history) {
       const job = api.raw(spec.id, query.id)
       assert.equal(api.serialize(job).stale, false)
-      assert.ok(job.result.references.length >= 2)
+      assert.ok(job.result.references.length >= (query.sourceOnly ? 1 : 2))
       assert.ok(
         job.result.references.every(
           (r) =>

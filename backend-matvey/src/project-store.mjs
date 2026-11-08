@@ -205,7 +205,12 @@ export class ProjectStore {
     if (changed || !existsSync(this.file)) this.write(data)
   }
   list() {
-    return this.read().projects
+    const order = new Map(demoProjects.map((p, i) => [p.id, i]))
+    return this.read().projects.sort(
+      (a, b) =>
+        (order.get(a.id) ?? demoProjects.length) -
+        (order.get(b.id) ?? demoProjects.length),
+    )
   }
   get(id) {
     const project = this.list().find((p) => p.id === id)

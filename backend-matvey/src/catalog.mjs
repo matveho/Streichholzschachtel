@@ -8,8 +8,10 @@
 // explicit "edition not supplied" label and no version claims.
 
 const EDMONTON = 'City of Edmonton'
+import { referenceSources } from '../demo/reference-sources.mjs'
 
 const entries = [
+  ...referenceSources,
   {
     hash: 'a48df412387b3ad11dc1f26724db38e57c3e7a49bcc0097ffa85e4e6bb37d31d',
     series: 'alberta-highway-b',

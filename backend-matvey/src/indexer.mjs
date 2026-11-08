@@ -107,10 +107,19 @@ async function extract(file) {
       ? resolve(root, '.venv/Scripts/python.exe')
       : resolve(root, '.venv/bin/python')
   if (existsSync(python)) {
-    const { stdout } = await run(python, [resolve(root, 'extract.py'), file], {
-      maxBuffer: 80 * 1024 * 1024,
-      windowsHide: true,
-    })
+    const { stdout } = await run(
+      python,
+      [
+        '-c',
+        'import sys,runpy,pymupdf; pymupdf.set_messages(stream=sys.stderr); sys.argv=sys.argv[1:]; runpy.run_path(sys.argv[0],run_name="__main__")',
+        resolve(root, 'extract.py'),
+        file,
+      ],
+      {
+        maxBuffer: 80 * 1024 * 1024,
+        windowsHide: true,
+      },
+    )
     return JSON.parse(stdout)
   }
   const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs')
@@ -319,7 +328,12 @@ async function tableLayout(file, hash) {
   if (cached && typeof cached === 'object') return cached
   const { stdout } = await run(
     python,
-    [resolve(root, 'native-table-layout.py'), file],
+    [
+      '-c',
+      'import sys,runpy,pymupdf; pymupdf.set_messages(stream=sys.stderr); sys.argv=sys.argv[1:]; runpy.run_path(sys.argv[0],run_name="__main__")',
+      resolve(root, 'native-table-layout.py'),
+      file,
+    ],
     { windowsHide: true, maxBuffer: 20 * 1024 * 1024, timeout: 300000 },
   )
   const layout = JSON.parse(stdout)
@@ -336,6 +350,7 @@ export async function buildIndex(progress = () => {}, onlyFiles) {
     : [
         resolve(root, '../public/documents'),
         resolve(root, 'documents'),
+        resolve(root, 'references'),
         demoDocumentDirectory,
       ]) {
     if (existsSync(dir))
@@ -402,7 +417,8 @@ export async function buildIndex(progress = () => {}, onlyFiles) {
         Object.assign(metadata, {
           label: artifact.code,
           title: artifact.title,
-          edition: 'Synthetic demo - P01, 6 November 2026',
+          edition: artifact.edition || 'Synthetic demo - P01, 6 November 2026',
+          origin: 'synthetic-project-artifact',
           projectArtifact: true,
           ownerProjectId: owner.id,
           category: artifact.category,

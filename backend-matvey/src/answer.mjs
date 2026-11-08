@@ -675,7 +675,7 @@ export function renderResult(
 }
 
 // Unit sections ({heading, sentences: [{text, units}]}) in the renderer's shape.
-function renderUnits(sections, corpus, publicBase, token, mode, notes) {
+export function renderUnits(sections, corpus, publicBase, token, mode, notes) {
   const label = (unit) => {
     const doc = corpus.documents.find((d) => d.id === unit.doc)
     return `${doc.label} ${doc.edition}${unit.table || unit.heading ? ' · ' + (unit.table || unit.heading).slice(0, 80) : ''}`

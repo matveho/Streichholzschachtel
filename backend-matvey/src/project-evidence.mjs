@@ -5,7 +5,7 @@ import { problem } from './project-store.mjs'
 
 export function preparedEvidence(issue, scope, projectId) {
   const evidence = issue.proofs
-    .map(([filename, quote]) => {
+    .map(([filename, quote, page]) => {
       const document = scope.documents.find(
         (d) =>
           basename(d.filePath) === filename || d.filenames?.includes(filename),
@@ -15,6 +15,30 @@ export function preparedEvidence(issue, scope, projectId) {
           503,
           `Prepared evidence is missing its associated source: ${filename}`,
         )
+      // Explicit table proofs retain the entire extracted row, including its
+      // real PDF regions; a numeric cell alone is never presented as a rule.
+      if (page) {
+        const compact = (s) => s.toLowerCase().replace(/[\s\u2013\u2014-]/g, '')
+        const unit = scope.units.find(
+          (u) =>
+            u.doc === document.id &&
+            u.page === page &&
+            compact(u.text).includes(compact(quote)),
+        )
+        if (unit && unit.regions?.length)
+          return {
+            document,
+            passage: {
+              id: unit.id,
+              doc: unit.doc,
+              page: unit.page,
+              section: unit.table || unit.heading || document.label,
+              extraction: unit.extraction || 'text',
+            },
+            excerpt: unit.text,
+            regions: unit.regions,
+          }
+      }
       for (const passage of scope.passages.filter(
         (p) => p.doc === document.id,
       )) {

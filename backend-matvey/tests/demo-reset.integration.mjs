@@ -1,5 +1,6 @@
 // Destructive workspace reset is tested ONLY against isolated preview storage.
 import assert from 'node:assert/strict'
+import { demoProjects } from '../demo/manifest.mjs'
 import { readFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
@@ -70,7 +71,7 @@ try {
     )
   const keptQuery = await query(keep.id),
     removedQuery = await query(remove.id)
-  for (const id of ['demo-mill-creek', 'demo-willow-creek']) {
+  for (const { id } of demoProjects) {
     assert.equal(
       (await request('/projects/' + id, 'PATCH', { persistOnReset: false }))
         .status,
@@ -125,12 +126,15 @@ try {
     existsSync(resolve(root, 'state/ui-preview/project-documents', keep.id)),
     true,
   )
-  for (const id of ['demo-mill-creek', 'demo-willow-creek']) {
+  for (const { id } of demoProjects) {
     const d = (await request('/projects/' + id)).data
     assert.equal(d.project.persistOnReset, true)
     assert.equal(d.project.protectedDemo, true)
     assert.ok(d.issues.every((i) => i.status === 'open' && i.verified))
-    assert.equal(d.queries.length, 2)
+    assert.equal(
+      d.queries.length,
+      demoProjects.find((p) => p.id === id).queries.length,
+    )
   }
   assert.ok((await request('/documents')).data.documents.length > 0)
   await request('/projects/' + keep.id, 'PATCH', { persistOnReset: false })

@@ -14,7 +14,8 @@ import { randomUUID, createHash } from 'node:crypto'
 import { ProjectStore, problem } from './project-store.mjs'
 import { demoProjects } from '../demo/manifest.mjs'
 import { preparedEvidence, projectResult } from './project-evidence.mjs'
-import { answer } from './answer.mjs'
+import { answer, renderUnits } from './answer.mjs'
+import { lookup, UnitIndex } from './lookup.mjs'
 import { suggestQueries } from './query-suggestions.mjs'
 import { restoreDemoDocuments } from './demo-documents.mjs'
 import { buildIndex } from './indexer.mjs'
@@ -162,7 +163,21 @@ export class ProjectApi {
         }
       }
       for (const query of spec.queries) {
-        const result = this.evidence.get(spec.id + '/' + query.issueId)
+        let result = this.evidence.get(spec.id + '/' + query.issueId)
+        if (query.sourceOnly) {
+          const found = lookup(query.question, new UnitIndex(scope.corpus))
+          result = projectResult(
+            renderUnits(
+              found.sections,
+              scope.corpus,
+              '',
+              '',
+              found.mode,
+              found.notes,
+            ),
+            spec.id,
+          )
+        }
         if (!result) continue
         const id = preparedId(spec.id, query.id)
         const job = {
@@ -171,7 +186,7 @@ export class ProjectApi {
           question: query.question,
           state: 'completed',
           stage: 'Prepared source-verified comparison',
-          sourceOnly: false,
+          sourceOnly: !!query.sourceOnly,
           prepared: true,
           documentIds: scope.corpus.documents.map((d) => d.id),
           scopeVersion: scope.version,
@@ -346,7 +361,7 @@ export class ProjectApi {
     const prepared =
       !job.sourceOnly &&
       spec?.queries.find(
-        (q) => q.question.toLowerCase() === question.toLowerCase(),
+        (q) => q.issueId && q.question.toLowerCase() === question.toLowerCase(),
       )
     if (prepared) {
       try {

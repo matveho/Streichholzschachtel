@@ -1,5 +1,7 @@
 // Synthetic project material is deliberately separate from published standards.
+import { projectPackages } from './project-packages.mjs'
 export const demoProjects = [
+  ...projectPackages,
   {
     id: 'demo-mill-creek',
     name: 'Mill Creek Corner Infill',
