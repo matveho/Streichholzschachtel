@@ -1,6 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import {
   FolderOpen,
+  TriangleAlert,
   ChevronRight,
   Plus,
   Search,
@@ -256,6 +257,9 @@ function ProjectDashboard({
         .toLowerCase()
         .includes(filter.toLowerCase()),
   )
+  const openIssueCount = issues.filter(
+    (issue) => issue.status === 'open',
+  ).length
   const visibleIssues = issues.filter((issue) => issue.status === issueTab),
     visibleQueries = queries.filter((q) => !savedOnly || q.saved)
   const route = (tail = '') => '#project/' + project.id + tail
@@ -508,6 +512,13 @@ function ProjectDashboard({
             <section className="project-panel" aria-label="Potential issues">
               <div className="project-panel-heading">
                 <h2 title="Source-verified example findings requiring engineering review">
+                  {openIssueCount > 0 && (
+                    <TriangleAlert
+                      className="issue-warning"
+                      size={17}
+                      aria-hidden="true"
+                    />
+                  )}
                   Potential issues
                 </h2>
               </div>
@@ -516,7 +527,7 @@ function ProjectDashboard({
                   className={issueTab === 'open' ? 'selected' : ''}
                   onClick={() => setIssueTab('open')}
                 >
-                  Open {issues.filter((i) => i.status === 'open').length}
+                  Open {openIssueCount}
                 </button>
                 <button
                   className={issueTab === 'dismissed' ? 'selected' : ''}

@@ -1053,3 +1053,10 @@ button.primary-action:hover {
 button.query-files {
   min-height: 44px;
 }
+
+.issue-warning {
+  color: var(--color-issues);
+  vertical-align: -3px;
+  margin-inline-end: 8px;
+  stroke-width: 2;
+}
