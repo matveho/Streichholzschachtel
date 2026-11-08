@@ -58,6 +58,27 @@ try {
   await page.locator('.textLayer span').first().waitFor({ timeout: 30000 })
   assert.ok((await page.locator('.query-report').innerText()).includes('450'))
   assert.equal(await page.locator('.document-tab').count(), 3)
+  await page
+    .getByRole('button', { name: /^Source 3:/ })
+    .first()
+    .click()
+  await page.locator('[data-reference="3"]').first().waitFor()
+  await page
+    .getByRole('button', { name: /^Source 1:/ })
+    .first()
+    .click()
+  await expect(
+    page.getByLabel('Page in Corner Lot Infill LID Guidelines', {
+      exact: true,
+    }),
+  ).toHaveValue('18')
+  await page.locator('.report-sentence').first().hover()
+  await expect
+    .poll(() => page.locator('.source-highlight:visible').count())
+    .toBeGreaterThanOrEqual(2)
+  await page.waitForFunction(
+    () => document.querySelectorAll('.pdf-status').length === 0,
+  )
   mkdirSync('test-results', { recursive: true })
   await page.screenshot({ path: 'test-results/project-evidence.png' })
   await page
