@@ -164,7 +164,10 @@ button,
   outline: 0;
   font-size: 16px;
   line-height: 20px;
-  height: 40px;
+  field-sizing: content;
+  padding: 0;
+  min-height: 1lh;
+  max-height: 3lh;
   min-width: 0;
   scrollbar-width: thin;
 }
@@ -547,9 +550,6 @@ button,
   margin-left: 10px;
 }
 @media (min-width: 1700px) {
-  .query-field textarea {
-    height: 24px;
-  }
   .query-bar {
     min-height: 80px;
   }
@@ -602,7 +602,6 @@ button,
   .query-field textarea {
     font-size: 14px;
     line-height: 18px;
-    height: 54px;
   }
   .query-field {
     padding: 7px;
@@ -1250,4 +1249,15 @@ button,
 .query-tab.selected .query-tab-close,
 .query-tab-close:focus-visible {
   opacity: 1;
+}
+
+.tabbed-workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+.tabbed-workspace > main {
+  flex: 1;
+  min-height: 0;
+  height: auto;
 }

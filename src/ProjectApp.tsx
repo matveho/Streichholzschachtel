@@ -639,13 +639,11 @@ function QueryReader({
   id,
   onRun,
   onNew,
-  tabBar,
 }: {
   data: ProjectData
   id: string
   onRun: (question: string, sourceOnly?: boolean) => void
   onNew: () => void
-  tabBar: React.ReactNode
 }) {
   const resource = useResource<ProjectQuery>(
     projectPath(data.project.id) + '/queries/' + id,
@@ -654,7 +652,6 @@ function QueryReader({
     return (
       <Shell title={data.project.name}>
         <Message text={resource.error} error onRetry={resource.refresh} />
-        {tabBar}
       </Shell>
     )
   const job = resource.data
@@ -662,7 +659,6 @@ function QueryReader({
     return (
       <Shell title={data.project.name}>
         <Message text="Opening project query…" />
-        {tabBar}
       </Shell>
     )
   if (job.stale)
@@ -682,7 +678,6 @@ function QueryReader({
             Project dashboard
           </a>
         </div>
-        {tabBar}
       </Shell>
     )
   return (
@@ -702,7 +697,6 @@ function QueryReader({
       projectDocuments={projectDocumentMap(data.documents)}
       onRun={(q, _case, sourceOnly) => onRun(q, sourceOnly)}
       onNew={onNew}
-      tabBar={tabBar}
     />
   )
 }
@@ -731,7 +725,17 @@ function ProjectPage({
     onEmpty: () => navigate('project/' + id),
   })
   const onQueryRoute = section === 'new' || (section === 'query' && !!record)
-  const tabBar = <QueryTabBar tabs={tabs} />
+  // Keep the tab buttons mounted while navigation replaces the query pane.
+  function withTabs(content: React.ReactNode) {
+    return onQueryRoute ? (
+      <div className="tabbed-workspace">
+        {content}
+        <QueryTabBar tabs={tabs} />
+      </div>
+    ) : (
+      content
+    )
+  }
   async function run(question: string, sourceOnly = false) {
     setError('')
     try {
@@ -747,19 +751,17 @@ function ProjectPage({
     }
   }
   if (resource.error)
-    return (
+    return withTabs(
       <Shell>
         <Message text={resource.error} error onRetry={resource.refresh} />
-        {onQueryRoute && tabBar}
-      </Shell>
+      </Shell>,
     )
   const data = resource.data
   if (!data)
-    return (
+    return withTabs(
       <Shell>
         <Message text="Opening project documents…" />
-        {onQueryRoute && tabBar}
-      </Shell>
+      </Shell>,
     )
   let content
   if (section === 'query' && record)
@@ -770,7 +772,6 @@ function ProjectPage({
         id={record}
         onRun={run}
         onNew={tabs.openNew}
-        tabBar={tabBar}
       />
     )
   else if (section === 'new') {
@@ -795,7 +796,6 @@ function ProjectPage({
         projectDocuments={projectDocumentMap(data.documents)}
         onRun={(q, _case, sourceOnly) => void run(q, sourceOnly)}
         onNew={tabs.openNew}
-        tabBar={tabBar}
       />
     )
   } else if (section === 'document' && record) {
@@ -848,7 +848,7 @@ function ProjectPage({
         onQueryFiles={tabs.openNew}
       />
     )
-  return (
+  return withTabs(
     <>
       {content}
       {error && (
@@ -859,7 +859,7 @@ function ProjectPage({
           </button>
         </div>
       )}
-    </>
+    </>,
   )
 }
 function subscribe(change: () => void) {

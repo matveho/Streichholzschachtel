@@ -33,7 +33,6 @@ export function QueryWorkspace({
   onNew,
   projectName,
   projectDocuments,
-  tabBar,
   draft,
   onDraftChange,
 }: {
@@ -43,8 +42,6 @@ export function QueryWorkspace({
   onNew: () => void
   projectName?: string
   projectDocuments?: Record<string, DocumentRecord>
-  /** Open-query tabs shown along the bottom of the workspace. */
-  tabBar?: React.ReactNode
   /** Unsent text restored when returning to this query's tab. */
   draft?: string
   onDraftChange?: (text: string) => void
@@ -262,7 +259,7 @@ export function QueryWorkspace({
             <textarea
               ref={input}
               id="query"
-              rows={2}
+              rows={1}
               value={query}
               placeholder={
                 entry.projectId
@@ -568,7 +565,6 @@ export function QueryWorkspace({
             ) : null}
           </div>
         </section>
-        {tabBar}
       </main>
     </DocumentContext.Provider>
   )
