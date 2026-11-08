@@ -8,7 +8,9 @@ Verified on 8 November 2026 against the local Windows runtime and deployed Verce
 | `node --test tests/projects.integration.mjs` | Four passed: protected seeds, scoped live 450 mm lookup, isolation/cache/files/history, ordinary project lifecycle |
 | `node tests/projects.restart.mjs` | Passed: real API restart, ordinary project persistence, query history, issue dismissal, deleted runtime PDF recovery, seed deduplication |
 | `node tests/projects.browser.mjs` | Passed against compiled local frontend and production Vercel; overview, documents, citations, findings, persistence, bookmarks, create/edit/delete and responsive layout |
-| `node tests/control.integration.mjs` | Passed on separate ports: startup, crash recovery, manual restart, PDF ranges, stop and exit |
+| `node tests/control.integration.mjs` | Passed on separate ports: startup, API and gateway crash recovery, healthy API preservation, manual restart, PDF ranges, stop and exit |
+| `node control.mjs --check-demo` | Passed read-only local presentation check: both projects, every associated PDF, prepared results, citation rendering and return navigation |
+| `BASIS_FRONTEND_URL=https://streichholzschachtel.vercel.app node tests/presentation.smoke.mjs` | Passed the same read-only presentation check against production |
 | `node tests/gateway.integration.mjs` | Passed: three broken PDF upstreams do not crash the gateway |
 | `npx tsc -b`, `npm run lint` | Passed |
 | Production Vercel build | Passed; public alias reaches project API through HTTPS |

@@ -4,6 +4,8 @@ Double-click root **Start Basis.cmd**, then choose **5** to open Basis. Keep the
 
 Before presenting, open both projects and use **Reset demo**. This restores prepared history and open findings. The comparisons are explicitly labeled prepared, source-verified evidence and require no timed inference. Two projects and six synthetic project PDFs are permanent protected seeds.
 
+Choose **T** in the controls for a read-only readiness check. It opens both project workspaces in a background browser, verifies every associated PDF and checks rendered citations and return navigation. It preserves your history, bookmarks and issue dismissals. For a public-site check, run `$env:BASIS_FRONTEND_URL='https://streichholzschachtel.vercel.app'; node tests/presentation.smoke.mjs` from `backend-matvey`.
+
 ## Two-minute sequence
 
 1. **0:00–0:20** — Overview: Mill Creek Corner Infill and Willow Creek Bridge Renewal. Each has its own client, documents and technical scope.

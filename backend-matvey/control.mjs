@@ -591,6 +591,29 @@ async function publishConnection() {
     'Published the HTTPS connection. Commit the vercel.json update with the next source checkpoint.',
   )
 }
+async function checkPresentation() {
+  console.log(
+    'Checking the local presentation without resetting project state...',
+  )
+  await new Promise((done, reject) => {
+    const child = spawn(process.execPath, ['tests/presentation.smoke.mjs'], {
+      cwd: root,
+      env: { ...process.env, BASIS_FRONTEND_URL: gatewayBase + '/app' },
+      windowsHide: true,
+      stdio: 'inherit',
+    })
+    child.once('error', reject)
+    child.once('exit', (code) =>
+      code === 0
+        ? done()
+        : reject(
+            new Error(
+              'Presentation check failed. Use Troubleshoot and Open logs.',
+            ),
+          ),
+    )
+  })
+}
 export async function main() {
   const command = process.argv[2]
   if (command) {
@@ -604,6 +627,7 @@ export async function main() {
       '--build': () => buildFrontend(true),
       '--https': publicConnection,
       '--publish': publishConnection,
+      '--check-demo': checkPresentation,
     }
     if (!commands[command]) throw new Error('Unknown control command.')
     await commands[command]()
@@ -625,17 +649,28 @@ export async function main() {
   const watchdog = setInterval(async () => {
     const state = load()
     if (state.stopped || !state.processes.api || recovering) return
-    if ((await probe(apiBase))?.service === 'basis-backend-matvey') {
+    const [api, gateway] = await Promise.all([
+      probe(apiBase),
+      probe(gatewayBase, '/_basis/gateway'),
+    ])
+    if (
+      api?.service === 'basis-backend-matvey' &&
+      gateway?.service === 'basis-gateway' &&
+      gateway.targetPort === apiPort
+    ) {
       misses = 0
       return
     }
     if (++misses < 3) return
+    if (load().stopped) return
     recoveries = recoveries.filter((t) => Date.now() - t < 600000)
     if (recoveries.length >= 3) return
     recovering = true
     recoveries.push(Date.now())
     try {
-      console.log('\nBackend unavailable; attempting automatic recovery...')
+      console.log(
+        '\nBackend or gateway unavailable; attempting automatic recovery...',
+      )
       await start()
       misses = 0
     } catch (error) {
@@ -647,7 +682,7 @@ export async function main() {
   try {
     for (;;) {
       console.log(
-        '\n1 start   2 restart / index new documents   3 stop   4 status\n5 open Basis   6 troubleshoot   7 open logs   8 rebuild interface\n9 switch offline / local review   D repair dependencies\nH HTTPS connection   P publish site connection   Q close controls',
+        '\n1 start   2 restart / index new documents   3 stop   4 status\n5 open Basis   6 troubleshoot   7 open logs   8 rebuild interface\n9 switch offline / local review   D repair dependencies\nT check demo readiness   H HTTPS connection   P publish site connection   Q close controls',
       )
       const choice = (await rl.question('\nBasis > ')).trim().toLowerCase()
       try {
@@ -679,6 +714,7 @@ export async function main() {
         } else if (choice === 'd') await repairDependencies()
         else if (choice === 'h') await publicConnection()
         else if (choice === 'p') await publishConnection()
+        else if (choice === 't') await checkPresentation()
         else console.log('Choose one of the displayed controls.')
       } catch (error) {
         console.error(

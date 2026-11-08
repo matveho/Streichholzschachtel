@@ -6,6 +6,8 @@ A project-based engineering document workspace with local processing, scoped res
 
 Install Node.js 24 or newer, then double-click **Start Basis.cmd**. It starts the local backend and gateway and provides restart/reindex, status, troubleshooting, logs, dependency repair and HTTPS controls. Choose **5** to open the compiled interface without entering a connection key. Keep the controls open for crash recovery; closing the window leaves services running.
 
+Choose **T** for a read-only presentation check of both projects, all associated PDFs and rendered source citations. Automatic recovery covers both API and gateway failures; a gateway-only recovery keeps the healthy API running.
+
 On this presentation device the project API uses **8810**, and the local interface is **http://127.0.0.1:8812/app/#projects**. A fresh checkout defaults to API 8787 / gateway 8789; local `.env` overrides are ignored by Git. Choose **D** to install missing dependencies and **8** to build the interface. See [backend controls](backend-matvey/CONTROLS.md).
 
 The deployed frontend is https://streichholzschachtel.vercel.app. Its `/local-api` rewrite reaches the device through HTTPS. Public access requires the device and tunnel online; the local interface is the presentation fallback. Backend state, private project PDFs and model assets are excluded from Vercel uploads.

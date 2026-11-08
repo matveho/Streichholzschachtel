@@ -56,6 +56,22 @@ try {
     80000,
   )
   assert.ok(output.includes('automatic recovery'))
+  const recoveredApi = state().processes.api.pid
+  const firstGateway = state().processes.gateway.pid
+  process.kill(firstGateway)
+  await until(async () => {
+    if (state().processes.gateway.pid === firstGateway) return false
+    try {
+      return (await fetch(`http://127.0.0.1:${gateway}/_basis/gateway`)).ok
+    } catch {
+      return false
+    }
+  }, 80000)
+  assert.equal(
+    state().processes.api.pid,
+    recoveredApi,
+    'Gateway recovery must keep the healthy API and its index running',
+  )
   const metadata = await (
     await fetch(`http://127.0.0.1:${gateway}/local-api/v1/documents`)
   ).json()
@@ -70,7 +86,8 @@ try {
   const recovered = state().processes.api.pid
   child.stdin.write('2\n')
   await until(
-    async () => state().processes.api.pid !== recovered && (await health())?.ready,
+    async () =>
+      state().processes.api.pid !== recovered && (await health())?.ready,
     80000,
   )
   assert.equal((await health()).failures, 0)
@@ -82,7 +99,7 @@ try {
   const exit = await new Promise((done) => child.once('exit', done))
   assert.equal(exit, 0)
   console.log(
-    'PASS start, readiness, crash recovery, keyless gateway, PDF ranges, manual restart, explicit stop and clean control exit',
+    'PASS start, readiness, API and gateway crash recovery, healthy API preservation, keyless gateway, PDF ranges, manual restart, explicit stop and clean control exit',
   )
 } catch (error) {
   console.error(output)

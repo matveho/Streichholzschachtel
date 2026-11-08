@@ -16,6 +16,7 @@ Keep this window open for automatic crash recovery. After adding PDFs, choose **
 | 8       | Rebuild the local frontend without stopping the running API                                                        |
 | 9       | Switch between fast offline source search and optional local Ollama review, then restart                           |
 | D       | Repair root/backend dependencies from their lockfiles                                                              |
+| T       | Check both demos, all their PDFs, rendered citations and navigation without changing project state                |
 | H       | Reuse an existing gateway tunnel or start an HTTPS tunnel                                                          |
 | P       | Verify a newly created tunnel, update the existing Vercel API rewrite and deploy using an authenticated Vercel CLI |
 | Q       | Close the controls while leaving the backend running                                                               |
@@ -24,13 +25,13 @@ Offline source search is the default for a newly created control configuration. 
 
 The current local interface opens at `http://127.0.0.1:8789/app/#home`. The gateway handles both local `/local-api` requests and Vercel's rewritten requests, keeping the connection key internal. The API listens on 8787. A normal launch keeps existing healthy services intact. Choose **2** to install the current API and gateway; the tunnel hostname is retained. Until an old gateway is upgraded, **5** opens the existing deployed interface instead.
 
-While the control window is open, a watchdog checks the managed API and attempts recovery after three missed checks, capped at three recoveries in ten minutes. Choosing Stop disables recovery. The frontend builds into a separate staging folder and is promoted only after success, preserving the previous bundle. The backend dependency graph is checked before a running API is replaced. Port ownership is checked before stopping a process; unrelated applications are rejected.
+While the control window is open, a watchdog checks both the managed API and gateway and attempts recovery after three missed checks, capped at three recoveries in ten minutes. A gateway-only failure is repaired without restarting the healthy API or rebuilding its index. Choosing Stop disables recovery. The frontend builds into a separate staging folder and is promoted only after success, preserving the previous bundle. The backend dependency graph is checked before a running API is replaced. Port ownership is checked before stopping a process; unrelated applications are rejected.
 
 New PDFs are picked up with **2**; valid OCR/extraction caches are retained. Cache writes are atomic, and unreadable partial caches are rebuilt, so an interrupted indexing run does not permanently poison the next start. The status screen distinguishes indexing from ready. A service with indexing failures needs inspection even if some documents are available. Logs and process records are local under ignored `backend-matvey/state/`. No connection key is printed in the menu or diagnostic output.
 
 The public Vercel connection also requires the host computer and HTTPS tunnel to remain online. A recreated quick tunnel has a different hostname. **H** reports the address; **P** updates the site when Vercel CLI is installed and signed in. If deployment fails, the local Vercel configuration is restored and the local interface remains available. These are explicit controls, not a claim of reboot-proof public hosting.
 
-For scripted troubleshooting, run `node control.mjs --status`, `--diagnose`, `--start`, `--restart`, `--reindex`, `--stop`, `--build`, `--https` or `--publish` from this folder. Tests can set `BASIS_CONTROL_API_PORT` and `BASIS_CONTROL_GATEWAY_PORT` to spare ports. `BASIS_CONTROL_SKIP_BUILD=1` is for isolated lifecycle tests only.
+For scripted troubleshooting, run `node control.mjs --status`, `--diagnose`, `--start`, `--restart`, `--reindex`, `--stop`, `--build`, `--check-demo`, `--https` or `--publish` from this folder. Tests can set `BASIS_CONTROL_API_PORT` and `BASIS_CONTROL_GATEWAY_PORT` to spare ports. `BASIS_CONTROL_SKIP_BUILD=1` is for isolated lifecycle tests only.
 
 ## Executed verification
 
