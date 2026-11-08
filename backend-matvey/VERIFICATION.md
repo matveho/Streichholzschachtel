@@ -1,3 +1,14 @@
+# Verification — version-aware extractive engine, 7 November 2026 (later)
+
+Run on a machine without Ollama, Tesseract or an Anthropic key, so only the offline engine was exercised.
+
+- `npm test`: 47 tests, 45 pass, 2 skipped (the two Infill LID checks need Tesseract OCR; its scanned pages are withheld without it). Includes the 34 demo questions, version-status checks, footnote-superscript extraction and the Claude output validator.
+- `npm run demo:api`: 34/34 demo questions pass through the authenticated job API with valid page regions; PDF byte-range returns 206 `%PDF`.
+- `node --test tests/api.integration.mjs`: 4/4 pass against a running server.
+- Not verified: the Claude layer against the live API (no key on this machine — only its validation logic is unit-tested), the browser checks, `tests/quality.mjs` (written for the Ollama pipeline), and Tesseract OCR.
+- The demo set guided tuning, so its pass rate overstates general accuracy. Spot checks on unseen paraphrases were mostly correct (RM runoff, crossing clearance, CB-lead slope, freeboard, PHD pressure, peaking-factor formula); LID checklist-table questions remained weak.
+- The water-main question is answered from Vol. 4 Water (December 2024) Table 1.2, which gives minimum invert depth below curb top, not cover depth.
+
 # Verification — 7 November 2026
 
 The backend is integrated and usable for inspecting original source evidence. The broader goal of reliable consolidated answers comparable to the prepared examples is **not complete**.

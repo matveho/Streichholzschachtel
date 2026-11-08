@@ -4,6 +4,8 @@ import { resolve, basename } from 'node:path'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { root, stateDir, knownFiles } from './config.mjs'
+import { catalogEntry, annotateVersions } from './catalog.mjs'
+import { buildPageUnits } from './units.mjs'
 
 const run = promisify(execFile)
 export const normalize = (text) =>
@@ -105,6 +107,7 @@ export function linesFromWords(page) {
       }
       return {
         text,
+        block: words[0][5],
         confidence:
           words.reduce((sum, w) => sum + (w[7] ?? 100), 0) /
           Math.max(1, words.length) /
@@ -142,10 +145,12 @@ export async function buildIndex(progress = () => {}) {
   }
   const documents = [],
     passages = [],
+    units = [],
     failures = []
   for (const [file, name] of files) {
     const documentStart = documents.length,
-      passageStart = passages.length
+      passageStart = passages.length,
+      unitStart = units.length
     try {
       progress(`Reading ${name}`, documents.length, files.size)
       const hash = createHash('sha256').update(readFileSync(file)).digest('hex')
@@ -155,7 +160,7 @@ export async function buildIndex(progress = () => {}) {
         ? JSON.parse(readFileSync(cache, 'utf8'))
         : await extract(file)
       if (!existsSync(cache)) writeFileSync(cache, JSON.stringify(extracted))
-      const metadata = knownFiles[name] || {
+      const metadata = catalogEntry(hash) || knownFiles[name] || {
         label: basename(name, '.pdf'),
         title: extracted.metadata.title || basename(name, '.pdf'),
         edition: 'Edition not supplied',
@@ -174,12 +179,15 @@ export async function buildIndex(progress = () => {}) {
       }
       documents.push(record)
       let bibliography = false
+      const unitState = { heading: '', table: '', recent: [] }
       for (let n = 0; n < extracted.pages.length; n++) {
         const page = extracted.pages[n]
         record.pageSizes[n + 1] = [page.width, page.height]
         const lines = linesFromWords(page).filter(
           (l) =>
-            l.rect[1] > 55 && l.rect[3] < page.height - 38 && l.text.length > 1,
+            l.rect[1] > 55 &&
+            l.rect[3] < page.height - 38 &&
+            (l.text.length > 1 || /\d/.test(l.text)),
         )
         const text = lines.map((l) => l.text).join('\n')
         if (/^\s*(?:REFERENCES|BIBLIOGRAPHY)\s*$/im.test(text))
@@ -187,14 +195,36 @@ export async function buildIndex(progress = () => {}) {
         else if (/^\s*(?:APPENDIX|APPENDICES)\b/im.test(text))
           bibliography = false
         if (bibliography) continue
-        // Contents, revision lists and references are navigation, not design evidence.
+        // Contents and references are navigation, not evidence. Revision lists
+        // and Terms of Use are kept but tagged: they answer version questions.
         if (
-          /TABLE OF CONTENTS|LIST OF REVISIONS|^REFERENCES\b/im.test(text) ||
-          text.match(/\.{5,}/g)?.length > 3 ||
-          (text.match(/\b(?:Added|Revised|Deleted|Updated)\b/g)?.length || 0) >
-            3
+          /TABLE OF CONTENTS|^REFERENCES\b/im.test(text) ||
+          text.match(/\.{5,}/g)?.length > 3
         )
           continue
+        const kind =
+          /LIST OF REVISIONS|Table of Revisions|list of revisions in/i.test(
+            text,
+          ) ||
+          (text.match(/\b(?:Added|Revised|Deleted|Updated|updated to)\b/g)
+            ?.length || 0) > 3
+            ? 'revisions'
+            : /TERMS OF USE/i.test(text)
+              ? 'terms'
+              : 'body'
+        units.push(
+          ...buildPageUnits(
+            lines,
+            {
+              doc: id,
+              page: n + 1,
+              kind,
+              title: record.title,
+              extraction: page.extraction || 'text',
+            },
+            unitState,
+          ),
+        )
         let section = ''
         for (let start = 0; start < lines.length;) {
           const selected = []
@@ -228,6 +258,7 @@ export async function buildIndex(progress = () => {}) {
               pageHeight: page.height,
               extraction: page.extraction || 'text',
               nativeText: page.extraction === 'ocr' ? page.nativeText : '',
+              kind,
               confidence:
                 selected.reduce((sum, l) => sum + l.confidence, 0) /
                 selected.length,
@@ -249,6 +280,7 @@ export async function buildIndex(progress = () => {}) {
     } catch (error) {
       documents.length = documentStart
       passages.length = passageStart
+      units.length = unitStart
       failures.push({ name, error: error.message })
       progress(
         `Could not read ${name}: ${error.message}`,
@@ -262,7 +294,8 @@ export async function buildIndex(progress = () => {}) {
     documents.length,
     files.size,
   )
-  return { documents, passages, failures }
+  annotateVersions(documents)
+  return { documents, passages, units, failures }
 }
 
 export function locateQuote(passage, quote) {

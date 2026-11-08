@@ -41,7 +41,9 @@ test('PDF bytes and range requests retain original file contents', async () => {
   const { documents } = await (
     await fetch(base + '/v1/documents', { headers })
   ).json()
-  assert.equal(documents.length, 5)
+  const health = await (await fetch(base + '/health')).json()
+  assert.ok(documents.length > 0)
+  assert.equal(documents.length, health.documents)
   assert.equal(
     documents.some((d) => 'filePath' in d),
     false,

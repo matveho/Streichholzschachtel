@@ -25,8 +25,12 @@ export const config = {
   token: process.env.BASIS_TOKEN || readFileSync(tokenFile, 'utf8').trim(),
   ollamaUrl: process.env.OLLAMA_URL || 'http://127.0.0.1:11435',
   model: process.env.OLLAMA_MODEL || 'qwen3:4b-instruct-2507-q4_K_M',
-  provider: process.env.GENERATION_PROVIDER || 'ollama',
+  // auto: Claude synthesis when an Anthropic credential is set, otherwise the
+  // offline extractive engine. ollama and gateway keep the earlier pipelines.
+  provider: process.env.GENERATION_PROVIDER || 'auto',
   gatewayModel: process.env.AI_GATEWAY_MODEL || 'google/gemini-4-argon',
+  anthropicModel: process.env.ANTHROPIC_MODEL || 'claude-opus-5-5',
+  anthropicEffort: process.env.ANTHROPIC_EFFORT || 'medium',
   extractiveOnly: process.env.EXTRACTIVE_ONLY === '1',
   frontendUrl:
     process.env.FRONTEND_URL || 'https://streichholzschachtel.vercel.app',
@@ -35,8 +39,16 @@ export const config = {
     .map((s) => s.trim())
     .filter(Boolean),
 }
-if (!['ollama', 'gateway'].includes(config.provider))
-  throw new Error('GENERATION_PROVIDER must be ollama or gateway.')
+if (!['auto', 'extractive', 'anthropic', 'ollama', 'gateway'].includes(config.provider))
+  throw new Error(
+    'GENERATION_PROVIDER must be auto, extractive, anthropic, ollama or gateway.',
+  )
+if (config.provider === 'auto')
+  config.provider =
+    process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN
+      ? 'anthropic'
+      : 'extractive'
+if (config.extractiveOnly) config.provider = 'extractive'
 
 export const knownFiles = {
   'design-guidelines.pdf': {

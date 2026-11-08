@@ -26,6 +26,10 @@ const engineVersion = createHash('sha256')
       'config.mjs',
       'model.mjs',
       'local-evidence.mjs',
+      'catalog.mjs',
+      'units.mjs',
+      'lookup.mjs',
+      'claude.mjs',
       '../extract.py',
     ]
       .map((file) => readFileSync(new URL(file, import.meta.url), 'utf8'))
@@ -33,7 +37,8 @@ const engineVersion = createHash('sha256')
       config.provider +
       config.model +
       config.gatewayModel +
-      config.extractiveOnly,
+      config.anthropicModel +
+      config.anthropicEffort,
   )
   .digest('hex')
 const corpusVersion = () =>
@@ -258,11 +263,15 @@ export const server = http.createServer(async (req, res) => {
         documents: corpus?.documents.length || 0,
         passages: corpus?.passages.length || 0,
         failures: corpus?.failures.length || 0,
-        model: config.extractiveOnly
-          ? 'disabled'
-          : config.provider === 'gateway'
-            ? config.gatewayModel
-            : config.model,
+        model:
+          config.provider === 'extractive'
+            ? 'none (offline extractive engine)'
+            : config.provider === 'gateway'
+              ? config.gatewayModel
+              : config.provider === 'anthropic'
+                ? config.anthropicModel
+                : config.model,
+        units: corpus?.units?.length || 0,
         provider: config.provider,
         activeQueries: activeJob ? 1 : 0,
         queuedQueries: queue.filter((j) => j.state === 'queued').length,
