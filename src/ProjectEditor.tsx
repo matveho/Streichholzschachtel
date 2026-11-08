@@ -33,25 +33,34 @@ export function ProjectEditor({
     [files, setFiles] = useState<File[]>([]),
     [error, setError] = useState(''),
     [progress, setProgress] = useState('')
+  const [catalogAttempt, retryCatalog] = useState(0)
   const [savedId, setSavedId] = useState(project?.id)
   const nameInput = useRef<HTMLInputElement>(null),
     collectionPicker = useRef<HTMLDivElement>(null),
     fileInput = useRef<HTMLInputElement>(null),
     folderInput = useRef<HTMLInputElement>(null),
     createdId = useRef(project?.id),
-    imported = useRef(new Set<string>())
+    imported = useRef(new Set<File>())
   useEffect(() => {
+    const opener = document.activeElement
     nameInput.current?.focus()
+    return () => {
+      if (opener instanceof HTMLElement) opener.focus()
+    }
+  }, [])
+  useEffect(() => {
     const controller = new AbortController()
     api(readSettings(), '/v1/reference-collections', {
       signal: controller.signal,
     })
-      .then(setCatalog)
+      .then((data) => {
+        if (!controller.signal.aborted) setCatalog(data)
+      })
       .catch((e) => {
         if (!controller.signal.aborted) setError(e.message)
       })
     return () => controller.abort()
-  }, [])
+  }, [catalogAttempt])
   useEffect(() => {
     if (!open) return
     const close = (e: PointerEvent) => {
@@ -92,11 +101,7 @@ export function ProjectEditor({
     const accepted = Array.from(list).filter(
       (f) => /\.pdf$/i.test(f.name) && f.size <= 12 * 1024 * 1024,
     )
-    const key = (f: File) =>
-      [f.webkitRelativePath || f.name, f.size, f.lastModified].join(':')
-    setFiles((current) => [
-      ...new Map([...current, ...accepted].map((f) => [key(f), f])).values(),
-    ])
+    setFiles((current) => [...new Set([...current, ...accepted])])
     setError(
       accepted.length === list.length
         ? ''
@@ -106,6 +111,7 @@ export function ProjectEditor({
   async function save(event: React.FormEvent) {
     event.preventDefault()
     setError('')
+    let importing: File | undefined
     setProgress('Saving project…')
     try {
       const response = await requestProject(
@@ -123,13 +129,9 @@ export function ProjectEditor({
       createdId.current = response.project.id
       setSavedId(response.project.id)
       for (let i = 0; i < files.length; i++) {
-        const file = files[i],
-          key = [
-            file.webkitRelativePath || file.name,
-            file.size,
-            file.lastModified,
-          ].join(':')
-        if (imported.current.has(key)) continue
+        const file = files[i]
+        if (imported.current.has(file)) continue
+        importing = file
         setProgress(`Indexing ${i + 1}/${files.length}: ${file.name}`)
         const content = await new Promise<string>((done, reject) => {
           const reader = new FileReader()
@@ -149,11 +151,12 @@ export function ProjectEditor({
             ...importedDocument.documents.map((d: ProjectDocument) => d.id),
           ]),
         ])
-        imported.current.add(key)
+        imported.current.add(file)
       }
       onSaved(createdId.current!)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save project.')
+      const reason = e instanceof Error ? e.message : 'Could not save project.'
+      setError(importing ? importing.name + ': ' + reason : reason)
       setProgress('')
     }
   }
@@ -162,6 +165,18 @@ export function ProjectEditor({
       className="project-modal-backdrop"
       onKeyDown={(e) => {
         if (e.key === 'Escape' && !progress) onClose()
+        if (e.key === 'Tab') {
+          const controls = Array.from(
+            e.currentTarget.querySelectorAll<HTMLElement>(
+              'button:not(:disabled), input:not(:disabled), summary, textarea:not(:disabled)',
+            ),
+          ).filter((el) => el.getClientRects().length)
+          const edge = e.shiftKey ? controls[0] : controls.at(-1)
+          if (document.activeElement === edge) {
+            e.preventDefault()
+            ;(e.shiftKey ? controls.at(-1) : controls[0])?.focus()
+          }
+        }
       }}
     >
       <section
@@ -284,10 +299,7 @@ export function ProjectEditor({
                     catalog?.collections
                       .find((c) => c.id === id)
                       ?.documentIds.includes(d.id),
-                  ) ||
-                  existingDocuments.some(
-                    (x) => x.id === d.id && x.projectArtifact,
-                  ),
+                  ) || existingDocuments.some((x) => x.id === d.id),
               )
               .map((d) => (
                 <label className="collection-document" key={d.id}>
@@ -416,6 +428,17 @@ export function ProjectEditor({
           {error && (
             <p role="alert" className="project-form-error">
               {error}
+              {!catalog && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError('')
+                    retryCatalog((n) => n + 1)
+                  }}
+                >
+                  Retry
+                </button>
+              )}
             </p>
           )}
           {progress && (
