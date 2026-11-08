@@ -6,6 +6,8 @@ export type HistoryEntry = {
   prompt: string
   caseId: string
   sourceOnly?: boolean
+  projectId?: string
+  queryId?: string
 }
 const storageKey = 'basis.query-history.v1'
 export function readHistory(): HistoryEntry[] {

@@ -11,6 +11,33 @@ const EDMONTON = 'City of Edmonton'
 
 const entries = [
   {
+    hash: 'a48df412387b3ad11dc1f26724db38e57c3e7a49bcc0097ffa85e4e6bb37d31d',
+    series: 'alberta-highway-b',
+    jurisdiction: 'Alberta',
+    label: 'Highway Guide B',
+    title: 'Highway Geometric Design Guide - Chapter B: Alignment Elements',
+    edition: 'September 2020',
+    date: '2020-09',
+  },
+  {
+    hash: 'b54d0cb29331ed0f57b1218874ca50ee73936b71dd3877c822ddeb43ba8e673d',
+    series: 'alberta-highway-c',
+    jurisdiction: 'Alberta',
+    label: 'Highway Guide C',
+    title: 'Highway Geometric Design Guide - Chapter C: Cross-Section Elements',
+    edition: 'February 2022',
+    date: '2022-02',
+  },
+  {
+    hash: '2fafb6831605ad91e5f1ce5d62e0f6a90b51504304eb25e799228a5b51fec9c3',
+    series: 'alberta-bridge-criteria',
+    jurisdiction: 'Alberta',
+    label: 'Bridge Criteria',
+    title: 'Alberta Transportation Bridge Structures Design Criteria',
+    edition: 'Version 9.0, January 2022',
+    date: '2022-01',
+  },
+  {
     hash: 'b760a155f725ccf5fa3ee85c5c3777511eb1579ebbaf132ffef75bec8eaf7b65',
     series: '3-compiled',
     label: 'Vol. 3 (2021)',

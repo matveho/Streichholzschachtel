@@ -15,7 +15,7 @@ import {
 import { documents as staticDocuments, referenceSets, queryCases } from './data'
 import { DocumentContext } from './DocumentContext'
 import { readSettings, useLiveQuery } from './backend'
-import type { BackendSettings } from './backend'
+import type { BackendSettings, DocumentRecord } from './backend'
 import { navigate } from './navigation'
 import type { DocId } from './data'
 import { PdfPane } from './PdfPane'
@@ -26,21 +26,27 @@ import { AppHeader } from './AppHeader'
 import { readHistory, saveHistory } from './history'
 import type { HistoryEntry } from './history'
 
-function QueryWorkspace({
+export function QueryWorkspace({
   entry,
   onRun,
   settings,
   onNew,
+  projectName,
+  projectDocuments,
 }: {
   entry: HistoryEntry
   settings: BackendSettings
   onRun: (prompt: string, caseId: string, sourceOnly?: boolean) => void
   onNew: () => void
+  projectName?: string
+  projectDocuments?: Record<string, DocumentRecord>
 }) {
   const queryCase = queryCases.find((c) => c.id === entry.caseId)!
   const exampleQuery = queryCase.prompt
   settings =
-    entry.id === entry.caseId && entry.prompt === exampleQuery
+    !entry.projectId &&
+    entry.id === entry.caseId &&
+    entry.prompt === exampleQuery
       ? { ...settings, mode: 'static' }
       : settings
   const [query, setQuery] = useState(entry.prompt)
@@ -51,9 +57,13 @@ function QueryWorkspace({
     submitted,
     retry,
     entry.sourceOnly === true,
+    entry.projectId,
+    entry.queryId,
   )
   const documents =
-    settings.mode === 'static' ? staticDocuments : (live.data?.documents ?? {})
+    settings.mode === 'static'
+      ? staticDocuments
+      : (live.data?.documents ?? projectDocuments ?? {})
   const report =
     settings.mode === 'static' ? queryCase.report : (live.data?.report ?? [])
   const references =
@@ -98,8 +108,9 @@ function QueryWorkspace({
   const ids = hover ?? pinned
   const active = references.filter((r) => ids.includes(r.id))
   const isPrepared = (text: string) =>
+    !entry.projectId &&
     text.toLowerCase().replace(/\s+/g, ' ') ===
-    exampleQuery.toLowerCase().replace(/\s+/g, ' ')
+      exampleQuery.toLowerCase().replace(/\s+/g, ' ')
   const supported =
     settings.mode === 'static' ? isPrepared(submitted) : !!live.data
   useEffect(() => () => clearTimeout(timer.current), [])
@@ -154,6 +165,10 @@ function QueryWorkspace({
   }
   function search() {
     if (!query.trim() || busy) return
+    if (entry.projectId) {
+      onRun(query.trim(), entry.caseId, false)
+      return
+    }
     setBusy(true)
     timer.current = setTimeout(() => {
       if (query.trim() === entry.prompt) {
@@ -218,7 +233,11 @@ function QueryWorkspace({
           { '--result-height': `${resultHeight}px` } as React.CSSProperties
         }
       >
-        <AppHeader onNew={newQuery} />
+        <AppHeader
+          onNew={newQuery}
+          homeHref={entry.projectId ? '#project/' + entry.projectId : '#home'}
+          context={projectName}
+        />
         <form
           className="query-bar"
           onSubmit={(e) => {
@@ -236,7 +255,11 @@ function QueryWorkspace({
               id="query"
               rows={2}
               value={query}
-              placeholder="Enter a query…"
+              placeholder={
+                entry.projectId
+                  ? "Search this project's documents…"
+                  : 'Enter a query…'
+              }
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -383,9 +406,11 @@ function QueryWorkspace({
             <h1>Query result</h1>
             {settings.mode !== 'static' && (
               <span className="live-mode">
-                {settings.mode === 'matvey'
-                  ? 'Matvey’s backend'
-                  : 'Backend (main)'}
+                {entry.projectId
+                  ? 'Project sources'
+                  : settings.mode === 'matvey'
+                    ? 'Matvey’s backend'
+                    : 'Backend (main)'}
                 {live.data
                   ? ' · ' +
                     ([
@@ -449,23 +474,37 @@ function QueryWorkspace({
                 <span>{live.error || live.phase}</span>
                 {live.busy && <button onClick={live.cancel}>Cancel</button>}
                 {live.error && (
-                  <button onClick={() => setRetry((r) => r + 1)}>Retry</button>
+                  <button
+                    onClick={() =>
+                      entry.projectId
+                        ? onRun(submitted, entry.caseId, entry.sourceOnly)
+                        : setRetry((r) => r + 1)
+                    }
+                  >
+                    Retry
+                  </button>
                 )}
               </div>
             ) : !submitted ? (
               <div className="empty-result">
                 <Search size={20} />
-                <span>Enter a query to inspect the local documents.</span>
-                <button
-                  onClick={() => {
-                    setQuery(exampleQuery)
-                    setSubmitted(exampleQuery)
-                    setPinned(queryCase.initialReferences)
-                  }}
-                >
-                  Load example
-                  <ArrowUpRight size={14} />
-                </button>
+                <span>
+                  {entry.projectId
+                    ? 'Enter a query to inspect the project documents.'
+                    : 'Enter a query to inspect the local documents.'}
+                </span>
+                {!entry.projectId && (
+                  <button
+                    onClick={() => {
+                      setQuery(exampleQuery)
+                      setSubmitted(exampleQuery)
+                      setPinned(queryCase.initialReferences)
+                    }}
+                  >
+                    Load example
+                    <ArrowUpRight size={14} />
+                  </button>
+                )}
               </div>
             ) : !supported ? (
               <div className="empty-result">

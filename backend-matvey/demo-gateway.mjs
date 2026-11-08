@@ -29,7 +29,7 @@ http
         res.end(
           JSON.stringify({
             service: 'basis-gateway',
-            version: 3,
+            version: 4,
             targetPort: Number(targetUrl.port),
           }),
         )
@@ -75,6 +75,12 @@ http
         return
       }
       const allowed =
+        (['GET', 'POST', 'PATCH', 'DELETE'].includes(req.method) &&
+          /^\/v1\/projects(?:\/[a-zA-Z0-9-]+(?:\/(?:reset|queries(?:\/[a-f0-9-]{36})?|issues\/[a-z0-9-]+|documents\/doc-[a-f0-9]+\/file))?)?$/.test(
+            url.pathname,
+          )) ||
+        (req.method === 'GET' &&
+          url.pathname === '/v1/reference-collections') ||
         (req.method === 'GET' &&
           (['/app', '/app/', '/basis.svg'].includes(url.pathname) ||
             /^\/(?:assets|documents)\/[a-zA-Z0-9_./%() -]+$/.test(
@@ -100,7 +106,9 @@ http
       const upstream = await fetch(url, {
         method: req.method,
         headers,
-        ...(req.method === 'POST' ? { body: req, duplex: 'half' } : {}),
+        ...(['POST', 'PATCH'].includes(req.method)
+          ? { body: req, duplex: 'half' }
+          : {}),
         signal: AbortSignal.timeout(30000),
       })
       res.statusCode = upstream.status

@@ -13,6 +13,8 @@ import { promisify } from 'node:util'
 import { root, stateDir, knownFiles, config } from './config.mjs'
 import { catalogEntry, annotateVersions } from './catalog.mjs'
 import { buildPageUnits } from './units.mjs'
+import { demoProjects } from '../demo/manifest.mjs'
+import { restoreDemoDocuments, demoDocumentDirectory } from './demo-documents.mjs'
 
 const run = promisify(execFile)
 export function readPdfCache(file) {
@@ -322,11 +324,13 @@ async function tableLayout(file, hash) {
 }
 
 export async function buildIndex(progress = () => {}) {
+  restoreDemoDocuments()
   mkdirSync(config.pdfCacheDir, { recursive: true })
   const files = new Map()
   for (const dir of [
     resolve(root, '../public/documents'),
     resolve(root, 'documents'),
+    demoDocumentDirectory,
   ]) {
     if (existsSync(dir))
       for (const name of readdirSync(dir).filter((n) => /\.pdf$/i.test(n)))
@@ -345,7 +349,13 @@ export async function buildIndex(progress = () => {}) {
       // Warm caches must still yield so health checks and controls stay responsive.
       await new Promise((done) => setImmediate(done))
       const hash = createHash('sha256').update(readFileSync(file)).digest('hex')
-      if (documents.some((d) => d.version === hash)) continue
+      const duplicate = documents.find((d) => d.version === hash)
+      if (duplicate) {
+        duplicate.filenames = [
+          ...new Set([...(duplicate.filenames || []), name]),
+        ]
+        continue
+      }
       const cacheName = `${hash}-${cacheVersion}.json`
       const legacyCache = resolve(stateDir, cacheName)
       const cache = existsSync(legacyCache)
@@ -365,6 +375,23 @@ export async function buildIndex(progress = () => {}) {
           source: '',
         }),
         ...(catalogEntry(hash) || {}),
+      }
+      const owner = demoProjects.find((p) =>
+        p.documents.some((d) => resolve(demoDocumentDirectory, d.file) === file),
+      )
+      if (owner) {
+        const artifact = owner.documents.find(
+          (d) => resolve(demoDocumentDirectory, d.file) === file,
+        )
+        Object.assign(metadata, {
+          label: artifact.code,
+          title: artifact.title,
+          edition: 'Synthetic demo - P01, 6 November 2026',
+          projectArtifact: true,
+          ownerProjectId: owner.id,
+          category: artifact.category,
+          source: '',
+        })
       }
       const id = `doc-${hash.slice(0, 12)}`
       const record = {

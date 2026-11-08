@@ -17,6 +17,8 @@ import { SearchIndex } from './search.mjs'
 import { answer } from './answer.mjs'
 import { suggestQueries } from './query-suggestions.mjs'
 import { readFrontendLocation } from './frontend-location.mjs'
+import { ProjectApi } from './project-api.mjs'
+import { scopedCorpus } from './project-store.mjs'
 
 const historyDir = resolve(stateDir, 'queries')
 const localModelManifest =
@@ -38,6 +40,12 @@ const engineVersion = createHash('sha256')
       'model.mjs',
       'local-evidence.mjs',
       'query-suggestions.mjs',
+      'project-api.mjs',
+      'project-store.mjs',
+      'project-evidence.mjs',
+      'reference-collections.mjs',
+      'demo-documents.mjs',
+      '../demo/manifest.mjs',
       'local-synthesis.mjs',
       'synthesis-repair.mjs',
       'evidence-units.mjs',
@@ -71,7 +79,7 @@ const engineVersion = createHash('sha256')
   )
   .digest('hex')
 const corpusVersion = () =>
-  corpus?.documents
+  searchIndex?.corpus.documents
     .map((d) => d.version)
     .sort()
     .join(':')
@@ -81,6 +89,7 @@ const jobs = new Map(),
 const cancellations = new Map()
 let corpus,
   searchIndex,
+  projectApi,
   activeJob = null
 let indexing = {
   ready: false,
@@ -237,7 +246,7 @@ export const server = http.createServer(async (req, res) => {
   }
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
-      'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Authorization, Content-Type, Range',
       'Access-Control-Allow-Private-Network': 'true',
       'Access-Control-Max-Age': '600',
@@ -297,8 +306,10 @@ export const server = http.createServer(async (req, res) => {
           : indexing.ready
             ? 'Ready'
             : 'Indexing documents',
-        documents: corpus?.documents.length || 0,
-        passages: corpus?.passages.length || 0,
+        documents: searchIndex?.corpus.documents.length || 0,
+        passages: searchIndex?.corpus.passages.length || 0,
+        projectDocuments:
+          corpus?.documents.filter((d) => d.projectArtifact).length || 0,
         failures: corpus?.failures.length || 0,
         model:
           config.provider === 'extractive'
@@ -312,11 +323,22 @@ export const server = http.createServer(async (req, res) => {
                   : config.model,
         units: corpus?.units?.length || 0,
         provider: config.provider,
-        activeQueries: activeJob ? 1 : 0,
-        queuedQueries: queue.filter((j) => j.state === 'queued').length,
+        activeQueries: Number(!!activeJob) + Number(!!projectApi?.active),
+        queuedQueries: queue.filter((j) => j.state === 'queued').length + (projectApi?.queue.length || 0),
       })
     if (!sameToken(supplied))
       return json(401, { error: 'Connection key is missing or incorrect.' })
+    if (
+      url.pathname === '/v1/reference-collections' ||
+      /^\/v1\/projects(?:\/|$)/.test(url.pathname)
+    ) {
+      if (!projectApi || !indexing.ready)
+        return json(503, {
+          error: 'Project documents are still indexing.',
+          stage: indexing.stage,
+        })
+      return await projectApi.handle(req, url, res, json, body)
+    }
     if (url.pathname === '/v1/documents' && req.method === 'GET') {
       if (!indexing.ready)
         return json(503, {
@@ -329,17 +351,21 @@ export const server = http.createServer(async (req, res) => {
           error:
             'PDF text extraction failed or returned no usable passages. See the local index log.',
         })),
-        documents: corpus.documents.map(({ filePath: _filePath, ...d }) => ({
-          ...d,
-          file: `/v1/documents/${d.id}/file?token=${encodeURIComponent(config.token)}`,
-        })),
+        documents: searchIndex.corpus.documents.map(
+          ({ filePath: _filePath, ...d }) => ({
+            ...d,
+            file: `/v1/documents/${d.id}/file?token=${encodeURIComponent(config.token)}`,
+          }),
+        ),
       })
     }
     const fileMatch = url.pathname.match(
       /^\/v1\/documents\/([a-z0-9-]+)\/file$/,
     )
     if (fileMatch && req.method === 'GET') {
-      const doc = corpus?.documents.find((d) => d.id === fileMatch[1])
+      const doc = searchIndex?.corpus.documents.find(
+        (d) => d.id === fileMatch[1],
+      )
       if (!doc) return json(404, { error: 'Document not found.' })
       const size = statSync(doc.filePath).size,
         headers = {
@@ -512,7 +538,13 @@ buildIndex((stage, completed, total) => {
 })
   .then((result) => {
     corpus = result
-    searchIndex = new SearchIndex(corpus)
+    searchIndex = new SearchIndex(
+      scopedCorpus(
+        corpus,
+        corpus.documents.filter((d) => !d.projectArtifact).map((d) => d.id),
+      ),
+    )
+    projectApi = new ProjectApi(corpus, stateDir, engineVersion)
     indexing = {
       ready: corpus.documents.length > 0,
       stage: corpus.documents.length ? 'Ready' : 'No readable documents found',

@@ -584,7 +584,7 @@ async function review(
   }
 }
 
-function renderResult(
+export function renderResult(
   sections,
   corpus,
   publicBase,
