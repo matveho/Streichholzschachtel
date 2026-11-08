@@ -372,8 +372,21 @@ test('prepared findings and histories are project-bound and anchored to original
   const { folder } = fresh(t),
     api = new ProjectApi(corpus, folder, 'project-test-engine')
   for (const spec of demoProjects) {
-    const issues = api.issues(spec.id)
+    const allIssues = api.issues(spec.id)
+    const issues = allIssues.filter((issue) => issue.prepared)
     assert.equal(issues.length, spec.issues.length)
+    for (const issue of allIssues.filter((issue) => !issue.prepared)) {
+      assert.ok(issue.elementId && issue.globalId)
+      assert.ok(
+        Number.isFinite(issue.actual) && Number.isFinite(issue.expected),
+      )
+      assert.ok(issue.citations.length > 0)
+      assert.ok(
+        issue.citations.every((citation) =>
+          api.store.get(spec.id).documentIds.includes(citation.doc),
+        ),
+      )
+    }
     assert.ok(
       issues.every((i) => i.verified),
       'Every prepared finding must have original-source anchors',
@@ -395,4 +408,22 @@ test('prepared findings and histories are project-bound and anchored to original
       assert.throws(() => api.raw(other.id, query.id), { status: 404 })
     }
   }
+})
+
+test('refreshed OCR invalidates the project evidence scope without changing PDF identity', (t) => {
+  const { store } = fresh(t)
+  const project = store.get('demo-mill-creek')
+  const before = store.scope(project.id).version
+  const id = project.documentIds[0]
+  const original = store.documents.get(id)
+  const refreshed = { ...original, extractionVersion: 'refreshed-ocr-output' }
+  store.documents.set(id, refreshed)
+  store.corpus = {
+    ...store.corpus,
+    documents: store.corpus.documents.map((doc) =>
+      doc.id === id ? refreshed : doc,
+    ),
+  }
+  assert.equal(refreshed.version, original.version)
+  assert.notEqual(store.scope(project.id).version, before)
 })

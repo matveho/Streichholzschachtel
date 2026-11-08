@@ -542,7 +542,7 @@ function ProjectDashboard({
             </button>
             <section className="project-panel" aria-label="Potential issues">
               <div className="project-panel-heading">
-                <h2 title="Source-verified example findings requiring engineering review">
+                <h2 title="Document and IFC findings requiring engineering review">
                   {openIssueCount > 0 && (
                     <TriangleAlert
                       className="issue-warning"
@@ -552,7 +552,49 @@ function ProjectDashboard({
                   )}
                   Potential issues
                 </h2>
+                <button
+                  disabled={pending}
+                  onClick={() => void action('/compare-ifc', 'POST')}
+                >
+                  {pending ? 'Working…' : 'Compare IFC'}
+                </button>
               </div>
+              {data.comparison && (
+                <details className="project-empty">
+                  <summary>
+                    IFC comparison: {data.comparison.modelCount} model(s),{' '}
+                    {
+                      data.comparison.coverage.filter((d) => d.checks > 0)
+                        .length
+                    }{' '}
+                    of {data.comparison.coverage.length} files compared
+                  </summary>
+                  <p>
+                    Checks explicit numeric statements against IFC properties
+                    using element identifiers or cited source pages and matching
+                    units. Other requirements need engineering review.
+                  </p>
+                  {data.comparison.errors.map((message) => (
+                    <p key={message}>{message}</p>
+                  ))}
+                  {Object.entries(labels).map(([key, label]) => (
+                    <div key={key}>
+                      <strong>{label}</strong>
+                      {data.comparison?.coverage
+                        .filter((d) => d.category === key)
+                        .map((d) => (
+                          <p key={d.doc}>
+                            {d.label}:{' '}
+                            {d.checks ? `${d.checks} checks` : d.reason}
+                          </p>
+                        ))}
+                      {!data.comparison?.coverage.some(
+                        (d) => d.category === key,
+                      ) && <p>No comparison documents.</p>}
+                    </div>
+                  ))}
+                </details>
+              )}
               <div className="project-panel-tabs">
                 <button
                   className={issueTab === 'open' ? 'selected' : ''}
@@ -571,6 +613,9 @@ function ProjectDashboard({
               {visibleIssues.map((issue) => (
                 <article className="project-issue" key={issue.id}>
                   <h3>{issue.title}</h3>
+                  {issue.category && (
+                    <p>{labels[issue.category] || issue.category}</p>
+                  )}
                   <p>{issue.explanation}</p>
                   <div className="issue-sources">
                     {[
@@ -582,18 +627,30 @@ function ProjectDashboard({
                     ))}
                   </div>
                   <div className="issue-actions">
-                    <button
-                      className="evidence-action"
-                      disabled={!issue.verified || pending}
-                      onClick={() =>
-                        navigate(
-                          'project/' + project.id + '/query/' + issue.queryId,
-                        )
-                      }
-                    >
-                      Inspect evidence
-                      <ArrowUpRight size={13} />
-                    </button>
+                    {!issue.queryId && (
+                      <details>
+                        <summary>Inspect evidence</summary>
+                        {issue.citations.map((c, i) => (
+                          <p key={i}>
+                            {c.label} · p. {c.page}: {c.excerpt}
+                          </p>
+                        ))}
+                      </details>
+                    )}
+                    {issue.queryId && (
+                      <button
+                        className="evidence-action"
+                        disabled={!issue.verified || pending}
+                        onClick={() =>
+                          navigate(
+                            'project/' + project.id + '/query/' + issue.queryId,
+                          )
+                        }
+                      >
+                        Inspect evidence
+                        <ArrowUpRight size={13} />
+                      </button>
+                    )}
                     <button
                       disabled={pending}
                       onClick={() =>

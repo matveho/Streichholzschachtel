@@ -7,6 +7,11 @@ try {
   const page = await browser.newPage({
     viewport: { width: 1440, height: 1000 },
   })
+  // These checks cover the standalone example workspace. The project UI has
+  // its own live backend checks; keep service availability out of this fixture.
+  await page.route('**/v1/projects', (route) =>
+    route.fulfill({ status: 404, contentType: 'application/json', body: '{}' }),
+  )
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
   const examples = [
@@ -44,6 +49,9 @@ try {
   ]
   await mkdir('test-results', { recursive: true })
   await page.goto('http://127.0.0.1:5173/#home')
+  await page
+    .getByRole('heading', { name: 'Previous queries', exact: true })
+    .waitFor()
   assert.equal(await page.locator('.history-entry').count(), 5)
   for (const example of examples) {
     await page.getByRole('link', { name: new RegExp(example.title) }).click()

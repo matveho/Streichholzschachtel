@@ -1,6 +1,6 @@
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist'
-import type { PDFDocumentProxy } from 'pdfjs-dist'
-import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist/legacy/build/pdf.mjs'
+import type { PDFDocumentProxy } from 'pdfjs-dist/legacy/build/pdf.mjs'
+import workerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'
 import type { DocumentRecord } from './backend'
 import type { DocId } from './data'
 

@@ -67,12 +67,46 @@ export const normalize = (text) =>
     .replace(/(\p{L})-\s*\n\s*(\p{L})/gu, '$1$2')
     .replace(/\s+/g, ' ')
     .trim()
-const cacheVersion =
-  'words-v5-' +
-  createHash('sha256')
-    .update(readFileSync(resolve(root, 'extract.py')))
-    .digest('hex')
-    .slice(0, 8)
+const extractionPython = resolve(
+  root,
+  process.platform === 'win32'
+    ? '.venv/Scripts/python.exe'
+    : '.venv/bin/python',
+)
+async function ocrAvailable() {
+  const command =
+    process.env.TESSERACT_PATH ||
+    (process.platform === 'win32' &&
+    existsSync('C:/Program Files/Tesseract-OCR/tesseract.exe')
+      ? 'C:/Program Files/Tesseract-OCR/tesseract.exe'
+      : 'tesseract')
+  try {
+    await run(command, ['--version'], { windowsHide: true, timeout: 5000 })
+    return true
+  } catch {
+    return false
+  }
+}
+export function reusablePdfCache(cached, canOcr = false) {
+  return (
+    Array.isArray(cached?.pages) &&
+    !(
+      canOcr &&
+      cached.pages.some((page) => page.extraction === 'ocr-unavailable')
+    )
+  )
+}
+export function pdfCacheVersion(native = existsSync(extractionPython)) {
+  // Never reuse PDF.js output after the native extractor becomes available.
+  return (
+    'words-v6-' +
+    (native ? 'pymupdf-' : 'pdfjs-') +
+    createHash('sha256')
+      .update(readFileSync(resolve(root, 'extract.py')))
+      .digest('hex')
+      .slice(0, 8)
+  )
+}
 const compactText = (text) =>
   normalize(text)
     .toLowerCase()
@@ -102,10 +136,7 @@ export function quantityUnits(text, dense = false) {
 }
 
 async function extract(file) {
-  const python =
-    process.platform === 'win32'
-      ? resolve(root, '.venv/Scripts/python.exe')
-      : resolve(root, '.venv/bin/python')
+  const python = extractionPython
   if (existsSync(python)) {
     const { stdout } = await run(
       python,
@@ -343,6 +374,7 @@ async function tableLayout(file, hash) {
 
 export async function buildIndex(progress = () => {}, onlyFiles) {
   restoreDemoDocuments()
+  const canOcr = existsSync(extractionPython) && (await ocrAvailable())
   mkdirSync(config.pdfCacheDir, { recursive: true })
   const files = new Map()
   for (const dir of onlyFiles
@@ -385,13 +417,13 @@ export async function buildIndex(progress = () => {}, onlyFiles) {
         ]
         continue
       }
-      const cacheName = `${hash}-${cacheVersion}.json`
+      const cacheName = `${hash}-${pdfCacheVersion()}.json`
       const legacyCache = resolve(stateDir, cacheName)
       const cache = existsSync(legacyCache)
         ? legacyCache
         : resolve(config.pdfCacheDir, cacheName)
       const cached = readPdfCache(cache)
-      const extracted = Array.isArray(cached?.pages)
+      const extracted = reusablePdfCache(cached, canOcr)
         ? cached
         : await extract(file)
       if (extracted !== cached) writePdfCache(cache, extracted)
@@ -480,6 +512,9 @@ export async function buildIndex(progress = () => {}, onlyFiles) {
         pages: extracted.pages.length,
         initialPage: 1,
         version: hash,
+        extractionVersion: createHash('sha256')
+          .update(JSON.stringify(extracted))
+          .digest('hex'),
         filePath: file,
         pageSizes: {},
       }

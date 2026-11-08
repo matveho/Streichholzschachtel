@@ -11,6 +11,11 @@ python -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
+On macOS or Linux, use `.venv/bin/python -m pip install -r requirements.txt`
+after creating the virtual environment. Native and fallback PDF extraction use
+separate caches, so installing the native extractor automatically rebuilds the
+PDF text on the next index run.
+
 Install Tesseract with English language data to search scanned pages. Launch **Start basis.cmd** from the repository root. Choose **2** to restart and reindex, **4** for status, or **T** to check the presentation. [Launcher controls](CONTROLS.md)
 
 ## Files and data
@@ -22,3 +27,27 @@ Install Tesseract with English language data to search scanned pages. Launch **S
 Run `npm test` here for the backend suite. For frontend development, start the gateway, then run `npm run dev` at the repository root. Set `BASIS_DEV_BACKEND_URL` if the gateway uses a different port from the default 8789.
 
 [API and persistence](PROJECT_API.md) · [IFC models](demo/IFC-MODELS.md)
+
+### IFC document comparison
+
+Project Potential Issues now includes a live property comparison in addition to
+prepared demonstration findings. Click **Compare IFC** to rescan. The scan uses
+only selected project documents in Reference, Client requirements, Design,
+Technical reports and Supporting materials. It reads the project's associated
+STEP IFC models (or the original IFC for legacy demo projects).
+
+Supported checks require a document statement with an explicit IFC element name or tag,
+a numeric property (including labelled values such as `200 mm`) and matching unit, such as `IND-LOCAL-02 maximum design speed:
+40 km/h`. Findings include the actual IFC value, STEP element ID, GlobalId, source
+page and excerpt. When a drawing omits the tag, the checker can use an IFC
+SourceDocument/SourcePage link for a specific property; generic labels such as
+width still need an explicit element identifier. Dismissals survive rescans; document/model changes invalidate
+cached results. `POST /v1/projects/:id/compare-ifc` forces a rescan; project GET
+responses include the comparison coverage report.
+
+This is a bounded property checker: it does not infer applicability of general
+standards, interpret drawing geometry, compare arbitrary tables, or assess
+qualitative requirements. The coverage report lists unsupported documents for
+review. No findings is not a compliance certification. IFC upload/association
+uses the existing model association mechanism; this change does not add an IFC
+upload interface.

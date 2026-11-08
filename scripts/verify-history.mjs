@@ -7,6 +7,11 @@ try {
   const page = await browser.newPage({
     viewport: { width: 1440, height: 1000 },
   })
+  // These checks cover the standalone example workspace. The project UI has
+  // its own live backend checks; keep service availability out of this fixture.
+  await page.route('**/v1/projects', (route) =>
+    route.fulfill({ status: 404, contentType: 'application/json', body: '{}' }),
+  )
   const errors = []
   page.on('pageerror', (e) => errors.push(e.message))
   await page.goto('http://127.0.0.1:5173/')
@@ -103,7 +108,7 @@ try {
     .fill('Check the foundation drainage requirements')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await page
-    .getByRole('heading', { name: 'No supported answer', exact: true })
+    .getByRole('status', { name: 'Nothing found', exact: true })
     .waitFor()
   await page.getByRole('link', { name: 'Home', exact: true }).click()
   assert.equal(await page.locator('.history-entry').count(), 6)
@@ -112,9 +117,9 @@ try {
     .getByRole('link', { name: /Check the foundation drainage requirements/ })
     .click()
   await page
-    .getByRole('heading', { name: 'No supported answer', exact: true })
+    .getByRole('status', { name: 'Nothing found', exact: true })
     .waitFor()
-  assert.equal(await page.locator('.query-report').count(), 1)
+  assert.equal(await page.locator('.query-report').count(), 0)
   await page.goto('http://127.0.0.1:5173/')
   assert.match(await page.locator('#query').inputValue(), /20 ha/)
   await page.getByRole('link', { name: 'Home', exact: true }).click()

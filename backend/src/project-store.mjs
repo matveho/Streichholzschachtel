@@ -372,10 +372,11 @@ export class ProjectStore {
     this.write(data)
     return seed
   }
-  setIssue(id, issueId, status) {
+  setIssue(id, issueId, status, comparisonIds = []) {
     if (!['open', 'dismissed'].includes(status))
       throw problem(400, 'Issue status must be open or dismissed.')
     if (
+      !comparisonIds.includes(issueId) &&
       !demoProjects
         .find((p) => p.id === id)
         ?.issues.some((i) => i.id === issueId)
@@ -425,7 +426,9 @@ export class ProjectStore {
         JSON.stringify([
           project.id,
           [...project.documentIds].sort(),
-          corpus.documents.map((d) => [d.id, d.version]).sort(),
+          corpus.documents
+            .map((d) => [d.id, d.version, d.extractionVersion || ''])
+            .sort(),
         ]),
       )
       .digest('hex')

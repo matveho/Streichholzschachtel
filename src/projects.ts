@@ -46,6 +46,7 @@ export type ProjectQuery = {
   outcome?: string
 }
 export type ProjectIssue = {
+  category?: string
   id: string
   title: string
   explanation: string
@@ -61,6 +62,19 @@ export type ProjectData = {
   queries: ProjectQuery[]
   issues: ProjectIssue[]
   collections: Collection[]
+  comparison?: {
+    modelCount: number
+    checkedAt: string
+    errors: string[]
+    coverage: {
+      doc: string
+      label: string
+      category: string
+      checks: number
+      status: string
+      reason?: string
+    }[]
+  }
 }
 export const projectPath = (id: string) =>
   '/v1/projects/' + encodeURIComponent(id)

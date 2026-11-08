@@ -7,13 +7,18 @@ try {
   const page = await browser.newPage({
     viewport: { width: 1440, height: 1000 },
   })
+  // These checks cover the standalone example workspace. The project UI has
+  // its own live backend checks; keep service availability out of this fixture.
+  await page.route('**/v1/projects', (route) =>
+    route.fulfill({ status: 404, contentType: 'application/json', body: '{}' }),
+  )
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.goto('http://127.0.0.1:5173/')
   assert.equal(await page.title(), 'basis')
   assert.equal(
     await page.locator('link[rel="icon"]').getAttribute('href'),
-    '/basis.svg',
+    '/basis-logo.png',
   )
   assert.ok(!(await page.locator('#query').inputValue()).includes('Edmonton'))
   assert.equal(await page.locator('footer').count(), 0)
@@ -251,7 +256,7 @@ try {
   await page.locator('#query').fill('Another question')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await page
-    .getByRole('heading', { name: 'No supported answer', exact: true })
+    .getByRole('status', { name: 'Nothing found', exact: true })
     .waitFor()
   assert.equal(await page.locator('.source-highlight').count(), 0)
   await page.goto('http://127.0.0.1:5173/#query/storm')

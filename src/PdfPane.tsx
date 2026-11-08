@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { TextLayer } from 'pdfjs-dist'
-import type { PDFDocumentProxy } from 'pdfjs-dist'
+import { TextLayer } from 'pdfjs-dist/legacy/build/pdf.mjs'
+import type { PDFDocumentProxy } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import {
   ChevronLeft,
   ChevronRight,

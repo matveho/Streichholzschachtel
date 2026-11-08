@@ -11,6 +11,8 @@ import {
 } from 'node:fs'
 import { resolve, sep, basename } from 'node:path'
 import { randomUUID, createHash } from 'node:crypto'
+import { compareIfcDocuments, readIfcProperties } from './ifc-comparison.mjs'
+import { root } from './config.mjs'
 import { ProjectStore, problem } from './project-store.mjs'
 import { demoProjects } from '../demo/manifest.mjs'
 import { preparedEvidence, projectResult } from './project-evidence.mjs'
@@ -49,6 +51,7 @@ export class ProjectApi {
     this.active = null
     this.scopeCache = new Map()
     this.evidence = new Map()
+    this.comparisonCache = new Map()
     for (const project of this.store.list())
       for (const job of this.history(project.id, false)) {
         if (['queued', 'running'].includes(job.state)) {
@@ -206,27 +209,85 @@ export class ProjectApi {
       }
     }
   }
+  comparison(projectId, force = false) {
+    const project = this.store.get(projectId)
+    const scope = this.store.scope(projectId)
+    const documents = scope.corpus.documents
+    const models = [],
+      errors = []
+    const files = new Set(
+      documents
+        .filter((d) => d.modelFile && basename(d.modelFile) === d.modelFile)
+        .map((d) => resolve(demoDocumentDirectory, d.modelFile)),
+    )
+    // Legacy demonstration projects have their IFC beside the original project packages.
+    if (!files.size && project.protectedDemo) {
+      const name = project.name.replaceAll(' ', '_') + '.ifc'
+      const candidate = resolve(root, 'IFC', name)
+      if (basename(name) === name && existsSync(candidate)) files.add(candidate)
+    }
+    const contents = [...files].map((file) => {
+      try {
+        return { name: basename(file), text: readFileSync(file, 'utf8') }
+      } catch {
+        errors.push(`Could not read ${basename(file)}.`)
+        return { name: basename(file), text: '' }
+      }
+    })
+    const signature = createHash('sha256')
+      .update(scope.version + JSON.stringify(contents))
+      .digest('hex')
+    const cached = this.comparisonCache.get(projectId)
+    if (!force && cached?.signature === signature) return cached.result
+    for (const file of contents) {
+      try {
+        const elements = readIfcProperties(file.text)
+        models.push({ name: file.name, elements })
+        if (!elements.length)
+          errors.push(`${file.name}: no supported element property sets found.`)
+      } catch (error) {
+        errors.push(`${file.name}: ${error.message}`)
+      }
+    }
+    if (!contents.length)
+      errors.push('No IFC model is associated with this project.')
+    const result = {
+      ...compareIfcDocuments(models, documents, scope.corpus.passages),
+      errors,
+    }
+    this.comparisonCache.set(projectId, { signature, result })
+    return result
+  }
   issues(projectId) {
     const project = this.store.get(projectId),
       spec = demoProjects.find((p) => p.id === projectId)
-    return (spec?.issues || []).map(({ proofs: _proofs, ...issue }) => {
-      const evidence = this.evidence.get(projectId + '/' + issue.id)
-      const query = spec.queries.find((q) => q.issueId === issue.id)
-      return {
+    const prepared = (spec?.issues || []).map(
+      ({ proofs: _proofs, ...issue }) => {
+        const evidence = this.evidence.get(projectId + '/' + issue.id)
+        const query = spec.queries.find((q) => q.issueId === issue.id)
+        return {
+          ...issue,
+          prepared: true,
+          verified: !!evidence,
+          status: project.issueStates[issue.id]?.status || 'open',
+          queryId: evidence ? preparedId(projectId, query.id) : null,
+          citations:
+            evidence?.references.map((r) => ({
+              doc: r.doc,
+              page: r.page,
+              label: this.store.documents.get(r.doc)?.label,
+              excerpt: r.excerpt,
+            })) || [],
+        }
+      },
+    )
+    return [
+      ...prepared,
+      ...this.comparison(projectId).issues.map((issue) => ({
         ...issue,
-        prepared: true,
-        verified: !!evidence,
         status: project.issueStates[issue.id]?.status || 'open',
-        queryId: evidence ? preparedId(projectId, query.id) : null,
-        citations:
-          evidence?.references.map((r) => ({
-            doc: r.doc,
-            page: r.page,
-            label: this.store.documents.get(r.doc)?.label,
-            excerpt: r.excerpt,
-          })) || [],
-      }
-    })
+      })),
+    ]
   }
   project(projectId) {
     const project = this.store.get(projectId),
@@ -533,6 +594,7 @@ export class ProjectApi {
           ),
           queries: this.history(projectId),
           issues: this.issues(projectId),
+          comparison: this.comparison(projectId),
           collections: this.store.collections.filter((c) =>
             project.collectionIds.includes(c.id),
           ),
@@ -557,6 +619,8 @@ export class ProjectApi {
       this.resetProject(projectId)
       return json(200, { project: this.project(projectId) })
     }
+    if (route === '/compare-ifc' && req.method === 'POST')
+      return json(200, this.comparison(projectId, true))
     const issueMatch = route.match(/^\/issues\/([a-z0-9-]+)$/)
     if (issueMatch && req.method === 'PATCH')
       return json(200, {
@@ -564,6 +628,7 @@ export class ProjectApi {
           projectId,
           issueMatch[1],
           (await input()).status,
+          this.comparison(projectId).issues.map((issue) => issue.id),
         ),
       })
     const modelMatch = route.match(/^\/documents\/(doc-[a-f0-9]+)\/model$/)

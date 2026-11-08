@@ -4,7 +4,12 @@ import { writeFileSync, unlinkSync, existsSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { resolve } from 'node:path'
 import { stateDir } from '../src/config.mjs'
-import { readPdfCache, writePdfCache } from '../src/indexer.mjs'
+import {
+  readPdfCache,
+  writePdfCache,
+  pdfCacheVersion,
+  reusablePdfCache,
+} from '../src/indexer.mjs'
 import { validPort, isBasisProcess, managedFrontendPaths } from '../control.mjs'
 
 test('control ports reject invalid values and protect model service ports', () => {
@@ -70,4 +75,21 @@ test('an interrupted PDF cache can be repaired without leaving a partial publish
   writePdfCache(file, repaired)
   assert.deepEqual(readPdfCache(file), repaired)
   assert.equal(existsSync(file + '.tmp-' + process.pid), false)
+})
+
+test('native PDF extraction never reuses fallback extraction caches', () => {
+  assert.notEqual(pdfCacheVersion(true), pdfCacheVersion(false))
+  assert.match(pdfCacheVersion(true), /pymupdf/)
+  assert.match(pdfCacheVersion(false), /pdfjs/)
+})
+
+test('installing OCR refreshes unreadable page caches while preserving usable caches', () => {
+  const unreadable = { pages: [{ extraction: 'ocr-unavailable', words: [] }] }
+  assert.equal(reusablePdfCache(unreadable, false), true)
+  assert.equal(reusablePdfCache(unreadable, true), false)
+  assert.equal(
+    reusablePdfCache({ pages: [{ extraction: 'text' }] }, true),
+    true,
+  )
+  assert.equal(reusablePdfCache(null, true), false)
 })

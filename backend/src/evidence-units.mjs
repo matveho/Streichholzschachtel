@@ -110,6 +110,18 @@ function sourceBlocks(passage) {
       }
       continue
     }
+    // OCR often places a list marker and its text on the same line. Keep
+    // separate list items separate so one damaged item cannot hide its neighbors.
+    if (
+      passage.extraction === 'ocr' &&
+      /^(?:[a-z]|[ivxlcdm]+)[.),]\s+\S/.test(text)
+    ) {
+      flush()
+      if (inTable) {
+        heading = sectionHeading
+        inTable = false
+      }
+    }
     const next = passage.lines[i + 1]?.text
     if (
       /:$/.test(text) &&
@@ -179,7 +191,7 @@ export function evidenceUnits(
       for (const segment of segments) {
         const sentence = normalize(segment.segment)
           .replace(/^[•●▪‣]\s*/, '')
-          .replace(/^(?:[ivxlcdm]+|[a-z]|\d+(?:\.\d+)*)[.)]\s+(?=[A-Z])/, '')
+          .replace(/^(?:[ivxlcdm]+|[a-z]|\d+(?:\.\d+)*)[.),]\s+(?=[A-Z])/, '')
           .replace(/([.!?])\s+(?:[a-z]|i{1,3}|iv|vi{0,3}|ix|x)\.$/, '$1')
         const alternatives = [sentence]
         // A separately quantified subject retains its universal predicate.

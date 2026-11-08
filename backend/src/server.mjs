@@ -87,7 +87,7 @@ const engineVersion = createHash('sha256')
   .digest('hex')
 const corpusVersion = () =>
   searchIndex?.corpus.documents
-    .map((d) => d.version)
+    .map((d) => d.version + ':' + (d.extractionVersion || ''))
     .sort()
     .join(':')
 mkdirSync(historyDir, { recursive: true })

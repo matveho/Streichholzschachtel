@@ -26,6 +26,42 @@ try {
     const model = data.documents.find((d) => d.model)
     assert.ok(model)
     await page.goto(frontend + '/#project/' + id)
+    const scanResponse = page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/projects/' + id + '/compare-ifc') &&
+        response.request().method() === 'POST',
+    )
+    await page.getByRole('button', { name: 'Compare IFC', exact: true }).click()
+    const response = await scanResponse
+    assert.equal(response.status(), 200)
+    const scan = await response.json()
+    assert.equal(scan.modelCount, 1)
+    assert.deepEqual(
+      [...new Set(scan.coverage.map((d) => d.category))].sort(),
+      ['client', 'design', 'reference', 'report', 'supporting'],
+    )
+    assert.ok(
+      scan.coverage.some((d) => d.checks > 0),
+      'Actual IFC values compared against document statements',
+    )
+    const panel = page.getByRole('region', {
+      name: 'Potential issues',
+      exact: true,
+    })
+    await panel.getByText(/^IFC comparison:/).click()
+    await panel.getByText('Technical reports', { exact: true }).waitFor()
+    if (scan.issues.length) {
+      const finding = panel
+        .locator('.project-issue')
+        .filter({ hasText: scan.issues[0].title })
+        .first()
+      await finding.getByText('Inspect evidence', { exact: true }).click()
+      assert.ok(
+        (await finding.textContent()).includes(
+          scan.issues[0].citations[0].excerpt,
+        ),
+      )
+    }
     const download = page.waitForEvent('download')
     await page
       .getByRole('link', {
@@ -65,7 +101,7 @@ try {
   }
   assert.deepEqual(errors, [])
   console.log(
-    'PASS both IFC download controls, model registers, actual property search and highlighted source navigation',
+    'PASS live IFC comparison across all five categories, IFC downloads, model registers, property search and source navigation',
   )
 } finally {
   await browser.close()
