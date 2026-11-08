@@ -808,6 +808,53 @@ button {
   font-size: 13px;
   line-height: 1.85;
 }
+.query-suggestions {
+  max-width: 1080px;
+  margin: 20px auto 0;
+}
+.query-suggestions h2 {
+  margin: 0 0 8px;
+  color: #acb7c3;
+  font-size: 12px;
+  font-weight: 500;
+}
+.query-suggestions > div {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #ffffff16;
+}
+.query-suggestions button {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 10px 8px;
+  border-bottom: 1px solid #ffffff16;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.query-suggestions button:focus-visible {
+  outline: 1px solid #79b6e7;
+  outline-offset: -1px;
+}
+.suggestion-question {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #c7e0f3;
+}
+.suggestion-question svg {
+  flex-shrink: 0;
+}
+.suggestion-preview {
+  color: #b2bbc5;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.suggestion-source {
+  color: #8895a3;
+  font-size: 11px;
+}
 .query-report section {
   margin: 0 0 14px;
 }

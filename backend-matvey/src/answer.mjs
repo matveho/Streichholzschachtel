@@ -15,6 +15,8 @@ import { expandRetrieval } from './retrieval-plan.mjs'
 import { verifyCalculations } from './calculations.mjs'
 import { sourceLookup } from './source-lookup.mjs'
 import { checkContradictions } from './entailment.mjs'
+import { UnitIndex, lookup } from './lookup.mjs'
+import { claudeAnswer } from './claude.mjs'
 
 const schema = {
   type: 'object',
@@ -672,11 +674,122 @@ function renderResult(
   }
 }
 
+// Unit sections ({heading, sentences: [{text, units}]}) in the renderer's shape.
+function renderUnits(sections, corpus, publicBase, token, mode, notes) {
+  const label = (unit) => {
+    const doc = corpus.documents.find((d) => d.id === unit.doc)
+    return `${doc.label} ${doc.edition}${unit.table || unit.heading ? ' · ' + (unit.table || unit.heading).slice(0, 80) : ''}`
+  }
+  return renderResult(
+    sections.map((s) => ({
+      heading: s.heading,
+      claims: s.sentences.map((x) => ({
+        text: x.text,
+        evidence: (x.units || []).map((u) => ({
+          passage: {
+            id: u.id,
+            doc: u.doc,
+            page: u.page,
+            section: label(u),
+            extraction: u.extraction || 'text',
+          },
+          excerpt: u.text,
+          regions: u.regions,
+        })),
+      })),
+    })),
+    corpus,
+    publicBase,
+    token,
+    mode,
+    notes,
+  )
+}
+
+// Offline extractive answer, optionally rewritten by Claude from the same units.
+async function answerFromUnits(
+  question,
+  searchIndex,
+  { publicBase, token, signal, progress, sourceOnly },
+) {
+  const corpus = searchIndex.corpus
+  const index = (searchIndex.unitIndex ??= new UnitIndex(corpus))
+  progress('Searching tables, provisions and document versions')
+  const found = lookup(question, index)
+  let { sections, mode } = found
+  let notes = [...found.notes]
+  const jurisdictionRefusal =
+    found.mode === 'no_evidence' && !found.candidates?.length
+  if (
+    !sourceOnly &&
+    config.provider === 'anthropic' &&
+    !jurisdictionRefusal &&
+    found.mode !== 'version_answer'
+  ) {
+    try {
+      progress('Writing a cited answer with Claude')
+      const written = await claudeAnswer(question, found, index, signal)
+      const versionSection = found.sections.find(
+        (s) => s.heading === 'Version and applicability',
+      )
+      if (written.answerable) {
+        sections = [
+          ...written.sections,
+          ...(versionSection ? [versionSection] : []),
+        ]
+        mode = 'cited_synthesis'
+        notes = [
+          `Written by ${written.model} from the cited source excerpts; every sentence's citations and numbers were checked against the source text. Engineering review is still required.`,
+        ]
+        if (written.limitations) notes.push(written.limitations)
+        if (written.rejected)
+          notes.push(
+            `${written.rejected} sentence(s) were withheld because their citations or numbers could not be verified.`,
+          )
+      } else if (found.mode !== 'no_evidence') {
+        sections = [
+          {
+            heading: 'No confirmed answer',
+            sentences: [
+              {
+                text:
+                  written.limitations ||
+                  'The retrieved passages do not directly answer this question.',
+                units: [],
+              },
+            ],
+          },
+          ...found.sections.map((s) => ({
+            ...s,
+            heading: `Closest source text: ${s.heading}`,
+          })),
+        ]
+        mode = 'insufficient_evidence'
+      }
+    } catch (error) {
+      if (signal.aborted) throw error
+      notes.push(
+        'Claude synthesis was unavailable; showing the offline source answer.',
+      )
+      console.warn('Claude synthesis:', error.message)
+    }
+  }
+  return renderUnits(sections, corpus, publicBase, token, mode, notes)
+}
+
 export async function answer(
   question,
   searchIndex,
-  { publicBase, token, signal, progress = () => {} },
+  { publicBase, token, signal, sourceOnly = false, progress = () => {} },
 ) {
+  if (sourceOnly || ['extractive', 'anthropic'].includes(config.provider))
+    return answerFromUnits(question, searchIndex, {
+      publicBase,
+      token,
+      signal,
+      progress,
+      sourceOnly,
+    })
   progress('Retrieving source passages')
   let passages = searchIndex.search(question)
   if (!passages.length) {

@@ -566,7 +566,7 @@ test('multi-part hyphenated questions retain context from at least three sources
     matches.map((p) => corpus.documents.find((d) => d.id === p.doc).label),
   )
   assert.ok(labels.has('Infill LID'))
-  assert.ok(labels.has('Servicing'))
+  assert.ok(labels.has('Connection Guide'))
   assert.ok(labels.has('LID CIM'))
   assert.ok(labels.size >= 3)
 })

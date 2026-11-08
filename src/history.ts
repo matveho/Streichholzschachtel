@@ -5,6 +5,7 @@ export type HistoryEntry = {
   title: string
   prompt: string
   caseId: string
+  sourceOnly?: boolean
 }
 const storageKey = 'basis.query-history.v1'
 export function readHistory(): HistoryEntry[] {
@@ -25,6 +26,8 @@ export function readHistory(): HistoryEntry[] {
         typeof entry.title === 'string' &&
         typeof entry.prompt === 'string' &&
         entry.prompt.trim() &&
+        (entry.sourceOnly === undefined ||
+          typeof entry.sourceOnly === 'boolean') &&
         queryCases.some((c) => c.id === entry.caseId),
     )
     return [

@@ -15,6 +15,7 @@ import { config, stateDir } from './config.mjs'
 import { buildIndex } from './indexer.mjs'
 import { SearchIndex } from './search.mjs'
 import { answer } from './answer.mjs'
+import { suggestQueries } from './query-suggestions.mjs'
 
 const historyDir = resolve(stateDir, 'queries')
 const localModelManifest =
@@ -35,6 +36,7 @@ const engineVersion = createHash('sha256')
       'config.mjs',
       'model.mjs',
       'local-evidence.mjs',
+      'query-suggestions.mjs',
       'local-synthesis.mjs',
       'synthesis-repair.mjs',
       'evidence-units.mjs',
@@ -44,6 +46,10 @@ const engineVersion = createHash('sha256')
       'source-lookup.mjs',
       'entailment.mjs',
       'entailment.py',
+      'catalog.mjs',
+      'units.mjs',
+      'lookup.mjs',
+      'claude.mjs',
       '../extract.py',
       '../native-table-layout.py',
     ]
@@ -110,6 +116,7 @@ const sameToken = (value) => {
 const serialize = (job) => ({
   id: job.id,
   question: job.question,
+  sourceOnly: job.sourceOnly === true,
   state: job.state,
   stage: job.stage,
   createdAt: job.createdAt,
@@ -156,8 +163,11 @@ async function work() {
       publicBase: '',
       token: config.token,
       signal: job.controller.signal,
+      sourceOnly: job.sourceOnly === true,
       progress: (stage) => (job.stage = stage),
     })
+    if (['no_evidence', 'insufficient_evidence'].includes(job.result.mode))
+      job.result.suggestions = suggestQueries(job.question, searchIndex)
     job.engineVersion = engineVersion
     job.corpusVersion = corpusVersion()
     if (job.controller.signal.aborted) throw new Error('Cancelled')
@@ -285,13 +295,17 @@ export const server = http.createServer(async (req, res) => {
         documents: corpus?.documents.length || 0,
         passages: corpus?.passages.length || 0,
         failures: corpus?.failures.length || 0,
-        model: config.extractiveOnly
-          ? 'disabled'
-          : config.provider === 'gateway'
-            ? config.gatewayModel
-            : config.provider === 'llamacpp'
-              ? config.llamaModel
-              : config.model,
+        model:
+          config.provider === 'extractive'
+            ? 'none (offline source lookup)'
+            : config.provider === 'gateway'
+              ? config.gatewayModel
+              : config.provider === 'llamacpp'
+                ? config.llamaModel
+                : config.provider === 'anthropic'
+                  ? config.anthropicModel
+                  : config.model,
+        units: corpus?.units?.length || 0,
         provider: config.provider,
         activeQueries: activeJob ? 1 : 0,
         queuedQueries: queue.filter((j) => j.state === 'queued').length,
@@ -376,6 +390,11 @@ export const server = http.createServer(async (req, res) => {
           error: 'Enter a question between 1 and 6000 characters.',
         })
       if (
+        input.sourceOnly !== undefined &&
+        typeof input.sourceOnly !== 'boolean'
+      )
+        return json(400, { error: 'sourceOnly must be a boolean.' })
+      if (
         input.id !== undefined &&
         !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
           input.id,
@@ -385,7 +404,8 @@ export const server = http.createServer(async (req, res) => {
       const id = input.id || randomUUID(),
         previous = findJob(id)
       if (previous)
-        return previous.question === question
+        return previous.question === question &&
+          (previous.sourceOnly === true) === (input.sourceOnly === true)
           ? json(202, serialize(previous))
           : json(409, {
               error: 'Request id already belongs to another question.',
@@ -404,6 +424,7 @@ export const server = http.createServer(async (req, res) => {
       const job = {
         id,
         question,
+        sourceOnly: input.sourceOnly === true,
         state: 'queued',
         stage: 'Waiting for the local reviewer',
         createdAt: new Date().toISOString(),

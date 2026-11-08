@@ -4,6 +4,7 @@ import sys
 import os
 import csv
 import io
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -34,6 +35,47 @@ def ocr_words(page):
             int(row['par_num'])*1000+int(row['line_num']), float(row['conf'])])
     return result
 
+UNIT_BEFORE_EXPONENT = re.compile(r'(?:^|[^A-Za-z])(?:mm|cm|km|m|ft)$')
+
+def text_words(page):
+    """Words with footnote superscripts split out as separate "[n]" markers.
+
+    Plain text extraction merges a table value and its footnote reference
+    ("0.7" + superscript "4" -> "0.74"). Unit exponents such as m3 stay attached.
+    """
+    words = []
+    for block_no, block in enumerate(page.get_text('rawdict')['blocks']):
+        if block.get('type') != 0:
+            continue
+        for line_no, line in enumerate(block['lines']):
+            current = []
+            def flush():
+                if current:
+                    text = ''.join(c['c'] for c in current)
+                    if text.strip():
+                        xs0 = [c['bbox'][0] for c in current]; ys0 = [c['bbox'][1] for c in current]
+                        xs1 = [c['bbox'][2] for c in current]; ys1 = [c['bbox'][3] for c in current]
+                        words.append([min(xs0), min(ys0), max(xs1), max(ys1), text, block_no, line_no, 100])
+                    current.clear()
+            for span in line['spans']:
+                chars = span['chars']
+                text = ''.join(c['c'] for c in chars).strip()
+                footnote = (span['flags'] & 1 and re.fullmatch(r'\d{1,2}(?:,\d{1,2})*', text)
+                            and not UNIT_BEFORE_EXPONENT.search(''.join(c['c'] for c in current)))
+                if footnote:
+                    flush()
+                    marked = [c for c in chars if c['c'].strip()]
+                    current.extend([{**marked[0], 'c': '['}, *marked, {**marked[-1], 'c': ']'}])
+                    flush()
+                    continue
+                for c in chars:
+                    if c['c'].isspace():
+                        flush()
+                    else:
+                        current.append(c)
+            flush()
+    return words
+
 pages = []
 for page in doc:
     # dehyphenation is applied later with a mapping back to the source lines
@@ -42,7 +84,12 @@ for page in doc:
     fragmented = len(alphabetic) > 50 and sum(len(word) <= 2 for word in alphabetic) / len(alphabetic) > .6
     image_only = len(words) < 25 and bool(page.get_images())
     ocr = fragmented or image_only
-    extracted_words = ocr_words(page) if ocr else [[*word[:4], word[4], word[5], word[6], 100] for word in words]
+    if ocr and not tesseract:
+        # Without OCR, withhold this page instead of failing the whole document.
+        pages.append({"width": page.rect.width, "height": page.rect.height, "words": [],
+                      "extraction": "ocr-unavailable", "nativeText": '', "label": page.get_label()})
+        continue
+    extracted_words = ocr_words(page) if ocr else text_words(page)
     pages.append({"width": page.rect.width, "height": page.rect.height,
                   "words": extracted_words, "extraction": "ocr" if ocr else "text",
                   "nativeText": ' '.join(word[4] for word in words) if fragmented else '',

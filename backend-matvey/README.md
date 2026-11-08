@@ -22,6 +22,21 @@ The extractor retains page dimensions, text and original page coordinates. Each 
 
 ## Answering behavior
 
+**Default engine (offline, no model).** Each page is split into evidence units — table rows (cells sharing a row, with the table title and column headings as context) and sentences — each with its exact PDF regions. A question is routed:
+
+- _Edition questions_ ("which edition is in effect", "when was X last updated") → the catalog's current edition, cited to the cover and the Terms of Use "effective as of" sentence, with older editions listed as superseded.
+- _Change questions_ ("what changed in Vol. 3-01", "…in August 2024") → the rows of that edition's list of revisions, optionally filtered by date.
+- _Other jurisdictions_ (e.g. Strathcona County, Calgary) → "not in the indexed documents"; Edmonton values are never offered as theirs.
+- _Lookups_ → scored units; the answer is the verbatim matching rows/clauses grouped by source table, with the table's column headings, the footnotes its rows reference, and a version check (e.g. "Table 2.1 of Vol. 3-02 was removed and replaced by Addendum #2 (December 2023)…"). Below the evidence threshold the result is **Not found in the indexed documents**.
+
+Result modes: `extractive_answer`, `version_answer`, `no_evidence`, and with Claude `cited_synthesis` / `insufficient_evidence`.
+
+**Optional Claude layer.** With `ANTHROPIC_API_KEY` set (or `GENERATION_PROVIDER=anthropic`), Claude (`claude-opus-5-5` by default) receives the chosen units plus the top retrieved units and the version catalog, and writes a short answer whose sentences cite unit ids — it never retypes quotes, so highlights stay exact. Every sentence must cite valid units and every number in it must occur in the cited text, the question or the catalog; failing sentences are dropped, and any API failure falls back to the offline answer. Server-side refusal fallbacks are enabled (`fallbacks: "default"`). Questions and retrieved excerpts leave the device when this is on. Edition/change answers and jurisdiction refusals stay deterministic.
+
+`npm run demo` runs the demo question set (`tests/demo-questions.mjs`) through the engine and prints each answer; `npm run demo:api` runs it through the HTTP API. Both currently pass 34/34 offline. The set was used while tuning, so treat it as a regression check, not an accuracy estimate; open-ended questions outside it (e.g. ESC inspection frequency in the LID guide's checklist tables) can still return weak passages — that is what the Claude layer is for.
+
+### Earlier pipelines (`GENERATION_PROVIDER=ollama` or `gateway`)
+
 Queries search the indexed collection, with separate retrieval for independent checks in a long question. Local mode selects numbered original source-line ranges for each requested check. It does not ask the model to write or retype the quoted evidence. Selected ranges are checked against extracted source text and original page geometry, then reviewed for asset, scope and completeness, with unresolved checks identified explicitly. This review uses the same local model and can still miss relevance errors. Hosted synthesis additionally checks generated quantities, units, lexical grounding and semantic support, with one bounded repair pass for citation problems. Source text is evidence, never instructions.
 
 **Current quality status:** direct source lookups and experimental local synthesis are integrated with the frontend. Exact numeric lookups can answer without generation; local synthesis selects source provisions per topic, applies numeric conditions, checks derived arithmetic and verifies the generated conclusion. Set `LOCAL_SYNTHESIS=1` to enable that path; it is enabled in this device's ignored `.env`. Some complex queries are still incomplete or withheld. The full goal of matching the prepared examples on general queries remains open. Do not treat passing transport, citation or browser tests as proof of answer quality.
@@ -34,7 +49,7 @@ Jobs run one at a time to fit this device's GPU, with a bounded queue and cancel
 
 ## Configuration
 
-Copy `.env.example` to `.env` for overrides. The default model is `qwen3:4b-instruct-2507-q4_K_M`, served by an isolated Ollama instance on `127.0.0.1:11435`; its models stay under this folder. A new model download requires at least 6 GiB of free disk space; existing models are reused without downloading. Your existing Ollama service on port 11434 is unaffected. To use an existing service, override `OLLAMA_URL` and `OLLAMA_MODEL` and install that model there yourself. `EXTRACTIVE_ONLY=1` disables model selection explicitly.
+Copy `.env.example` to `.env` for overrides. `GENERATION_PROVIDER` defaults to `auto`: Claude when an Anthropic credential is present, otherwise the offline engine — neither needs Ollama, so the launcher no longer downloads a model unless `GENERATION_PROVIDER=ollama`. For the Ollama pipeline, the default model is `qwen3:4b-instruct-2507-q4_K_M`, served by an isolated Ollama instance on `127.0.0.1:11435`; its models stay under this folder. A new model download requires at least 6 GiB of free disk space; existing models are reused without downloading. Your existing Ollama service on port 11434 is unaffected. To use an existing service, override `OLLAMA_URL` and `OLLAMA_MODEL` and install that model there yourself. `EXTRACTIVE_ONLY=1` disables model selection explicitly.
 
 The API binds to loopback port 8787. `FRONTEND_URL` optionally opens an already deployed frontend instead of the bundled interface. The production Basis origin and localhost are allowed by CORS; add exact preview origins with `ALLOWED_ORIGINS`. Same-origin bundled frontend requests are allowed too. Requests to documents, query history and query endpoints require a random connection key generated in `state/session-token.txt`.
 
@@ -55,6 +70,8 @@ npm ci
 npm run index
 npm start
 npm test
+npm run demo
+npm run demo:api
 node --test tests/api.integration.mjs
 node tests/quality.mjs
 node tests/browser.mjs
@@ -76,7 +93,11 @@ Use `Authorization: Bearer <connection key>`. `result` contains `documents`, `re
 
 ## Implementation map
 
-- `src/indexer.mjs`, `extract.py`: faithful text and coordinate extraction, versioned caches.
+- `src/indexer.mjs`, `extract.py`: faithful text and coordinate extraction (footnote superscripts as `[n]`), versioned caches.
+- `src/catalog.mjs`: publication identity, editions, effective dates, addenda, current/superseded status, jurisdiction check.
+- `src/units.mjs`: table rows and sentences with PDF regions and table/heading context.
+- `src/lookup.mjs`: offline question routing, unit scoring and the extractive answer.
+- `src/claude.mjs`: optional Claude synthesis over cited units, with citation and number checks.
 - `src/search.mjs`: lexical retrieval, phrase matching, engineering concept expansion and evidence relevance gates.
 - `src/local-evidence.mjs`: per-check selection of original source-line ranges, without model-written claims.
 - `src/model.mjs`: isolated local runtime and optional hosted provider adapters.

@@ -19,7 +19,7 @@ function stem(word) {
     .replace(/s$/, '')
     .replace(/e$/, '')
 }
-export function tokens(text) {
+export function tokens(text, stopwords = stop) {
   return (
     normalize(text)
       .toLowerCase()
@@ -27,12 +27,37 @@ export function tokens(text) {
       .replace(/\bm[³3]\b/g, 'cubicmetres')
       .replace(/\bm[²2]\b/g, 'squaremetres')
       .match(/[\p{L}][\p{L}\d-]{1,}|\d+(?:\.\d+)?/gu)
-      ?.filter((t) => !stop.has(t))
+      ?.filter((t) => !stopwords.has(t))
       .map((t) =>
         t.length > 4 ? stem(t) : t.length === 4 ? t.replace(/e$/, '') : t,
       ) ?? []
   )
 }
+// Lookup keeps words such as "review", "design" and "requirements" because a
+// precise provision often turns on them; inverse document frequency weighs them.
+export const lookupStopwords = new Set(
+  [...stop]
+    .filter(
+      (w) =>
+        !/^(review|design|use|using|requirements?|apply|applies|applicable|needed|need|standards?|guidelines?|guide|documents?|project|proposed)$/.test(
+          w,
+        ),
+    )
+    .concat([
+      'will',
+      'want',
+      'know',
+      'like',
+      'get',
+      'go',
+      'my',
+      'me',
+      'any',
+      'all',
+      'there',
+      'here',
+    ]),
+)
 const concepts = [
   ['cover', 'burial', 'depth', 'frost', 'freezing', 'insulation'],
   ['compaction', 'compacted', 'traffic', 'vehicles', 'infiltration'],
@@ -89,6 +114,7 @@ export function rankProvisions(units, question) {
 export class SearchIndex {
   constructor(corpus) {
     this.corpus = corpus
+    this.status = new Map(corpus.documents.map((d) => [d.id, d.status]))
     this.entries = corpus.passages.map((p) => {
       const list = tokens(p.text)
       const counts = new Map()
@@ -295,6 +321,8 @@ export class SearchIndex {
         const body = tokens(e.passage.text).join(' ')
         for (let i = 0; i < phraseTerms.length - 1; i++)
           if (body.includes(phraseTerms.slice(i, i + 2).join(' '))) score += 3
+        // Older editions repeat current text; prefer the edition in force.
+        if (this.status?.get(e.passage.doc) === 'superseded') score *= 0.5
         // Low-quality glyph maps are withheld rather than silently rewritten.
         if (
           [...e.passage.text].filter((c) => {

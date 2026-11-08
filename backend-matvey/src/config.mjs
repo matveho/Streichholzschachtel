@@ -32,6 +32,8 @@ export const config = {
   llamaManifest: process.env.LOCAL_MODEL_MANIFEST || '',
   releaseForVerifier: process.env.LOCAL_MODEL_RELEASE_FOR_VERIFIER === '1',
   gatewayModel: process.env.AI_GATEWAY_MODEL || 'google/gemini-4-argon',
+  anthropicModel: process.env.ANTHROPIC_MODEL || 'claude-opus-5-5',
+  anthropicEffort: process.env.ANTHROPIC_EFFORT || 'medium',
   extractiveOnly: process.env.EXTRACTIVE_ONLY === '1',
   localSynthesis: process.env.LOCAL_SYNTHESIS === '1',
   entailmentDir: process.env.ENTAILMENT_MODEL_DIR || '',
@@ -43,8 +45,13 @@ export const config = {
     .map((s) => s.trim())
     .filter(Boolean),
 }
-if (!['ollama', 'llamacpp', 'gateway'].includes(config.provider))
-  throw new Error('GENERATION_PROVIDER must be ollama, llamacpp or gateway.')
+if (
+  !['extractive', 'anthropic', 'ollama', 'llamacpp', 'gateway'].includes(
+    config.provider,
+  )
+)
+  throw new Error('Unknown GENERATION_PROVIDER.')
+if (config.extractiveOnly) config.provider = 'extractive'
 
 export const knownFiles = {
   'design-guidelines.pdf': {

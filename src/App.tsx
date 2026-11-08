@@ -20,6 +20,7 @@ import { navigate } from './navigation'
 import type { DocId } from './data'
 import { PdfPane } from './PdfPane'
 import { QueryReport } from './QueryReport'
+import { QuerySuggestions } from './QuerySuggestions'
 import { QueryHome } from './QueryHome'
 import { AppHeader } from './AppHeader'
 import { readHistory, saveHistory } from './history'
@@ -33,7 +34,7 @@ function QueryWorkspace({
 }: {
   entry: HistoryEntry
   settings: BackendSettings
-  onRun: (prompt: string, caseId: string) => void
+  onRun: (prompt: string, caseId: string, sourceOnly?: boolean) => void
   onNew: () => void
 }) {
   const queryCase = queryCases.find((c) => c.id === entry.caseId)!
@@ -45,7 +46,12 @@ function QueryWorkspace({
   const [query, setQuery] = useState(entry.prompt)
   const [submitted, setSubmitted] = useState(entry.prompt)
   const [retry, setRetry] = useState(0)
-  const live = useLiveQuery(settings, submitted, retry)
+  const live = useLiveQuery(
+    settings,
+    submitted,
+    retry,
+    entry.sourceOnly === true,
+  )
   const documents =
     settings.mode === 'static' ? staticDocuments : (live.data?.documents ?? {})
   const report =
@@ -457,13 +463,26 @@ function QueryWorkspace({
                 </button>
               </div>
             ) : (
-              <QueryReport
-                blocks={report}
-                sourceReferences={references}
-                selected={ids}
-                onPreview={(refs) => (refs ? reveal(refs) : setHover(null))}
-                onSelect={(refs) => reveal(refs, true)}
-              />
+              <>
+                <QueryReport
+                  blocks={report}
+                  sourceReferences={references}
+                  selected={ids}
+                  onPreview={(refs) => (refs ? reveal(refs) : setHover(null))}
+                  onSelect={(refs) => reveal(refs, true)}
+                />
+                {live.data &&
+                  ['no_evidence', 'insufficient_evidence'].includes(
+                    live.data.mode,
+                  ) && (
+                    <QuerySuggestions
+                      suggestions={live.data.suggestions ?? []}
+                      onSelect={(suggestion) =>
+                        onRun(suggestion.question, entry.caseId, true)
+                      }
+                    />
+                  )}
+              </>
             )}
             {live.data?.notes?.length ? (
               <p className="result-notes">{live.data.notes.join(' ')}</p>
@@ -499,15 +518,19 @@ export default function App() {
     setDraftCase(caseId)
     navigate('new')
   }
-  function runQuery(prompt: string, caseId: string) {
+  function runQuery(prompt: string, caseId: string, sourceOnly = false) {
     const previous = history.find(
-      (entry) => entry.id !== entry.caseId && entry.prompt === prompt,
+      (entry) =>
+        entry.id !== entry.caseId &&
+        entry.prompt === prompt &&
+        (entry.sourceOnly === true) === sourceOnly,
     )
     const entry: HistoryEntry = {
       id: previous?.id ?? crypto.randomUUID(),
       title: prompt,
       prompt,
       caseId,
+      sourceOnly,
     }
     setHistory((prev) => {
       const next = [entry, ...prev.filter((item) => item.id !== entry.id)]

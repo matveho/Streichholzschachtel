@@ -27,6 +27,14 @@ export type LiveResult = {
   mode: string
   notes: string[]
   id: string
+  suggestions?: QuerySuggestion[]
+}
+export type QuerySuggestion = {
+  question: string
+  sourceLabel: string
+  page: number
+  preview: string
+  sourceOnly: true
 }
 const defaults: BackendSettings = {
   mode: 'matvey',
@@ -72,8 +80,9 @@ export function useLiveQuery(
   settings: BackendSettings,
   question: string,
   retry: number,
+  sourceOnly = false,
 ) {
-  const key = JSON.stringify([settings, question, retry])
+  const key = JSON.stringify([settings, question, retry, sourceOnly])
   const cancelRef = useRef<() => void>(() => {})
   const [state, setState] = useState<{
     key: string
@@ -98,7 +107,12 @@ export function useLiveQuery(
       try {
         const cacheKey =
           'basis.result.' +
-          JSON.stringify([settings.mode, baseUrl(settings), question])
+          JSON.stringify([
+            settings.mode,
+            baseUrl(settings),
+            question,
+            sourceOnly,
+          ])
         let job
         if (!retry) {
           try {
@@ -117,6 +131,7 @@ export function useLiveQuery(
             method: 'POST',
             body: JSON.stringify({
               question,
+              sourceOnly,
               ...(requestedId ? { id: requestedId } : {}),
             }),
             signal: controller.signal,
@@ -193,7 +208,7 @@ export function useLiveQuery(
           () => {},
         )
     }
-  }, [key, settings, question, retry])
+  }, [key, settings, question, retry, sourceOnly])
   if (settings.mode === 'static' || !question)
     return {
       phase: '',
