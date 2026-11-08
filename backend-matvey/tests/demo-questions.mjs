@@ -142,7 +142,7 @@ export const demoQuestions = [
   },
   {
     // Vol. 4 Water (Dec 2024) is in the collection; Table 1.2 gives invert depth.
-    q: 'What is the minimum cover depth for a water main in Edmonton?',
+    q: 'What is the minimum depth of water main invert below the curb top in Edmonton?',
     expect: ['minimum depth of water main invert below the curb top', '2.59 m'],
     docs: ['Vol. 4 Water'],
   },

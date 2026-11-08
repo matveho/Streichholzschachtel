@@ -9,6 +9,7 @@ import { answer, validateSynthesis, relatedProvisions } from '../src/answer.mjs'
 import { config, root } from '../src/config.mjs'
 import { evidenceUnits } from '../src/evidence-units.mjs'
 import { draftLocal } from '../src/local-synthesis.mjs'
+import { UnitIndex, lookup } from '../src/lookup.mjs'
 import {
   replacementRequirementSearch,
   replacementPermissionSearch,
@@ -349,7 +350,7 @@ test('unrelated and unsupported-domain queries return no evidence', () => {
     'How do I bake a chocolate cake?',
     'What stormwater design rules apply in Toronto?',
   ])
-    assert.equal(search.search(q).length, 0, q)
+    assert.equal(lookup(q, new UnitIndex(corpus)).mode, 'no_evidence', q)
 })
 
 test('an unsupported query returns an explicit empty result instead of unrelated PDF sources', async () => {

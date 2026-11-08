@@ -399,7 +399,9 @@ function QueryWorkspace({
                             live.data.mode,
                           )
                         ? 'No supported answer'
-                        : 'Cited findings')
+                        : live.data.mode === 'related_evidence'
+                          ? 'Related source text'
+                          : 'Cited findings')
                   : ''}
               </span>
             )}
@@ -493,9 +495,11 @@ function QueryWorkspace({
                   onSelect={(refs) => reveal(refs, true)}
                 />
                 {live.data &&
-                  ['no_evidence', 'insufficient_evidence'].includes(
-                    live.data.mode,
-                  ) && (
+                  [
+                    'no_evidence',
+                    'insufficient_evidence',
+                    'related_evidence',
+                  ].includes(live.data.mode) && (
                     <QuerySuggestions
                       suggestions={live.data.suggestions ?? []}
                       onSelect={(suggestion) =>

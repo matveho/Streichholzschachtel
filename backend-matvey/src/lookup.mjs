@@ -85,7 +85,7 @@ const valueQuestion =
 
 const generic = new Set(
   tokens(
-    'edmonton city epcor development developments minimum maximum new value values what which area areas type types land apply applies applicable use using used need needed requirement requirements required require design should',
+    'edmonton city epcor development developments minimum maximum new value values what which area areas type types land apply applies applicable use using used need needed requirement requirements required require design should many much often long show find tell give please',
   ),
 )
 
@@ -143,6 +143,12 @@ export class UnitIndex {
     const wantsValue = valueQuestion.test(question)
     const scored = []
     for (const e of this.entries) {
+      if (
+        /\b(?:technical references|bibliography|bibliographies|reference documents)\b/i.test(
+          e.unit.heading,
+        )
+      )
+        continue
       const doc = this.docs.get(e.unit.doc)
       if (series.length && !series.includes(doc.series)) continue
       // A table title or column heading defines a row; a lead-in only hints.
@@ -194,6 +200,39 @@ export class UnitIndex {
     }
     return scored.sort((a, b) => b.score - a.score)
   }
+}
+
+export function coversRequestedConcept(question, unit) {
+  if (unit.text.length > 1000) return false
+  if (
+    /\bminimum\b/i.test(question) &&
+    /\bless than (?:the )?minimum\b/i.test(unit.text) &&
+    !/\bminimum\b[^|.;]{0,90}\d+(?:\.\d+)?\s*(?:mm|m|%)\b/i.test(unit.text)
+  )
+    return false
+  if (
+    /\bwhat\b.*\bposted speed limit\b/i.test(question) &&
+    /\bposted speed limits?[^.;|]{0,50}\b(?:greater than|exceed)\b/i.test(
+      unit.text,
+    )
+  )
+    return false
+  const words = unitTokens(unit.text + ' ' + unit.frame)
+  const content = [...unitTokens(question)].filter(
+    (t) => !generic.has(t) && !/^\d/.test(t),
+  )
+  if (!content.length) return false
+  const focus =
+    canon(question).match(
+      /^\s*(?:what|which)\s+(?:(?:is|are)\s+)?(?:(?:the|a|an)\s+)?(.+?)(?=\s+(?:for|of|at|in|on|when|where|between|under|is|are|do|does|should|can|applies|apply|required|recommended)\b|\?|$)/i,
+    )?.[1] || ''
+  const requested = [...unitTokens(focus)].filter(
+    (t) => !generic.has(t) && !/^\d/.test(t),
+  )
+  return (
+    requested.every((t) => words.has(t)) &&
+    content.filter((t) => words.has(t)).length / content.length >= 0.75
+  )
 }
 
 const footnoteRefs = (text) =>
@@ -451,6 +490,78 @@ function notFound(question, reason) {
   }
 }
 
+// Subjects these drainage and water standards actually cover. A question about
+// one of them gets the closest related provisions even without a direct
+// answer; a question about anything else (stairs, parking, geography) does not.
+const domainTerms = new Set(
+  tokens(
+    'sewer sewers storm stormwater sanitary drainage drain runoff rainfall water main mains service services pipe pipes pond ponds SWMF LID bioretention culvert catch basin maintenance hole forcemain pump station flow infiltration inflow detention storage release rate grading lot lots erosion sediment hydrant valve backflow connection connections fire flow pressure zoning zone outfall overflow swale underdrain foundation weeping sump roof leader downspout trench bedding backfill excavation easement manhole bridge highway road street rail transit train thermal expansion concrete steel footing retaining column beam slab asphalt pavement lighting electrical power landscaping pedestrian bicycle sidewalk geotechnical',
+  ),
+)
+export const isEngineeringQuery = (question) =>
+  tokens(canon(question)).some((t) => domainTerms.has(t))
+
+function relatedEvidence(question, candidates, index) {
+  const subjects = tokens(canon(question)).filter((t) => domainTerms.has(t))
+  if (!subjects.length) return null
+  const content = [...new Set(tokens(canon(question)))].filter(
+    (t) => !generic.has(t) && !/^\d/.test(t) && index.df.has(t),
+  )
+  const needed = Math.min(2, content.length)
+  const picked = []
+  for (const c of candidates) {
+    if (picked.length >= 3 || c.score < 0.25) break
+    const doc = index.docs.get(c.unit.doc)
+    if (
+      doc.status === 'superseded' ||
+      c.unit.kind !== 'body' ||
+      c.unit.type === 'heading' ||
+      !c.unit.regions?.length ||
+      c.unit.text.length < 25
+    )
+      continue
+    const words = new Set(tokens(canon(c.unit.text)))
+    if (!subjects.some((t) => words.has(t))) continue
+    if (content.filter((t) => words.has(t)).length < needed) continue
+    if (
+      picked.some(
+        (p) => p.unit.doc === c.unit.doc && p.unit.page === c.unit.page,
+      )
+    )
+      continue
+    picked.push(c)
+  }
+  if (!picked.length) return null
+  const sections = [
+    {
+      heading: 'No direct answer in the indexed documents',
+      sentences: [
+        {
+          text: 'The documents do not state this directly. The closest related provisions are below; check whether they apply to your situation before relying on them.',
+          units: [],
+        },
+      ],
+    },
+  ]
+  for (const c of picked) {
+    const doc = index.docs.get(c.unit.doc)
+    const where =
+      (c.unit.type === 'row' && c.unit.table) || c.unit.heading || ''
+    sections.push({
+      heading: `Related: ${where ? where.slice(0, 90) + ' — ' : ''}${doc.label}, ${doc.edition}`,
+      sentences: [{ text: c.unit.text, units: [c.unit] }],
+    })
+  }
+  return {
+    mode: 'related_evidence',
+    sections,
+    notes: [
+      'No passage directly answers the question; related source text is shown for reference only.',
+    ],
+    candidates: candidates.slice(0, 30),
+  }
+}
+
 const sameTable = (a, b) =>
   a.doc === b.doc &&
   Math.abs(a.page - b.page) <= 1 &&
@@ -480,8 +591,13 @@ export function lookup(question, index) {
   if (series.length && (!candidates.length || candidates[0].score < 0.5))
     candidates = index.score(question, { allowSuperseded })
   candidates = dedupe(candidates.slice(0, 60), index)
-  const top = candidates[0]
-  if (!top || top.score < 0.5)
+  const direct = candidates.filter((c) =>
+    coversRequestedConcept(question, c.unit),
+  )
+  const top = direct[0]
+  if (!top || top.score < 0.5) {
+    const related = relatedEvidence(question, candidates, index)
+    if (related) return related
     return {
       ...notFound(
         question,
@@ -489,6 +605,8 @@ export function lookup(question, index) {
       ),
       candidates: candidates.slice(0, 30),
     }
+  }
+  candidates = direct
   const chosen = [top]
   for (const c of candidates.slice(1, 20)) {
     if (chosen.length >= 4) break

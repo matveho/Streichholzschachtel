@@ -139,6 +139,8 @@ export class SearchIndex {
       .map((s) => s.trim())
       .filter((s) => s.length > 25 && tokens(s).length >= 3)
       .slice(0, 6)
+    if (/\bprivate\s+storm[ -]servic/i.test(question))
+      parts.push('private storm sewer systems')
     if (parts.length < 2) return this.withReferencedSections(baseline)
     const groups = parts.map((part) =>
       this.searchSingle(part, selectedIds).slice(0, 3),

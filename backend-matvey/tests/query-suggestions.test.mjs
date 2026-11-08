@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { SearchIndex } from '../src/search.mjs'
-import { UnitIndex, lookup } from '../src/lookup.mjs'
+import { UnitIndex, lookup, coversRequestedConcept } from '../src/lookup.mjs'
 import { suggestQueries } from '../src/query-suggestions.mjs'
 import { answer } from '../src/answer.mjs'
 
@@ -31,6 +31,40 @@ const unit = {
   regions: [[20, 40, 300, 15]],
 }
 const corpus = { documents: [doc], passages: [], units: [unit], failures: [] }
+
+test('a matching asset cannot stand in for the requested measurement or fact', () => {
+  assert.equal(
+    coversRequestedConcept('What storm sewer cover is required?', unit),
+    true,
+  )
+  assert.equal(
+    coversRequestedConcept(
+      'What insulation R-value is required for storm sewer cover?',
+      unit,
+    ),
+    false,
+  )
+  assert.equal(
+    coversRequestedConcept('What is the capital of France?', {
+      ...unit,
+      text: 'A footbridge publication was issued in Paris, France.',
+      frame: 'Technical references',
+    }),
+    false,
+  )
+})
+
+test('weak technical matches stay labelled as related provisions rather than direct answers', (t) => {
+  const index = new UnitIndex(corpus)
+  t.mock.method(index, 'score', () => [{ unit, score: 0.4 }])
+  const result = lookup(
+    'What insulation R-value is required for storm sewer cover?',
+    index,
+  )
+  assert.equal(result.mode, 'related_evidence')
+  assert.match(result.sections[0].heading, /No direct answer/)
+  assert.equal(result.sections[1].sentences[0].units[0], unit)
+})
 
 test('alternatives are independently answerable source queries, without fabricated limits', () => {
   const search = new SearchIndex(corpus)

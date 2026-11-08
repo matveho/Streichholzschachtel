@@ -78,12 +78,32 @@ try {
     () => document.querySelector('#query')?.value === '',
   )
   assert.equal(await page.locator('.query-report').count(), 0)
+  const emptyJob = {
+    id: crypto.randomUUID(),
+    state: 'completed',
+    result: {
+      mode: 'no_evidence',
+      documents: [],
+      references: [],
+      notes: [],
+      suggestions: [],
+      report: [
+        {
+          heading: 'No supported answer',
+          sentences: [{ text: 'No applicable source text was found.' }],
+        },
+      ],
+    },
+  }
+  await page.route(/\/local-api\/v1\/queries(?:\/[^/?]+)?$/, (route) =>
+    route.fulfill({ json: emptyJob }),
+  )
   await page
     .locator('#query')
     .fill('Check the foundation drainage requirements')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await page
-    .getByText('Search processing is not connected.', { exact: false })
+    .getByRole('heading', { name: 'No supported answer', exact: true })
     .waitFor()
   await page.getByRole('link', { name: 'Home', exact: true }).click()
   assert.equal(await page.locator('.history-entry').count(), 6)
@@ -92,9 +112,9 @@ try {
     .getByRole('link', { name: /Check the foundation drainage requirements/ })
     .click()
   await page
-    .getByText('Search processing is not connected.', { exact: false })
+    .getByRole('heading', { name: 'No supported answer', exact: true })
     .waitFor()
-  assert.equal(await page.locator('.query-report').count(), 0)
+  assert.equal(await page.locator('.query-report').count(), 1)
   await page.goto('http://127.0.0.1:5173/')
   assert.match(await page.locator('#query').inputValue(), /20 ha/)
   await page.getByRole('link', { name: 'Home', exact: true }).click()

@@ -23,13 +23,22 @@ try {
     name: 'Related source queries',
   })
   await alternatives.waitFor({ timeout: 60000 })
-  assert.equal(await page.locator('.source-highlight').count(), 0)
+  await page
+    .getByRole('heading', {
+      name: /No direct answer|Not found in the indexed documents|No supported answer/,
+    })
+    .waitFor()
   const first = alternatives.getByRole('button').first()
   const question = (
     await first.locator('.suggestion-question').innerText()
   ).trim()
   assert.ok(await first.locator('.suggestion-preview').innerText())
   mkdirSync('test-results', { recursive: true })
+  const expand = page.getByRole('button', {
+    name: 'Expand result panel',
+    exact: true,
+  })
+  if (await expand.count()) await expand.click()
   await page.screenshot({ path: 'test-results/query-alternatives.png' })
   await first.click()
   await page.waitForFunction(() =>

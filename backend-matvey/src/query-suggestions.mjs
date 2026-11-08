@@ -1,10 +1,10 @@
-import { UnitIndex, lookup } from './lookup.mjs'
+import { UnitIndex, lookup, isEngineeringQuery } from './lookup.mjs'
 import { tokens, lookupStopwords } from './search.mjs'
 import { foreignJurisdiction } from './catalog.mjs'
 
 const noise = new Set(
   tokens(
-    'show find tell source text provisions requirements minimum maximum design please specific unknown approved city epcor edmonton document standard guide',
+    'show find tell source text provisions requirements minimum maximum design please specific unknown approved city epcor edmonton document standard guide height width length depth rating speed limit area volume value',
     lookupStopwords,
   ),
 )
@@ -20,6 +20,7 @@ const overlap = (a, b) => [...a].filter((t) => b.has(t)).length
 // engineering answer into an approval. Every option is run through the same
 // offline lookup used when the user selects it.
 export function suggestQueries(question, searchIndex, limit = 3) {
+  if (!isEngineeringQuery(question)) return []
   const index = (searchIndex.unitIndex ??= new UnitIndex(searchIndex.corpus))
   if (foreignJurisdiction(question, index.corpus.documents)) return []
   const asked = subject(question)

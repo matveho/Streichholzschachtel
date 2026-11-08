@@ -35,9 +35,17 @@ test('a real unsupported query offers source alternatives which return cited PDF
     'What insulation R-value is required for storm sewer cover?',
     true,
   )
-  assert.ok(['no_evidence', 'insufficient_evidence'].includes(job.result.mode))
-  assert.deepEqual(job.result.references, [])
-  assert.deepEqual(job.result.documents, [])
+  assert.ok(
+    ['no_evidence', 'insufficient_evidence', 'related_evidence'].includes(
+      job.result.mode,
+    ),
+  )
+  if (job.result.mode === 'related_evidence') {
+    assert.match(job.result.report[0].heading, /No direct answer/)
+  } else {
+    assert.deepEqual(job.result.references, [])
+    assert.deepEqual(job.result.documents, [])
+  }
   assert.ok(job.result.suggestions?.length > 0)
   assert.ok(job.result.suggestions.length <= 3)
   for (const suggestion of job.result.suggestions) {

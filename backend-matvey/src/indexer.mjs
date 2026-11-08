@@ -330,11 +330,11 @@ export async function buildIndex(progress = () => {}) {
       progress(`Reading ${name}`, documents.length, files.size)
       const hash = createHash('sha256').update(readFileSync(file)).digest('hex')
       if (documents.some((d) => d.version === hash)) continue
-      const name = `${hash}-${cacheVersion}.json`
-      const legacyCache = resolve(stateDir, name)
+      const cacheName = `${hash}-${cacheVersion}.json`
+      const legacyCache = resolve(stateDir, cacheName)
       const cache = existsSync(legacyCache)
         ? legacyCache
-        : resolve(config.pdfCacheDir, name)
+        : resolve(config.pdfCacheDir, cacheName)
       const extracted = existsSync(cache)
         ? JSON.parse(readFileSync(cache, 'utf8'))
         : await extract(file)
@@ -392,8 +392,12 @@ export async function buildIndex(progress = () => {}) {
           /LIST OF REVISIONS|Table of Revisions|list of revisions in/i.test(
             text,
           ) ||
-          (text.match(/\b(?:Added|Revised|Deleted|Updated|updated to)\b/g)
-            ?.length || 0) > 3
+          (text.match(
+            /\b(?:Added|Revised|Deleted|Updated|Removed|updated to)\b/g,
+          )?.length || 0) > 2 ||
+          /(?:^|\n)\s*(?:Removed|Added|Revised|Deleted|Updated)\s+(?:from|to|Section|Table|Figure|["“])/im.test(
+            text,
+          )
             ? 'revisions'
             : /TERMS OF USE/i.test(text)
               ? 'terms'

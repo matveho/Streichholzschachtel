@@ -166,7 +166,11 @@ async function work() {
       sourceOnly: job.sourceOnly === true,
       progress: (stage) => (job.stage = stage),
     })
-    if (['no_evidence', 'insufficient_evidence'].includes(job.result.mode))
+    if (
+      ['no_evidence', 'insufficient_evidence', 'related_evidence'].includes(
+        job.result.mode,
+      )
+    )
       job.result.suggestions = suggestQueries(job.question, searchIndex)
     job.engineVersion = engineVersion
     job.corpusVersion = corpusVersion()
