@@ -1,6 +1,6 @@
 @echo off
 setlocal
-cd /d "%~dp0backend-matvey"
+cd /d "%~dp0backend"
 title Basis Backend Controls
 where node >nul 2>nul
 if errorlevel 1 (

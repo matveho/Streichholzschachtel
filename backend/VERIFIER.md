@@ -1,6 +1,6 @@
 # Optional local contradiction verifier
 
-The user authorized `E:\Basis-model-cache` for optional model weights and the Python environment. Source code remains in `backend-matvey`. This verifier processes text locally; it does not send project questions or excerpts to a hosted model.
+The user authorized `E:\Basis-model-cache` for optional model weights and the Python environment. Source code remains in `backend`. This verifier processes text locally; it does not send project questions or excerpts to a hosted model.
 
 This device has the environment at `E:\Basis-model-cache\.venv` and the model at `E:\Basis-model-cache\model`. The preparation script verifies SHA-256 checksums against a pinned revision of [cross-encoder/nli-deberta-v3-small](https://huggingface.co/cross-encoder/nli-deberta-v3-small). It reuses verified files and downloads only missing or mismatched files.
 

@@ -1,52 +1,31 @@
 # Basis
 
-A project-based engineering document workspace with local processing, scoped research and original-source verification. Built for natHacks 2026 by team Streichholzschachtel.
+**Where did this number come from?** Basis helps civil engineers trace a design decision back to the drawing, report or standard behind it. Open a project, query its drawings, reports and standards, then select a citation to see the highlighted passage in the original PDF.
 
-## Run
+[Open Basis](https://streichholzschachtel.vercel.app/#projects) · Built for natHacks 2026 by team Streichholzschachtel.
 
-Install Node.js 24 or newer, then double-click **Start Basis.cmd**. It starts the local backend and gateway and provides restart/reindex, status, troubleshooting, logs, dependency repair and HTTPS controls. Choose **5** to open the compiled interface without entering a connection key. Keep the controls open for crash recovery; closing the window leaves services running.
+## Try a design review
 
-Choose **T** for a read-only presentation check of both projects, all associated PDFs and rendered source citations. Automatic recovery covers both API and gateway failures; a gateway-only recovery keeps the healthy API running.
+1. Open **Parkview Exchange Redevelopment**. Under **Potential issues**, inspect the sanitary upstream grade finding.
+2. Compare the proposed **0.30%** slope on drawing C101 with the EPCOR table in the adjacent viewer. The applicable row depends on the reach being upstream and its peak dry-weather flow. Select the table citation to inspect those conditions yourself.
+3. Open **North Ridge Highway Intersection Upgrade** and inspect the traffic and pavement inputs. Here the question is whether two project reports used the same traffic counts. Use **Query Files** to ask a follow-up within this project's documents.
 
-On this presentation device the project API uses **8810**, and the local interface is **http://127.0.0.1:8812/app/#projects**. A fresh checkout defaults to API 8787 / gateway 8789; local `.env` overrides are ignored by Git. Choose **D** to install missing dependencies and **8** to build the interface. See [backend controls](backend-matvey/CONTROLS.md).
+The demonstration projects pair fictional design packages with published engineering guidance. The comparison findings are prepared and linked to their evidence. Fresh queries search the active project's files locally. Engineers can inspect and dismiss a finding after review.
 
-The deployed frontend is https://streichholzschachtel.vercel.app. Its `/local-api` rewrite reaches the device through HTTPS. Public access requires the device and tunnel online; the local interface is the presentation fallback. Backend state, private project PDFs and model assets are excluded from Vercel uploads.
+## Run locally
 
-## Working product
+On Windows with **Node.js 24 or newer**, install the dependencies from the repository root:
 
-- Dense project overview, searchable Reference Collection selection, individual document selection and local PDF/folder import.
-- Editable descriptions with an automatic local summary from document topics/types; advanced controls in the top-bar Settings menu.
-- Protected permanent Mill Creek drainage and Willow Creek bridge demonstration projects.
-- Dashboard documents grouped by role, metadata, filtering and original PDF navigation.
-- Project-specific queries/history, saved findings, side-by-side PDFs, exact citations, highlights and minimap markers.
-- Two evidence-anchored prepared potential issues per demonstration project, with inspect, dismiss, restore and reset.
-- Backend-enforced project scope through retrieval, expansions, model context, citations, caches and history. Empty selections stay empty.
-- Ordinary project deletion preserves shared reference PDFs. Startup restores missing demo projects and disposable demo PDF copies.
+```powershell
+npm ci
+npm ci --prefix backend
+```
 
-Prepared comparisons are labeled, grounded in actual standards and clearly distinguished from live queries. Synthetic client/design/calculation PDFs are labeled demonstration documents and not for construction. Findings require engineering review. PDF files and folders can be imported and indexed locally (12 MB per PDF). General automatic discrepancy detection remains deferred. This shared-device prototype does not provide production multi-tenant authentication.
+Double-click **Start Basis.cmd** and choose **5** to open the workspace. For the full PDF extraction and table-reading setup, see the [backend guide](backend/README.md). The hosted frontend connects to the presentation computer over HTTPS, so that computer and its tunnel must be online for the public demo.
 
-## Development and integration
+## Inside the repository
 
-React, TypeScript and Vite provide the frontend. PDF.js renders original files; local fonts and Lucide provide the interface assets. The local Node backend in `backend-matvey` uses indexed PDF evidence and JSON persistence. Offline source lookup is the launcher default; optional model review is local. No hosted inference is required.
-
-For frontend development: `npm ci`, then `npm run dev`. Set `BASIS_DEV_BACKEND_URL` to the local gateway if using nondefault ports. The independent `backend/` directory remains available for the other backend implementation.
-
-- [API contract and persistence](backend-matvey/PROJECT_API.md)
-- [Original backend handoff](docs/backend-handoff.md)
-
-## Verification
-
-Root: `npx tsc -b`, `npm run lint`, `npm run build`.
-
-From `backend-matvey`:
-
-- `node --test tests/*.test.mjs` — backend unit/retrieval/project tests.
-- `node --test tests/projects.integration.mjs` — actual API workflow on isolated 8810.
-- `node tests/projects.restart.mjs` — restarts isolated 8810/8812 and checks recovery/persistence.
-- `node tests/projects.browser.mjs` — project browser workflow against the isolated preview on 8842.
-- `node tests/demo-reset.integration.mjs` and `node tests/demo-reset.browser.mjs` — destructive reset checks against isolated preview storage only.
-- `node tests/control.integration.mjs` — separate launcher lifecycle/crash-recovery test on 8820/8822.
-
-Integration/browser suites modify and reset demonstration state; run them outside a presentation. Earlier `npm run test:ui` scripts target the legacy query screen and are retained as legacy checks, not the project-workspace acceptance suite.
-
-**Settings → Reset demo** restores the built-in examples and deletes ordinary projects unless **Keep on reset** is checked in that project’s Settings. The checkbox is saved locally; built-in examples are permanently checked and locked. Reset removes temporary projects’ imports and query history, while opted-in projects and shared references remain.
+- [Frontend](src/) — React and TypeScript workspace with a PDF.js viewer.
+- [Backend](backend/) — project storage, local search, indexing and citation coordinates.
+- [Project packages](backend/demo/PROJECT-PACKAGES.md) — source provenance, engineering assumptions and the basis for each prepared comparison.
+- [API contract](backend/PROJECT_API.md) — project, document, query and finding endpoints.

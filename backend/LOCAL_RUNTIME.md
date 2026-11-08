@@ -2,7 +2,7 @@
 
 The deployed demo still uses its saved engine on port 8787. Development on port 8788 can use Qwen3.5-4B through a separate loopback runtime on port 11436. This is an experiment, not a completed answer-quality release.
 
-All inference runs on this device. Weights, binaries, the runtime key and optional Python environments are stored in the user-authorized `E:\Basis-model-cache`; source changes remain in `backend-matvey`.
+All inference runs on this device. Weights, binaries, the runtime key and optional Python environments are stored in the user-authorized `E:\Basis-model-cache`; source changes remain in `backend`.
 
 ## Prepare
 

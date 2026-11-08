@@ -9,7 +9,7 @@ The frontend uses the keyless `/local-api` gateway. The underlying API requires 
 | GET | `/v1/projects/:project` | Project, documents, query history, issues and selected collections |
 | PATCH / DELETE | `/v1/projects/:project` | Update / delete ordinary projects; protected demo deletion returns 403 |
 | POST | `/v1/projects/:project/reset` | Targeted restoration of one built-in project (internal compatibility endpoint) |
-| POST | `/v1/demo/reset` | Workspace demo reset: delete ordinary projects with `persistOnReset !== true`, their imports and history; restore both protected seeds |
+| POST | `/v1/demo/reset` | Workspace demo reset: delete ordinary projects with `persistOnReset !== true`, their imports and history; restore all protected seeds |
 | PATCH | `/v1/projects/:project/issues/:issue` | Persist `{status:"dismissed"}` or `"open"` |
 | GET / POST | `/v1/projects/:project/queries` | History / submit `{question,documentIds?,sourceOnly?,id?}`; pollable job |
 | GET / PATCH / DELETE | `/v1/projects/:project/queries/:query` | Read / bookmark with `{saved:true}` / cancel |
@@ -31,7 +31,7 @@ Findings are prepared comparisons, clearly labeled. Exact excerpts must anchor i
 
 ## Verification commands
 
-From `backend-matvey`: `node --test tests/projects.test.mjs`; against private API 8810: `node --test tests/projects.integration.mjs`; against isolated preview storage: `$env:BASIS_FRONTEND_URL='http://127.0.0.1:8842/app'; node tests/projects.browser.mjs`. HTTP/browser suites create/delete test projects and reset demo state; avoid running them during presentation. Root checks: `npx tsc -b` and `npm run lint`.
+From `backend`: `node --test tests/projects.test.mjs`; against private API 8810: `node --test tests/projects.integration.mjs`; against isolated preview storage: `$env:BASIS_FRONTEND_URL='http://127.0.0.1:8842/app'; node tests/projects.browser.mjs`. HTTP/browser suites create/delete test projects and reset demo state; avoid running them during presentation. Root checks: `npx tsc -b` and `npm run lint`.
 
 Project descriptions default to an automatic local summary of selected collections and imported document topics/types. Editing a description stores a manual override; setting `description` to an empty string regenerates it. Description edits are allowed on protected examples and do not invalidate existing document-scoped query results. Reset restores original descriptions. `BASIS_STATE_DIR` can isolate development storage from the active demo.
 

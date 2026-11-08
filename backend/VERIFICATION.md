@@ -34,7 +34,7 @@ Quality reports record engine and corpus versions. Coverage regexes are only a f
 
 ## Local models and memory
 
-All inference remains local. The user authorized `E:\Basis-model-cache` for weights, runtime binaries and the optional verifier environment; source changes remain in `backend-matvey`. Downloads are pinned and SHA-256 verified. See [LOCAL_RUNTIME.md](LOCAL_RUNTIME.md) and [VERIFIER.md](VERIFIER.md).
+All inference remains local. The user authorized `E:\Basis-model-cache` for weights, runtime binaries and the optional verifier environment; source changes remain in `backend`. Downloads are pinned and SHA-256 verified. See [LOCAL_RUNTIME.md](LOCAL_RUNTIME.md) and [VERIFIER.md](VERIFIER.md).
 
 The independent verifier passed 15 of 16 offline cases, with one false approval of an incorrect numeric comparison. It is **veto-only**: a strong contradiction can reject a claim, but entailment never approves one. Numeric, applicability, exact-source and model-review checks still apply. Oversized inputs abstain instead of losing qualifications to truncation. A configured verifier failure withholds an answer.
 
@@ -51,7 +51,7 @@ Hosted synthesis remains disabled. No Gateway key was created, no credits were p
 
 ## Reproduce
 
-From `backend-matvey`, with the appropriate API and runtime running:
+From `backend`, with the appropriate API and runtime running:
 
 ```powershell
 node --test --test-concurrency=1 tests/*.test.mjs
