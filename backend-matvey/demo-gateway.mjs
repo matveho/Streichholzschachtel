@@ -1,6 +1,8 @@
 import http from 'node:http'
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync, statSync, createReadStream } from 'node:fs'
 import { Readable } from 'node:stream'
+import { resolve, sep, extname } from 'node:path'
+import { readFrontendLocation } from './src/frontend-location.mjs'
 
 const key = readFileSync(
   new URL('./state/session-token.txt', import.meta.url),
@@ -18,9 +20,67 @@ http
   .createServer(async (req, res) => {
     try {
       const url = new URL(req.url, target)
+      url.pathname = url.pathname.replace(/^\/local-api(?=\/|$)/, '') || '/'
+      if (req.method === 'GET' && url.pathname === '/_basis/gateway') {
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+        })
+        res.end(
+          JSON.stringify({
+            service: 'basis-gateway',
+            version: 3,
+            targetPort: Number(targetUrl.port),
+          }),
+        )
+        return
+      }
+      if (
+        req.method === 'GET' &&
+        (['/app', '/app/', '/basis.svg'].includes(url.pathname) ||
+          /^\/(?:assets|documents)\//.test(url.pathname))
+      ) {
+        const directory = readFrontendLocation()
+        const file = resolve(
+          directory,
+          url.pathname.startsWith('/app')
+            ? 'index.html'
+            : decodeURIComponent(url.pathname.slice(1)),
+        )
+        if (
+          !file.startsWith(directory + sep) ||
+          !existsSync(file) ||
+          !statSync(file).isFile()
+        ) {
+          res.writeHead(404)
+          res.end('Local interface is not built. Use Rebuild interface.')
+          return
+        }
+        const types = {
+          '.html': 'text/html; charset=utf-8',
+          '.js': 'text/javascript',
+          '.mjs': 'text/javascript',
+          '.css': 'text/css',
+          '.svg': 'image/svg+xml',
+          '.pdf': 'application/pdf',
+          '.woff': 'font/woff',
+          '.woff2': 'font/woff2',
+        }
+        res.writeHead(200, {
+          'Content-Type': types[extname(file)] || 'application/octet-stream',
+          'Content-Length': statSync(file).size,
+          'Cache-Control': 'no-cache',
+        })
+        createReadStream(file).pipe(res)
+        return
+      }
       const allowed =
         (req.method === 'GET' &&
-          (url.pathname === '/health' ||
+          (['/app', '/app/', '/basis.svg'].includes(url.pathname) ||
+            /^\/(?:assets|documents)\/[a-zA-Z0-9_./%() -]+$/.test(
+              url.pathname,
+            ) ||
+            url.pathname === '/health' ||
             url.pathname === '/v1/documents' ||
             /^\/v1\/documents\/doc-[a-f0-9]+\/file$/.test(url.pathname) ||
             /^\/v1\/queries\/[a-f0-9-]{36}$/.test(url.pathname))) ||

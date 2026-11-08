@@ -4,6 +4,7 @@ import {
   writeFileSync,
   existsSync,
   mkdirSync,
+  renameSync,
 } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve, basename } from 'node:path'
@@ -14,6 +15,18 @@ import { catalogEntry, annotateVersions } from './catalog.mjs'
 import { buildPageUnits } from './units.mjs'
 
 const run = promisify(execFile)
+export function readPdfCache(file) {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8'))
+  } catch {
+    return null
+  }
+}
+export function writePdfCache(file, value) {
+  const temporary = file + '.tmp-' + process.pid
+  writeFileSync(temporary, JSON.stringify(value))
+  renameSync(temporary, file)
+}
 export function annotateSections(lines, previous = []) {
   let active = [...previous]
   for (let i = 0; i < lines.length; i++) {
@@ -296,14 +309,15 @@ async function tableLayout(file, hash) {
   const cache = existsSync(legacyCache)
     ? legacyCache
     : resolve(config.pdfCacheDir, name)
-  if (existsSync(cache)) return JSON.parse(readFileSync(cache, 'utf8'))
+  const cached = readPdfCache(cache)
+  if (cached && typeof cached === 'object') return cached
   const { stdout } = await run(
     python,
     [resolve(root, 'native-table-layout.py'), file],
     { windowsHide: true, maxBuffer: 20 * 1024 * 1024, timeout: 300000 },
   )
   const layout = JSON.parse(stdout)
-  writeFileSync(cache, JSON.stringify(layout))
+  writePdfCache(cache, layout)
   return layout
 }
 
@@ -328,6 +342,8 @@ export async function buildIndex(progress = () => {}) {
       unitStart = units.length
     try {
       progress(`Reading ${name}`, documents.length, files.size)
+      // Warm caches must still yield so health checks and controls stay responsive.
+      await new Promise((done) => setImmediate(done))
       const hash = createHash('sha256').update(readFileSync(file)).digest('hex')
       if (documents.some((d) => d.version === hash)) continue
       const cacheName = `${hash}-${cacheVersion}.json`
@@ -335,10 +351,11 @@ export async function buildIndex(progress = () => {}) {
       const cache = existsSync(legacyCache)
         ? legacyCache
         : resolve(config.pdfCacheDir, cacheName)
-      const extracted = existsSync(cache)
-        ? JSON.parse(readFileSync(cache, 'utf8'))
+      const cached = readPdfCache(cache)
+      const extracted = Array.isArray(cached?.pages)
+        ? cached
         : await extract(file)
-      if (!existsSync(cache)) writeFileSync(cache, JSON.stringify(extracted))
+      if (extracted !== cached) writePdfCache(cache, extracted)
       const layout = await tableLayout(file, hash)
       const metadata = {
         ...(knownFiles[name] || {

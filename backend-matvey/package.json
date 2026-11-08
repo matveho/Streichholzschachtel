@@ -7,7 +7,7 @@
   },
   "scripts": {
     "start": "node src/server.mjs",
-    "launch": "node launch.mjs",
+    "launch": "node control.mjs",
     "index": "node src/index-cli.mjs",
     "test": "node --test tests/*.test.mjs",
     "demo": "node tests/run-demo.mjs",

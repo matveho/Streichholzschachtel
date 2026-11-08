@@ -4,11 +4,13 @@ An independent local backend for the existing Basis interface. The main backend 
 
 ## Start on this computer
 
-For the team presentation, use **Start Demo.cmd** and [DEMO.md](DEMO.md). This device has a saved demo engine and frontend under ignored `state/`; the demo uses port 8787 while development uses port 8788.
+Double-click **[Start Basis.cmd](../Start%20Basis.cmd)** in the repository root for the current control panel: automatic start, restart/reindex, stop, status, local interface, logs and troubleshooting. See [CONTROLS.md](CONTROLS.md). It keeps a running API intact unless you explicitly restart it, and supports offline source search without a model download. The older presentation snapshot below remains available as a fallback while the project-workspace release is being integrated.
 
-**Start Backend.cmd** prepares the current backend, PDF extractor and local model runtime. On the first run it downloads the configured model into `state/models`. Subsequent starts reuse the model and PDF extraction cache. The current frontend expects the `/local-api` gateway; the launcher does not yet recreate that public gateway automatically, so use the running deployed demo for team testing.
+This device also retains **Start Demo.cmd** and a saved older engine under ignored `state/` as a fallback. The normal entry point is **Start Basis.cmd**; the public API uses 8787 and its gateway uses 8789.
 
-The deployed frontend connects automatically through Vercel's `/local-api` rewrite to `demo-gateway.mjs` on port 8789, which authenticates internally to the API on port 8787. The gateway's HTTPS quick tunnel must remain running. Its URL changes when recreated and then requires updating the Vercel rewrite. The launcher also creates a separate private API tunnel; that private connection link is no longer used by the current frontend.
+**Start Backend.cmd** and `npm run launch` open the same controls. Dependency repair is available from the menu. The local gateway starts automatically, the frontend connects without a key, and valid PDF caches are reused. Models are not downloaded automatically. The optional local-review profile uses the existing Ollama installation; offline source search works without a model.
+
+The deployed frontend connects automatically through Vercel's `/local-api` rewrite to `demo-gateway.mjs` on port 8789, which authenticates internally to the API on port 8787. The gateway's HTTPS quick tunnel must remain running. Its URL changes when recreated and then requires updating the Vercel rewrite. The current controls expose HTTPS through that gateway and do not print a private connection key or bootstrap link. The saved legacy snapshot remains independent.
 
 Home has five labelled static **Example** queries in history. New queries use Matvey's backend automatically, without a source selector or connection-key entry.
 
@@ -111,6 +113,6 @@ Use `Authorization: Bearer <connection key>`. `result` contains `documents`, `re
 - `src/model.mjs`: isolated local runtime and optional hosted provider adapters.
 - `src/answer.mjs`: grounded synthesis, citation checks, review and refusal/excerpt modes.
 - `src/server.mjs`: authenticated API, job queue, persistence, range PDFs, CORS and bundled frontend serving.
-- `launch.mjs`, `Start Backend.cmd`: isolated setup, frontend bundle, local services and HTTPS tunnel.
+- `control.mjs`, `Start Basis.cmd`: frontend builds, local services, recovery, diagnostics and HTTPS connection controls.
 
 No server code or model credentials are imported into the frontend bundle. New backend dependencies are scoped to this folder.

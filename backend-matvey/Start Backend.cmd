@@ -17,5 +17,5 @@ if not exist "node_modules\pdfjs-dist\package.json" (
     exit /b 1
   )
 )
-node launch.mjs
+node control.mjs
 if errorlevel 1 pause

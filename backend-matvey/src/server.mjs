@@ -16,6 +16,7 @@ import { buildIndex } from './indexer.mjs'
 import { SearchIndex } from './search.mjs'
 import { answer } from './answer.mjs'
 import { suggestQueries } from './query-suggestions.mjs'
+import { readFrontendLocation } from './frontend-location.mjs'
 
 const historyDir = resolve(stateDir, 'queries')
 const localModelManifest =
@@ -251,7 +252,7 @@ export const server = http.createServer(async (req, res) => {
       (['/app', '/app/', '/basis.svg'].includes(url.pathname) ||
         /^\/(assets|documents)\//.test(url.pathname))
     ) {
-      const frontend = resolve(stateDir, 'frontend'),
+      const frontend = readFrontendLocation(),
         file = resolve(
           frontend,
           url.pathname.startsWith('/app')
