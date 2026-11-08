@@ -32,6 +32,12 @@ Two earlier suite failures were test setup races: one test started before indexi
 
 Public access depends on this device, its network and the quick tunnel. Use the local interface if connectivity fails. A replacement tunnel requires explicitly publishing its hostname from the controls. Keep the control window open for crash recovery.
 
-Issues are prepared evidence-backed review prompts, not a general automatic compliance engine. General uploads are deferred. Private project artifacts and backend state are excluded from frontend deployment. The prototype uses shared-device logical isolation, not production multi-tenant security. Use one project API instance for normal operation.
+Issues are prepared evidence-backed review prompts, not a general automatic compliance engine. PDF/folder import is available, with a 12 MB limit per file. Private project artifacts and backend state are excluded from frontend deployment. The prototype uses shared-device logical isolation, not production multi-tenant security. Use one project API instance for normal operation.
 
-The repeatable two-minute sequence and reset instructions are in DEMO.md; frontend contracts and persistence boundaries are in PROJECT_API.md. Reset both demo projects before presenting to remove test history and restore open findings.
+Launch and readiness controls are in CONTROLS.md; frontend contracts and persistence boundaries are in PROJECT_API.md. Reset both demo projects before presenting to remove test history and restore open findings.
+
+## Compact workspace update
+
+The project list now uses dense rows. Collection selection uses a searchable dropdown with individually selectable documents, followed by native PDF/folder pickers. Project descriptions can be edited, including protected examples, or regenerated locally from selected document topics and types. Manual descriptions survive later imports. Reset is in Settings; source provenance is available under Source notes.
+
+Executed checks for this update: 135 backend unit tests, local project browser workflow, native folder/PDF import browser workflow (including partial failure/retry and query/PDF highlighting), and import API isolation/restart persistence. Uploaded bytes stay under ignored local project storage; private document IDs differ across projects even for identical PDFs.

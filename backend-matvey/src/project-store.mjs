@@ -36,6 +36,21 @@ export class ProjectStore {
     this.collections = referenceCollections(corpus)
     this.documents = new Map(corpus.documents.map((d) => [d.id, d]))
     this.restoreSeeds()
+    const existing = this.read()
+    let migrated = false
+    for (const project of existing.projects) {
+      if (project.descriptionMode) continue
+      project.descriptionMode = project.description?.trim() ? 'manual' : 'auto'
+      if (project.descriptionMode === 'auto')
+        project.description = describeProject(
+          project.documentIds
+            .map((id) => this.documents.get(id))
+            .filter(Boolean),
+          this.collections.filter((c) => project.collectionIds.includes(c.id)),
+        )
+      migrated = true
+    }
+    if (migrated) this.write(existing)
     const pending = corpus.documents.filter(
       (d) => d.importPending && d.ownerProjectId,
     )

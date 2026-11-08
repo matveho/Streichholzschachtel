@@ -14,7 +14,7 @@ import { root, stateDir, knownFiles, config } from './config.mjs'
 import { catalogEntry, annotateVersions } from './catalog.mjs'
 import { buildPageUnits } from './units.mjs'
 import { demoProjects } from '../demo/manifest.mjs'
-import { importedDocuments } from './project-imports.mjs'
+import { importedDocuments, discardImport } from './project-imports.mjs'
 import {
   restoreDemoDocuments,
   demoDocumentDirectory,
@@ -413,7 +413,13 @@ export async function buildIndex(progress = () => {}, onlyFiles) {
         Object.assign(metadata, {
           title: basename(upload.name, '.pdf').replace(/[_-]+/g, ' '),
           label: basename(upload.name, '.pdf'),
-          edition: 'Project document',
+          edition: catalogEntry(hash)?.edition || 'Project document',
+          series: undefined,
+          date: undefined,
+          kind: 'project',
+          status: 'unknown',
+          supersededNote: undefined,
+          supersededBy: undefined,
           projectArtifact: true,
           ownerProjectId: upload.ownerProjectId,
           category: upload.category,
@@ -569,7 +575,9 @@ export async function buildIndex(progress = () => {}, onlyFiles) {
       documents.length = documentStart
       passages.length = passageStart
       units.length = unitStart
-      failures.push({ name, error: error.message })
+      const staged = imported.get(file)
+      if (staged?.pending) discardImport(staged.ownerProjectId, file)
+      else failures.push({ name, error: error.message })
       progress(
         `Could not read ${name}: ${error.message}`,
         documents.length,

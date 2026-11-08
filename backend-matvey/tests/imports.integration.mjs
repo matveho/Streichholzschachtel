@@ -134,6 +134,37 @@ try {
     .data
   assert.equal(old.stale, true)
   assert.equal(old.result, undefined)
+  const official = await api(
+    '/projects/' + a.id + '/documents/import',
+    'POST',
+    {
+      name: 'bridge-standard.pdf',
+      content: readFileSync(
+        resolve(
+          root,
+          '../public/documents/trans-bridge-structures-design-criteria-version-9-0.pdf',
+        ),
+      ).toString('base64'),
+    },
+  )
+  assert.equal(official.status, 201)
+  const importedStandard = official.data.documents[0].id
+  await promisify(execFile)(
+    process.execPath,
+    [
+      '--input-type=module',
+      '-e',
+      `import {stageImport} from './src/project-imports.mjs'; stageImport(${JSON.stringify(a.id)},{name:'interrupted.pdf',content:Buffer.from('%PDF-1.7 invalid').toString('base64')})`,
+    ],
+    {
+      cwd: root,
+      windowsHide: true,
+      env: {
+        ...process.env,
+        BASIS_STATE_DIR: resolve(root, 'state/ui-preview'),
+      },
+    },
+  )
   await promisify(execFile)(process.execPath, ['control.mjs', '--restart'], {
     cwd: root,
     windowsHide: true,
@@ -154,6 +185,40 @@ try {
     await new Promise((r) => setTimeout(r, 250))
   }
   assert.ok(ready)
+  assert.equal(
+    (await (await fetch(base + '/health')).json()).failures,
+    0,
+    'An interrupted invalid staging file cannot poison unrelated projects on restart',
+  )
+  const importedRecord = (await api('/projects/' + a.id)).data.documents.find(
+    (d) => d.id === importedStandard,
+  )
+  assert.notEqual(
+    importedRecord.status,
+    'superseded',
+    'An identical publication in another project cannot suppress this project’s imported copy',
+  )
+  let bridgeJob = (
+    await api('/projects/' + a.id + '/queries', 'POST', {
+      question: 'What crossfall is required for bridge decks?',
+      sourceOnly: true,
+      documentIds: [importedStandard],
+    })
+  ).data
+  for (
+    let i = 0;
+    i < 80 && ['queued', 'running'].includes(bridgeJob.state);
+    i++
+  ) {
+    await new Promise((r) => setTimeout(r, 100))
+    bridgeJob = (await api('/projects/' + a.id + '/queries/' + bridgeJob.id))
+      .data
+  }
+  assert.equal(bridgeJob.state, 'completed')
+  assert.ok(bridgeJob.result.references.length > 0)
+  assert.ok(
+    bridgeJob.result.references.every((r) => r.doc === importedStandard),
+  )
   assert.ok(
     (await api('/projects/' + a.id)).data.documents.some(
       (d) => d.id === first.id,

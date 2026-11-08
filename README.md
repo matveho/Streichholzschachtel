@@ -14,7 +14,8 @@ The deployed frontend is https://streichholzschachtel.vercel.app. Its `/local-ap
 
 ## Working product
 
-- Project overview, creation, collection selection and individual document selection.
+- Dense project overview, searchable Reference Collection selection, individual document selection and local PDF/folder import.
+- Editable descriptions with an automatic local summary from document topics/types; advanced controls in the top-bar Settings menu.
 - Protected permanent Mill Creek drainage and Willow Creek bridge demonstration projects.
 - Dashboard documents grouped by role, metadata, filtering and original PDF navigation.
 - Project-specific queries/history, saved findings, side-by-side PDFs, exact citations, highlights and minimap markers.
@@ -31,7 +32,6 @@ React, TypeScript and Vite provide the frontend. PDF.js renders original files; 
 For frontend development: `npm ci`, then `npm run dev`. Set `BASIS_DEV_BACKEND_URL` to the local gateway if using nondefault ports. The independent `backend/` directory remains available for the other backend implementation.
 
 - [API contract and persistence](backend-matvey/PROJECT_API.md)
-- [Two-minute presentation and recovery](backend-matvey/DEMO.md)
 - [Original backend handoff](docs/backend-handoff.md)
 
 ## Verification
