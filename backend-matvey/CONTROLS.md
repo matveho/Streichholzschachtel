@@ -2,6 +2,8 @@
 
 Double-click **Start Basis.cmd** in the repository root. Node.js 24 or newer must be installed. The window starts Basis if it is stopped, then presents controls. Closing the window leaves the services running. Choose **3** to stop the backend and gateway.
 
+Keep this window open for automatic crash recovery. After adding PDFs, choose **2**, then **4** until the API reports **READY** with zero indexing failures. If startup fails, choose **6** for diagnostics, **7** for logs, or **D** to repair missing dependencies. The launcher remains available after a startup error. The older `Start Backend.cmd` forwards to this same launcher. Command-line options can also be passed directly, for example `"Start Basis.cmd" --status`.
+
 | Control | Action                                                                                                             |
 | ------- | ------------------------------------------------------------------------------------------------------------------ |
 | 1       | Start; keep an already running Basis API intact                                                                    |

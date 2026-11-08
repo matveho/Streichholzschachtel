@@ -67,6 +67,13 @@ try {
   )
   assert.equal(pdf.status, 206)
   assert.equal(await pdf.text(), '%PDF')
+  const recovered = state().processes.api.pid
+  child.stdin.write('2\n')
+  await until(
+    async () => state().processes.api.pid !== recovered && (await health())?.ready,
+    80000,
+  )
+  assert.equal((await health()).failures, 0)
   child.stdin.write('3\n')
   await until(async () => state().stopped && !(await health()))
   await wait(1500)
@@ -75,7 +82,7 @@ try {
   const exit = await new Promise((done) => child.once('exit', done))
   assert.equal(exit, 0)
   console.log(
-    'PASS start, readiness, crash recovery, keyless gateway, PDF ranges, explicit stop and clean control exit',
+    'PASS start, readiness, crash recovery, keyless gateway, PDF ranges, manual restart, explicit stop and clean control exit',
   )
 } catch (error) {
   console.error(output)
