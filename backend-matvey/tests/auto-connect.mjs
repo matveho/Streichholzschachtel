@@ -23,16 +23,23 @@ try {
     5,
   )
   const metadata = await page.evaluate(async () => {
+    const health = await (await fetch('/local-api/health')).json()
     const r = await fetch('/local-api/v1/documents')
     const data = await r.json()
     return {
       status: r.status,
       count: data.documents.length,
       files: data.documents.map((d) => d.file),
+      expectedCount: health.documents,
+      ready: health.ready,
+      failures: health.failures,
     }
   })
   assert.equal(metadata.status, 200)
-  assert.equal(metadata.count, 5)
+  assert.ok(metadata.ready)
+  assert.equal(metadata.failures, 0)
+  assert.ok(metadata.count > 0)
+  assert.equal(metadata.count, metadata.expectedCount)
   assert.ok(
     metadata.files.every(
       (file) => file.startsWith('/local-api/') && !file.includes('token='),

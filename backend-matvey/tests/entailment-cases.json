@@ -1,0 +1,98 @@
+[
+  {
+    "id": "permission upheld",
+    "premise": "The project is a 20 ha minor drainage system. The Rational Method may also be used for detailed design of minor drainage systems draining areas of 65 ha or less.",
+    "claim": "The Rational Method may be used for detailed design of this 20 ha minor drainage system.",
+    "entailed": true
+  },
+  {
+    "id": "permission contradicted",
+    "premise": "The project is a 20 ha minor drainage system. The Rational Method may also be used for detailed design of minor drainage systems draining areas of 65 ha or less.",
+    "claim": "The Rational Method is not permitted for detailed design of this minor drainage system.",
+    "entailed": false
+  },
+  {
+    "id": "universal membership",
+    "premise": "A detention pond is a stormwater storage facility. All stormwater storage facilities must be designed using computer modelling.",
+    "claim": "This detention pond must be designed using computer modelling.",
+    "entailed": true
+  },
+  {
+    "id": "numeric false condition",
+    "premise": "The soil is 600 mm deep. For facilities with soil deeper than 650 mm, tests shall be conducted at two depths.",
+    "claim": "The soil is deeper than 650 mm, so tests at two depths are required.",
+    "entailed": false
+  },
+  {
+    "id": "recommendation retained",
+    "premise": "It is preferred that facilities less than 650 mm deep be tested at the halfway depth.",
+    "claim": "For facilities less than 650 mm deep, testing at the halfway depth is preferred.",
+    "entailed": true
+  },
+  {
+    "id": "recommendation strengthened",
+    "premise": "It is preferred that facilities less than 650 mm deep be tested at the halfway depth.",
+    "claim": "Testing at the halfway depth is mandatory for every facility less than 650 mm deep.",
+    "entailed": false
+  },
+  {
+    "id": "asset figure preserved",
+    "premise": "The proposed storm main has 1.7 m cover. The proposed storm service has 2.0 m cover.",
+    "claim": "The proposed storm service has 2.0 m cover.",
+    "entailed": true
+  },
+  {
+    "id": "asset figure swapped",
+    "premise": "The proposed storm main has 1.7 m cover. The proposed storm service has 2.0 m cover.",
+    "claim": "The proposed storm service has only 1.7 m cover.",
+    "entailed": false
+  },
+  {
+    "id": "absence is not exemption",
+    "premise": "A QA/QC test must be completed adjacent to a field test, at the same depth.",
+    "claim": "There is no mandatory field-test count.",
+    "entailed": false
+  },
+  {
+    "id": "explicit exemption",
+    "premise": "For facilities with a soil depth of 300 mm or less, Guelph Permeameter testing is not required.",
+    "claim": "Guelph Permeameter testing is not required when the soil depth is 300 mm or less.",
+    "entailed": true
+  },
+  {
+    "id": "approval is conditional",
+    "premise": "An alternative service layout may be used subject to written approval by the utility.",
+    "claim": "The proposed alternative service layout is automatically approved.",
+    "entailed": false
+  },
+  {
+    "id": "scope transfer",
+    "premise": "Sanitary sewers must be designed for a minimum velocity of 0.6 m/s.",
+    "claim": "Storm sewers must be designed for a minimum velocity of 0.6 m/s.",
+    "entailed": false
+  },
+  {
+    "id": "flattened formula ambiguity",
+    "premise": "The extracted formula is Q = CIA 360.",
+    "claim": "The formula is Q = CIA multiplied by 360.",
+    "entailed": false
+  },
+  {
+    "id": "verified arithmetic",
+    "premise": "The required cover is 2.0 m. The proposed cover is 1.7 m. Independently verified arithmetic: 2.0 - 1.7 = 0.3 m.",
+    "claim": "The proposed cover is 0.3 m below the required cover.",
+    "entailed": true
+  },
+  {
+    "id": "unrelated claim",
+    "premise": "Minor storm sewers serving areas of 30 ha or less must accommodate runoff from a five-year rainfall event.",
+    "claim": "Hospital staircases require a two-hour fire resistance rating.",
+    "entailed": false
+  },
+  {
+    "id": "conveyance threshold is not storage permission",
+    "premise": "Computer modelling is required for conveyance systems serving areas larger than 65 ha and for all stormwater storage facilities. A detention pond is a storage facility. The proposed pond serves 40 ha.",
+    "claim": "The proposed detention pond is exempt from computer modelling because its catchment is below 65 ha.",
+    "entailed": false
+  }
+]

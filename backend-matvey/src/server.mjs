@@ -17,6 +17,15 @@ import { SearchIndex } from './search.mjs'
 import { answer } from './answer.mjs'
 
 const historyDir = resolve(stateDir, 'queries')
+const localModelManifest =
+  config.llamaManifest && existsSync(config.llamaManifest)
+    ? readFileSync(config.llamaManifest, 'utf8')
+    : ''
+const verifierManifest =
+  config.entailmentDir &&
+  existsSync(resolve(config.entailmentDir, 'source.json'))
+    ? readFileSync(resolve(config.entailmentDir, 'source.json'), 'utf8')
+    : ''
 const engineVersion = createHash('sha256')
   .update(
     [
@@ -27,20 +36,31 @@ const engineVersion = createHash('sha256')
       'model.mjs',
       'local-evidence.mjs',
       'local-synthesis.mjs',
+      'synthesis-repair.mjs',
       'evidence-units.mjs',
       'applicability.mjs',
       'retrieval-plan.mjs',
       'calculations.mjs',
       'source-lookup.mjs',
+      'entailment.mjs',
+      'entailment.py',
       '../extract.py',
+      '../native-table-layout.py',
     ]
       .map((file) => readFileSync(new URL(file, import.meta.url), 'utf8'))
       .join('') +
       config.provider +
       config.model +
       config.gatewayModel +
+      config.llamaModel +
+      config.llamaUrl +
+      config.releaseForVerifier +
+      localModelManifest +
       config.extractiveOnly +
-      config.localSynthesis,
+      config.localSynthesis +
+      config.entailmentDir +
+      config.entailmentPython +
+      verifierManifest,
   )
   .digest('hex')
 const corpusVersion = () =>
@@ -269,7 +289,9 @@ export const server = http.createServer(async (req, res) => {
           ? 'disabled'
           : config.provider === 'gateway'
             ? config.gatewayModel
-            : config.model,
+            : config.provider === 'llamacpp'
+              ? config.llamaModel
+              : config.model,
         provider: config.provider,
         activeQueries: activeJob ? 1 : 0,
         queuedQueries: queue.filter((j) => j.state === 'queued').length,

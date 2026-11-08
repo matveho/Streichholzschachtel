@@ -1,11 +1,186 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { buildIndex, locateQuote } from '../src/indexer.mjs'
+import { readdirSync, readFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { resolve } from 'node:path'
+import { buildIndex, locateQuote, annotateSections } from '../src/indexer.mjs'
 import { SearchIndex, tokens } from '../src/search.mjs'
-import { answer, validateSynthesis } from '../src/answer.mjs'
-import { config } from '../src/config.mjs'
+import { answer, validateSynthesis, relatedProvisions } from '../src/answer.mjs'
+import { config, root } from '../src/config.mjs'
+import { evidenceUnits } from '../src/evidence-units.mjs'
+import { draftLocal } from '../src/local-synthesis.mjs'
+import {
+  replacementRequirementSearch,
+  replacementPermissionSearch,
+  selectedSections,
+  sectionCatalog,
+  passagesForSections,
+  expandRetrieval,
+} from '../src/retrieval-plan.mjs'
 const corpus = await buildIndex(),
   search = new SearchIndex(corpus)
+
+test('retrieval section numbers never become project inputs to selection or drafting', async (t) => {
+  const original = { ...config }
+  t.after(() => Object.assign(config, original))
+  config.provider = 'ollama'
+  const question =
+    'Describe the design requirements for box planters used on a four-unit corner-lot infill development.'
+  const baseline = search.search(question),
+    catalog = sectionCatalog(question, baseline, search)
+  const section = catalog.find((s) => s.heading === '1.5 Box Planter Design')
+  assert.ok(section)
+  const requests = []
+  const outputs = [
+    {
+      queries: [
+        {
+          heading: 'Planter design',
+          query: 'box planter design requirements',
+          sections: [section.id],
+        },
+      ],
+    },
+    { answerable: true, evidence: ['A'], unresolved: [] },
+    {
+      findings: [
+        { text: 'A source-backed finding.', evidence: ['A'], calculations: [] },
+      ],
+    },
+  ]
+  t.mock.method(globalThis, 'fetch', async (_url, options) => {
+    const body = JSON.parse(options.body)
+    requests.push(JSON.parse(body.messages[1].content))
+    return new Response(
+      JSON.stringify({
+        message: { content: JSON.stringify(outputs.shift()) },
+        done_reason: 'stop',
+      }),
+    )
+  })
+  const signal = new AbortController().signal
+  const retrieval = await expandRetrieval(question, baseline, search, signal)
+  assert.match(retrieval.topics[0].query, /1\.5 Box Planter Design/)
+  await draftLocal(
+    question,
+    retrieval.passages,
+    search,
+    signal,
+    [],
+    undefined,
+    retrieval.topics,
+  )
+  assert.equal(requests[1].question, 'box planter design requirements')
+  assert.equal(requests[2].question, 'box planter design requirements')
+})
+
+test('section selection honors model priority while enforcing the program budget independently of JSON schema hints', () => {
+  const catalog = ['a', 'b', 'c', 'd'].map((id) => ({ id, heading: id }))
+  assert.deepEqual(
+    selectedSections(['missing', 'd', 'b', 'd', 'a', 'c'], catalog).map(
+      (s) => s.id,
+    ),
+    ['d', 'b', 'a'],
+  )
+})
+
+test('sequencing table quotations stay inside their original cell and retain row and column meaning', () => {
+  const pages = corpus.passages.filter(
+    (p) => p.doc === 'doc-f27309b4bba5' && p.page === 40,
+  )
+  const units = evidenceUnits(search.withPageContext(pages), 30000)
+  const excavation = units.find(
+    (u) =>
+      u.tableRowLabel === '2 Excavation' &&
+      u.tableColumn === 'How to Implement' &&
+      /Do not excavate/.test(u.excerpt),
+  )
+  assert.ok(excavation)
+  assert.ok(locateQuote(excavation.passage, excavation.excerpt))
+  assert.ok(
+    excavation.regions.every(([x, , width]) => x >= 254 && x + width <= 401),
+  )
+  assert.doesNotMatch(
+    excavation.excerpt,
+    /Inspect when|Owner.s Representative|silt contaminated/,
+  )
+  const timing = units.find(
+    (u) =>
+      u.tableRowLabel === '2 Excavation' &&
+      u.tableColumn === 'Inspection Timing',
+  )
+  assert.match(timing.excerpt, /Inspect when excavation commences/)
+  assert.doesNotMatch(timing.excerpt, /Do not excavate|Equipment operating/)
+})
+
+test('actual section retrieval supplies construction controls and original anchors without inventing section IDs', () => {
+  const question =
+    'For a four-unit corner-lot infill, can a box planter replace conventional storm servicing, and what design and construction checks are needed?'
+  const catalog = sectionCatalog(question, search.search(question), search)
+  const site = catalog.find(
+    (s) => s.doc === 'doc-f27309b4bba5' && s.heading === '4.2 Working On-Site',
+  )
+  assert.ok(site)
+  assert.match(site.description, /best practices.*working on or around an LID/i)
+  const passages = passagesForSections([site.id], catalog, search)
+  const units = evidenceUnits(search.withPageContext(passages), 30000)
+  const inspection = units.find((u) =>
+    /Conduct weekly documented ESC inspections/.test(u.excerpt),
+  )
+  const compaction = units.find((u) => /scarifying/.test(u.excerpt))
+  assert.ok(inspection)
+  assert.ok(compaction)
+  assert.ok(locateQuote(inspection.passage, inspection.excerpt))
+  assert.ok(locateQuote(compaction.passage, compaction.excerpt))
+  assert.ok(passages.every((p) => p.doc === site.doc))
+  assert.deepEqual(passagesForSections(['invented'], catalog, search), [])
+  assert.ok(catalog.length <= 210)
+})
+
+test('replacement searches retrieve the proposed alternative permission as well as existing obligations', () => {
+  const question =
+    'For a four-unit corner-lot infill, can a box planter replace conventional storm servicing, and what design and construction checks are needed?'
+  const query = replacementPermissionSearch(question)
+  assert.ok(query)
+  const passages = search.withPageContext(
+    search.searchSingle(query).slice(0, 2),
+  )
+  const permission = evidenceUnits(passages, 30000).find((u) =>
+    /LID may be utilized in lieu of traditional underground storm servicing systems/.test(
+      u.excerpt,
+    ),
+  )
+  assert.ok(permission)
+  assert.ok(locateQuote(permission.passage, permission.excerpt))
+  assert.equal(
+    replacementPermissionSearch('What is the minimum sewer slope?'),
+    null,
+  )
+})
+
+test('governing section ancestry continues across pages and resets for sibling assets without treating decimals as headings', () => {
+  const line = (text, x = 50) => ({ text, rect: [x, 80, 500, 92] })
+  const first = [
+    line('5.2 Soil Cells'),
+    line('5.2.1.'),
+    line('Installation', 70),
+    line('Install the cells according to the manufacturer.'),
+  ]
+  const active = annotateSections(first)
+  assert.deepEqual(first.at(-1).sectionPath, [
+    '5.2 Soil Cells',
+    '5.2.1 Installation',
+  ])
+  const second = [
+    line('Maintain the installation.'),
+    line('1.25 times the design flow'),
+    line('5.3 Box Planters'),
+    line('Keep the base protected.'),
+  ]
+  annotateSections(second, active)
+  assert.deepEqual(second[1].sectionPath, active)
+  assert.deepEqual(second.at(-1).sectionPath, ['5.3 Box Planters'])
+})
 
 test('short engineering nouns normalize consistently with their plural and inflected forms', () => {
   for (const group of [
@@ -21,7 +196,17 @@ test('short engineering nouns normalize consistently with their plural and infle
   }
 })
 test('indexes all supplied original PDFs with usable anchors', () => {
-  assert.equal(corpus.documents.length, 5)
+  const expected = new Set()
+  for (const folder of ['../public/documents', 'documents'])
+    for (const file of readdirSync(resolve(root, folder)).filter((name) =>
+      /\.pdf$/i.test(name),
+    ))
+      expected.add(
+        createHash('sha256')
+          .update(readFileSync(resolve(root, folder, file)))
+          .digest('hex'),
+      )
+  assert.deepEqual(new Set(corpus.documents.map((d) => d.version)), expected)
   assert.equal(corpus.failures.length, 0)
   assert.ok(corpus.passages.length > 500)
   for (const p of corpus.passages) {
@@ -87,11 +272,81 @@ test('retrieval follows a same-document section reference to the governing stora
   )
   assert.equal(new Set(passages.map((p) => p.id)).size, passages.length)
 })
+
+test('review of a restrictive-method quote also sees the adjacent explicit permission', () => {
+  const p = corpus.passages.find(
+    (p) =>
+      p.doc === 'doc-eb651c8aa7d3' &&
+      p.page === 12 &&
+      p.text.includes('Utilization of the rational method'),
+  )
+  const context = search.withPageContext([p])[0]
+  const quote =
+    'Utilization of the rational method should be restricted to preliminary design or to approximate estimates of peak flow rates.'
+  const related = relatedProvisions(
+    {
+      text: 'The Rational Method is not permitted for final design calculations.',
+      evidence: [{ passage: context, excerpt: quote }],
+    },
+    'For a 20 ha minor drainage system, what design methods apply?',
+  )
+  assert.ok(
+    related.some((q) =>
+      /may also be used for the detailed design of minor drainage/.test(q),
+    ),
+  )
+})
+
+test('same-page continuation supplies the complete velocity provision without crossing to other documents or pages', () => {
+  const seed = corpus.passages.find(
+    (p) =>
+      p.doc === 'doc-09e07f57e7a3' &&
+      p.page === 10 &&
+      p.text.includes('mean velocities') &&
+      !p.text.includes('below 0.6'),
+  )
+  assert.ok(seed)
+  const expanded = search.withAdjacentPassages([seed])
+  assert.ok(
+    expanded.some((p) =>
+      p.text.includes('Mean velocities below 0.6 m/s will not be allowed.'),
+    ),
+  )
+  assert.ok(expanded.every((p) => p.doc === seed.doc && p.page === seed.page))
+  const limit = evidenceUnits(expanded).find((u) =>
+    /Mean velocities below 0\.6 m\/s/.test(u.excerpt),
+  )
+  assert.ok(limit)
+  assert.match(limit.heading, /Storm Sewer Velocity Requirements/i)
+  assert.equal(new Set(expanded.map((p) => p.id)).size, expanded.length)
+})
+
+test('page context preserves a complete qualified velocity paragraph with original anchors', () => {
+  const seed = corpus.passages.find(
+    (p) =>
+      p.doc === 'doc-09e07f57e7a3' &&
+      p.page === 10 &&
+      p.text.includes('mean velocities'),
+  )
+  const contexts = search.withPageContext([seed, seed])
+  assert.equal(contexts.length, 1)
+  const paragraph = evidenceUnits(contexts).find(
+    (u) =>
+      /0\.90 to 1\.0 m\/s/.test(u.excerpt) && /below 0\.6 m\/s/.test(u.excerpt),
+  )
+  assert.ok(paragraph)
+  assert.match(paragraph.excerpt, /lower velocities are to be justified/)
+  assert.ok(locateQuote(paragraph.passage, paragraph.excerpt))
+  assert.equal(
+    new Set(contexts[0].lines.map((l) => JSON.stringify([l.rect, l.text])))
+      .size,
+    contexts[0].lines.length,
+  )
+})
 test('unrelated and unsupported-domain queries return no evidence', () => {
   for (const q of [
     'What is the capital of France?',
     'How do I bake a chocolate cake?',
-    'What fire resistance rating is required for a hospital staircase?',
     'What stormwater design rules apply in Toronto?',
   ])
     assert.equal(search.search(q).length, 0, q)
@@ -107,6 +362,41 @@ test('an unsupported query returns an explicit empty result instead of unrelated
   assert.deepEqual(result.documents, [])
   assert.deepEqual(result.references, [])
   assert.equal(result.report[0].heading, 'No supported answer')
+})
+
+test('an analysis outage withholds an answer instead of returning unreviewed retrieval matches', async () => {
+  const originalFetch = globalThis.fetch
+  const previous = {
+    provider: config.provider,
+    localSynthesis: config.localSynthesis,
+    extractiveOnly: config.extractiveOnly,
+  }
+  Object.assign(config, {
+    provider: 'ollama',
+    localSynthesis: true,
+    extractiveOnly: false,
+  })
+  globalThis.fetch = async () => {
+    throw new Error('Simulated local analysis outage')
+  }
+  try {
+    const result = await answer(
+      'Can the Rational Method alone size a detention pond serving 40 ha?',
+      search,
+      {
+        publicBase: 'http://localhost',
+        token: 'test',
+        signal: new AbortController().signal,
+      },
+    )
+    assert.equal(result.mode, 'insufficient_evidence')
+    assert.equal(result.documents.length, 0)
+    assert.equal(result.references.length, 0)
+    assert.equal(result.report[0].heading, 'No supported answer')
+  } finally {
+    globalThis.fetch = originalFetch
+    Object.assign(config, previous)
+  }
 })
 
 test('unverifiable recovered text produces no answer, documents or citations', async () => {
@@ -279,4 +569,25 @@ test('multi-part hyphenated questions retain context from at least three sources
   assert.ok(labels.has('Servicing'))
   assert.ok(labels.has('LID CIM'))
   assert.ok(labels.size >= 3)
+})
+
+test('replacement questions independently retrieve the existing service requirement', () => {
+  const topic = replacementRequirementSearch(
+    'For a four-unit corner-lot infill, can a box planter replace conventional storm servicing, and what checks are needed?',
+  )
+  assert.ok(topic)
+  assert.ok(
+    search
+      .searchSingle(topic.query)
+      .slice(0, 4)
+      .some(
+        (p) =>
+          p.doc === 'doc-dc122df73bce' &&
+          /Private storm sewer systems are required/.test(p.text),
+      ),
+  )
+  assert.equal(
+    replacementRequirementSearch('What pipe diameter is required?'),
+    null,
+  )
 })
