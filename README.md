@@ -47,5 +47,3 @@ From `backend-matvey`:
 - `node tests/control.integration.mjs` — separate launcher lifecycle/crash-recovery test on 8820/8822.
 
 Integration/browser suites modify and reset demonstration state; run them outside a presentation. Earlier `npm run test:ui` scripts target the legacy query screen and are retained as legacy checks, not the project-workspace acceptance suite.
-
-Original reference PDFs retain their issuing authority and publication metadata. Reference Collections describe the supplied editions and do not establish legal applicability or guarantee the latest published edition.
