@@ -22,11 +22,17 @@ import { PdfPane } from './PdfPane'
 import { QueryReport } from './QueryReport'
 import { QuerySuggestions } from './QuerySuggestions'
 import { QueryHome } from './QueryHome'
+import { QueryAssist, QueryThread } from './QueryAssist'
+import { clarificationRounds, outcomeOf } from './assist'
+import type { ThreadTurn } from './assist'
 import { AppHeader } from './AppHeader'
 import { readHistory, saveHistory } from './history'
 import type { HistoryEntry } from './history'
 import { QueryTabBar } from './QueryTabs'
 import { useQueryTabs } from './useQueryTabs'
+
+/** Where a new search came from, so the query tab can keep the thread. */
+export type RunContext = { from: string; choice?: string }
 
 export function QueryWorkspace({
   entry,
@@ -38,10 +44,18 @@ export function QueryWorkspace({
   tabBar,
   draft,
   onDraftChange,
+  thread = [],
+  onUpload,
+  uploadNote = "Add the required PDF to the backend's documents folder, then restart it.",
 }: {
   entry: HistoryEntry
   settings: BackendSettings
-  onRun: (prompt: string, caseId: string, sourceOnly?: boolean) => void
+  onRun: (
+    prompt: string,
+    caseId: string,
+    sourceOnly?: boolean,
+    context?: RunContext,
+  ) => void
   onNew: () => void
   projectName?: string
   projectDocuments?: Record<string, DocumentRecord>
@@ -50,6 +64,12 @@ export function QueryWorkspace({
   /** Unsent text restored when returning to this query's tab. */
   draft?: string
   onDraftChange?: (text: string) => void
+  /** Earlier questions asked in this query's tab. */
+  thread?: ThreadTurn[]
+  /** Opens the project's document upload; absent where uploads aren't possible. */
+  onUpload?: () => void
+  /** Shown instead of the upload button when `onUpload` is absent. */
+  uploadNote?: string
 }) {
   const queryCase = queryCases.find((c) => c.id === entry.caseId)!
   const exampleQuery = queryCase.prompt
@@ -123,6 +143,12 @@ export function QueryWorkspace({
       exampleQuery.toLowerCase().replace(/\s+/g, ' ')
   const supported =
     settings.mode === 'static' ? isPrepared(submitted) : !!live.data
+  // Off-topic, not found and other-jurisdiction results carry no source text.
+  const nothingToCopy =
+    !!live.data &&
+    ['not_found', 'jurisdiction', 'off_topic'].includes(
+      outcomeOf(live.data.mode, live.data.assist),
+    )
   useEffect(() => () => clearTimeout(timer.current), [])
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
@@ -176,7 +202,7 @@ export function QueryWorkspace({
   function search() {
     if (!query.trim() || busy) return
     if (entry.projectId) {
-      onRun(query.trim(), entry.caseId, false)
+      onRun(query.trim(), entry.caseId, false, { from: submitted })
       return
     }
     setBusy(true)
@@ -187,10 +213,21 @@ export function QueryWorkspace({
       }
       setBusy(false)
       setPinned(isPrepared(query.trim()) ? queryCase.initialReferences : [])
-      onRun(query.trim(), entry.caseId)
+      onRun(query.trim(), entry.caseId, false, { from: submitted })
       setHover(null)
       setNavigationKey((k) => k + 1)
     }, 500)
+  }
+  /** Runs a clarified or more detailed version of the current question. */
+  function refine(question: string, choice: string) {
+    if (busy) return
+    setQuery(question)
+    onRun(question, entry.caseId, false, { from: submitted, choice })
+  }
+  function rephrase() {
+    setExpanded(false)
+    input.current?.focus()
+    input.current?.select()
   }
   function newQuery() {
     clearTimeout(timer.current)
@@ -457,7 +494,7 @@ export function QueryWorkspace({
                   Clear selection
                 </button>
               )}
-              {supported && (
+              {supported && !nothingToCopy && (
                 <button
                   onClick={copy}
                   title="Copy result with source references"
@@ -540,14 +577,33 @@ export function QueryWorkspace({
               </div>
             ) : (
               <>
-                <QueryReport
-                  blocks={report}
-                  sourceReferences={references}
-                  selected={ids}
-                  onPreview={(refs) => (refs ? reveal(refs) : setHover(null))}
-                  onSelect={(refs) => reveal(refs, true)}
-                />
+                <QueryThread thread={thread} />
+                {live.data && (
+                  <QueryAssist
+                    key={live.data.id}
+                    mode={live.data.mode}
+                    assist={live.data.assist}
+                    question={submitted}
+                    suggestions={live.data.suggestions}
+                    rounds={clarificationRounds(thread)}
+                    inProject={!!entry.projectId}
+                    onRefine={refine}
+                    onRephrase={rephrase}
+                    onUpload={onUpload}
+                    uploadNote={uploadNote}
+                  />
+                )}
+                {!nothingToCopy && (
+                  <QueryReport
+                    blocks={report}
+                    sourceReferences={references}
+                    selected={ids}
+                    onPreview={(refs) => (refs ? reveal(refs) : setHover(null))}
+                    onSelect={(refs) => reveal(refs, true)}
+                  />
+                )}
                 {live.data &&
+                  !live.data.assist &&
                   [
                     'no_evidence',
                     'insufficient_evidence',
@@ -556,7 +612,10 @@ export function QueryWorkspace({
                     <QuerySuggestions
                       suggestions={live.data.suggestions ?? []}
                       onSelect={(suggestion) =>
-                        onRun(suggestion.question, entry.caseId, true)
+                        onRun(suggestion.question, entry.caseId, true, {
+                          from: submitted,
+                          choice: suggestion.question,
+                        })
                       }
                     />
                   )}
@@ -609,7 +668,12 @@ export default function App() {
     setDraftCase(caseId)
     tabs.openNew()
   }
-  function runQuery(prompt: string, caseId: string, sourceOnly = false) {
+  function runQuery(
+    prompt: string,
+    caseId: string,
+    sourceOnly = false,
+    context?: RunContext,
+  ) {
     const previous = history.find(
       (entry) =>
         entry.id !== entry.caseId &&
@@ -628,7 +692,7 @@ export default function App() {
       saveHistory(next)
       return next
     })
-    tabs.markRun()
+    tabs.markRun(context && { ...context, to: prompt })
     navigate('query/' + encodeURIComponent(entry.id))
   }
   if (route === 'home')
@@ -649,6 +713,7 @@ export default function App() {
       onDraftChange={
         draftTab ? (text) => tabs.setDraft(draftTab.key, text) : undefined
       }
+      thread={route === 'new' ? undefined : tabs.activeTab?.thread}
       onRun={runQuery}
       onNew={() => newQuery(entry.caseId)}
       tabBar={<QueryTabBar tabs={tabs} />}

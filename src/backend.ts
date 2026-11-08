@@ -29,6 +29,26 @@ export type LiveResult = {
   notes: string[]
   id: string
   suggestions?: QuerySuggestion[]
+  assist?: QueryAssist
+}
+export type QueryOutcome =
+  'answered' | 'vague' | 'partial' | 'not_found' | 'jurisdiction' | 'off_topic'
+/** Conversational help the backend attaches to every finished query. */
+export type QueryAssist = {
+  outcome: QueryOutcome
+  /** Municipality named in the question that the documents don't cover. */
+  jurisdiction?: string
+  /** Kind of document that would probably answer the question. */
+  missing?: string
+  /** Specific parameters the question leaves out, e.g. the pipe diameter. */
+  details: string[]
+  /** Answerable sample questions, offered when the search isn't engineering. */
+  examples?: string[]
+  /** Each option has already been checked to produce a sourced answer. */
+  clarifications: {
+    question: string
+    options: { label: string; question: string }[]
+  }[]
 }
 export type QuerySuggestion = {
   question: string

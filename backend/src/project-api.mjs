@@ -17,6 +17,7 @@ import { preparedEvidence, projectResult } from './project-evidence.mjs'
 import { answer, renderUnits } from './answer.mjs'
 import { lookup, UnitIndex } from './lookup.mjs'
 import { suggestQueries } from './query-suggestions.mjs'
+import { assistQuery } from './clarify.mjs'
 import {
   restoreDemoDocuments,
   demoDocumentDirectory,
@@ -122,6 +123,8 @@ export class ProjectApi {
       createdAt: job.createdAt,
       completedAt: job.completedAt,
       stale,
+      // Lets history lists flag unanswered questions without the full result.
+      outcome: stale ? undefined : job.result?.assist?.outcome,
       result: stale ? undefined : job.result,
       error: job.error,
       saved: this.store.get(job.projectId).savedQueryIds.includes(job.id),
@@ -290,6 +293,7 @@ export class ProjectApi {
         )
       )
         result.suggestions = suggestQueries(job.question, scope.index)
+      result.assist = assistQuery(job.question, scope.index, result)
       if (job.controller.signal.aborted) throw new Error('Cancelled')
       const allowed = new Set(job.documentIds)
       if (

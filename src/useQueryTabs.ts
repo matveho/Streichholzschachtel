@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { ThreadTurn } from './assist'
 
 /** `target` is 'new' for an unsent query, otherwise the query id it shows. */
 export type QueryTab = {
@@ -7,16 +8,21 @@ export type QueryTab = {
   name: string
   /** Text typed into an unsent tab, kept per tab. */
   draft?: string
+  /** Earlier questions in this tab, oldest first. */
+  thread?: ThreadTurn[]
 }
 type TabState = {
   tabs: QueryTab[]
   active: string | null
   next: number
-  /** Set just before a search navigates, so the active tab follows it. */
-  retarget: boolean
+  /**
+   * Set just before a search navigates, so the active tab follows it. `turn`
+   * is the question being left behind, added to the tab's thread.
+   */
+  retarget: null | { turn?: ThreadTurn }
 }
 
-const empty: TabState = { tabs: [], active: null, next: 1, retarget: false }
+const empty: TabState = { tabs: [], active: null, next: 1, retarget: null }
 const storageKey = (scope: string) => 'basis.query-tabs.v1:' + scope
 
 function load(scope: string): TabState {
@@ -33,13 +39,21 @@ function load(scope: string): TabState {
         typeof tab.key === 'string' &&
         typeof tab.target === 'string' &&
         typeof tab.name === 'string' &&
-        (tab.draft === undefined || typeof tab.draft === 'string'),
+        (tab.draft === undefined || typeof tab.draft === 'string') &&
+        (tab.thread === undefined ||
+          (Array.isArray(tab.thread) &&
+            tab.thread.every(
+              (turn: ThreadTurn) =>
+                !!turn &&
+                typeof turn.question === 'string' &&
+                (turn.choice === undefined || typeof turn.choice === 'string'),
+            ))),
     )
     return {
       tabs: valid,
       active: valid.some((tab) => tab.key === active) ? active! : null,
       next: typeof next === 'number' && next > 0 ? next : valid.length + 1,
-      retarget: false,
+      retarget: null,
     }
   } catch {
     return empty
@@ -52,17 +66,17 @@ function create(state: TabState, target: string): TabState {
     tabs: [...state.tabs, tab],
     active: tab.key,
     next: state.next + 1,
-    retarget: false,
+    retarget: null,
   }
 }
 
 /** Brings the tab state in line with the query the route is showing. */
 function reconcile(state: TabState, target: string | null): TabState {
   if (target === null)
-    return state.retarget ? { ...state, retarget: false } : state
+    return state.retarget ? { ...state, retarget: null } : state
   const active = state.tabs.find((tab) => tab.key === state.active)
   if (active?.target === target)
-    return state.retarget ? { ...state, retarget: false } : state
+    return state.retarget ? { ...state, retarget: null } : state
   const existing = state.tabs.find((tab) => tab.target === target)
   if (state.retarget && active) {
     if (existing)
@@ -74,18 +88,29 @@ function reconcile(state: TabState, target: string | null): TabState {
             ? state.tabs.filter((tab) => tab !== active)
             : state.tabs,
         active: existing.key,
-        retarget: false,
+        retarget: null,
       }
+    const turn = state.retarget.turn
     return {
       ...state,
       tabs: state.tabs.map((tab) =>
-        tab === active ? { ...tab, target, draft: undefined } : tab,
+        tab === active
+          ? {
+              ...tab,
+              target,
+              draft: undefined,
+              thread:
+                turn && active.target !== 'new'
+                  ? [...(tab.thread ?? []), turn].slice(-20)
+                  : tab.thread,
+            }
+          : tab,
       ),
-      retarget: false,
+      retarget: null,
     }
   }
   if (existing && target !== 'new')
-    return { ...state, active: existing.key, retarget: false }
+    return { ...state, active: existing.key, retarget: null }
   return create(state, target)
 }
 
@@ -142,7 +167,7 @@ export function useQueryTabs({
     select(key: string) {
       const tab = state.tabs.find((t) => t.key === key)
       if (!tab) return
-      setState((current) => ({ ...current, active: key, retarget: false }))
+      setState((current) => ({ ...current, active: key, retarget: null }))
       open(tab.target)
     },
     close(key: string) {
@@ -161,7 +186,7 @@ export function useQueryTabs({
         tabs: current.tabs.filter((t) => t.key !== key),
         active: neighbour?.key ?? null,
         next: tabs.length ? current.next : 1,
-        retarget: false,
+        retarget: null,
       }))
       if (neighbour) open(neighbour.target)
       else onEmpty()
@@ -172,9 +197,16 @@ export function useQueryTabs({
         tabs: current.tabs.map((t) => (t.key === key ? { ...t, name } : t)),
       }))
     },
-    /** Call right before a search navigates to its result. */
-    markRun() {
-      setState((current) => ({ ...current, retarget: true }))
+    /**
+     * Call right before a search navigates to its result. `from` is the
+     * question on screen; `choice` is the clarification that led onward.
+     */
+    markRun(context?: { from: string; to: string; choice?: string }) {
+      const turn =
+        context?.from.trim() && context.from.trim() !== context.to.trim()
+          ? { question: context.from.trim(), choice: context.choice }
+          : undefined
+      setState((current) => ({ ...current, retarget: { turn } }))
     },
   }
 }

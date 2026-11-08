@@ -13,6 +13,7 @@ import {
   Pencil,
 } from 'lucide-react'
 import LegacyApp, { QueryWorkspace } from './App'
+import type { RunContext } from './App'
 import { ProjectEditor } from './ProjectEditor'
 import { WorkspaceSettings } from './WorkspaceSettings'
 import { api, ApiError, readSettings } from './backend'
@@ -24,10 +25,16 @@ import { projectPath, requestProject, projectDocumentMap } from './projects'
 import type { Project, ProjectData, ProjectQuery } from './projects'
 import type { Reference } from './data'
 import { QueryTabBar } from './QueryTabs'
+import type { ThreadTurn } from './assist'
 import { useQueryTabs } from './useQueryTabs'
 import './projects.css'
 
 const emptyReferences: Reference[] = []
+const unansweredLabels: Record<string, string> = {
+  not_found: 'Not found',
+  partial: 'No direct answer',
+  jurisdiction: 'Other municipality',
+}
 const labels: Record<string, string> = {
   reference: 'Reference documents',
   client: 'Client requirements',
@@ -233,17 +240,22 @@ function ProjectDashboard({
   data,
   onRefresh,
   onQueryFiles,
+  uploading = false,
+  onUploadDone,
 }: {
   data: ProjectData
   onRefresh: () => void
   onQueryFiles: () => void
+  /** Opens the document manager straight away (from a query's upload button). */
+  uploading?: boolean
+  onUploadDone?: () => void
 }) {
   const { project, documents, queries, issues } = data
   const [filter, setFilter] = useState(''),
     [category, setCategory] = useState('all'),
     [issueTab, setIssueTab] = useState('open'),
     [savedOnly, setSavedOnly] = useState(false),
-    [editing, setEditing] = useState(false),
+    [editing, setEditing] = useState(uploading && !project.protectedDemo),
     [error, setError] = useState(''),
     [pending, setPending] = useState(false)
   const [descriptionEditing, setDescriptionEditing] = useState(false),
@@ -256,7 +268,10 @@ function ProjectDashboard({
         .includes(filter.toLowerCase()),
   )
   const visibleIssues = issues.filter((issue) => issue.status === issueTab),
-    visibleQueries = queries.filter((q) => !savedOnly || q.saved)
+    visibleQueries = queries.filter((q) => !savedOnly || q.saved),
+    unanswered = queries.filter(
+      (q) => !q.stale && q.outcome && q.outcome in unansweredLabels,
+    )
   const route = (tail = '') => '#project/' + project.id + tail
   async function action(path: string, method: string, value?: unknown) {
     setPending(true)
@@ -571,6 +586,37 @@ function ProjectDashboard({
                 </p>
               )}
             </section>
+            {unanswered.length > 0 && (
+              <section
+                className="project-panel"
+                aria-label="Unanswered questions"
+              >
+                <div className="project-panel-heading">
+                  <h2 title="Questions the project documents could not answer">
+                    Unanswered questions <span>{unanswered.length}</span>
+                  </h2>
+                </div>
+                <p className="unanswered-hint">
+                  These may need documents that aren't in the project yet.
+                </p>
+                {unanswered.slice(0, 5).map((query) => (
+                  <div className="project-query-row" key={query.id}>
+                    <a
+                      href={route('/query/' + query.id)}
+                      onClick={navigateLink}
+                    >
+                      <span>{query.question}</span>
+                      <small>
+                        <span className="unanswered-badge">
+                          {unansweredLabels[query.outcome!]}
+                        </span>
+                        {date(query.createdAt)}
+                      </small>
+                    </a>
+                  </div>
+                ))}
+              </section>
+            )}
             <section
               className="project-panel"
               aria-label="Project query history"
@@ -624,10 +670,14 @@ function ProjectDashboard({
         <ProjectEditor
           project={project}
           existingDocuments={documents}
-          onClose={() => setEditing(false)}
+          onClose={() => {
+            setEditing(false)
+            onUploadDone?.()
+          }}
           onSaved={() => {
             setEditing(false)
             onRefresh()
+            onUploadDone?.()
           }}
         />
       )}
@@ -640,12 +690,14 @@ function QueryReader({
   onRun,
   onNew,
   tabBar,
+  thread,
 }: {
   data: ProjectData
   id: string
-  onRun: (question: string, sourceOnly?: boolean) => void
+  onRun: (question: string, sourceOnly?: boolean, context?: RunContext) => void
   onNew: () => void
   tabBar: React.ReactNode
+  thread?: ThreadTurn[]
 }) {
   const resource = useResource<ProjectQuery>(
     projectPath(data.project.id) + '/queries/' + id,
@@ -700,9 +752,16 @@ function QueryReader({
       settings={readSettings()}
       projectName={data.project.name}
       projectDocuments={projectDocumentMap(data.documents)}
-      onRun={(q, _case, sourceOnly) => onRun(q, sourceOnly)}
+      onRun={(q, _case, sourceOnly, context) => onRun(q, sourceOnly, context)}
       onNew={onNew}
       tabBar={tabBar}
+      thread={thread}
+      onUpload={
+        data.project.protectedDemo
+          ? undefined
+          : () => navigate(`project/${data.project.id}/upload/${job.id}`)
+      }
+      uploadNote="This example project is read-only. Create a new project to upload your own documents."
     />
   )
 }
@@ -732,7 +791,11 @@ function ProjectPage({
   })
   const onQueryRoute = section === 'new' || (section === 'query' && !!record)
   const tabBar = <QueryTabBar tabs={tabs} />
-  async function run(question: string, sourceOnly = false) {
+  async function run(
+    question: string,
+    sourceOnly = false,
+    context?: RunContext,
+  ) {
     setError('')
     try {
       const job = await requestProject(projectPath(id) + '/queries', 'POST', {
@@ -740,7 +803,7 @@ function ProjectPage({
         sourceOnly,
         id: crypto.randomUUID(),
       })
-      tabs.markRun()
+      tabs.markRun(context && { ...context, to: question })
       navigate('project/' + id + '/query/' + job.id)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not run the query.')
@@ -771,6 +834,7 @@ function ProjectPage({
         onRun={run}
         onNew={tabs.openNew}
         tabBar={tabBar}
+        thread={tabs.activeTab?.thread}
       />
     )
   else if (section === 'new') {
@@ -793,7 +857,9 @@ function ProjectPage({
         settings={readSettings()}
         projectName={data.project.name}
         projectDocuments={projectDocumentMap(data.documents)}
-        onRun={(q, _case, sourceOnly) => void run(q, sourceOnly)}
+        onRun={(q, _case, sourceOnly, context) =>
+          void run(q, sourceOnly, context)
+        }
         onNew={tabs.openNew}
         tabBar={tabBar}
       />
@@ -846,6 +912,13 @@ function ProjectPage({
         data={data}
         onRefresh={resource.refresh}
         onQueryFiles={tabs.openNew}
+        uploading={section === 'upload'}
+        onUploadDone={
+          section === 'upload'
+            ? () =>
+                navigate('project/' + id + (record ? '/query/' + record : ''))
+            : undefined
+        }
       />
     )
   return (
@@ -874,7 +947,7 @@ export default function ProjectApplication() {
     () => '#projects',
   )
   const match = hash.match(
-    /^#project\/([a-zA-Z0-9-]+)(?:\/(new|query|document)(?:\/([a-zA-Z0-9-]+))?)?$/,
+    /^#project\/([a-zA-Z0-9-]+)(?:\/(new|query|document|upload)(?:\/([a-zA-Z0-9-]+))?)?$/,
   )
   if (capability.status === 404 && !match) return <LegacyApp />
   if (capability.error)

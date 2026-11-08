@@ -16,6 +16,7 @@ import { buildIndex } from './indexer.mjs'
 import { SearchIndex } from './search.mjs'
 import { answer } from './answer.mjs'
 import { suggestQueries } from './query-suggestions.mjs'
+import { assistQuery } from './clarify.mjs'
 import { readFrontendLocation } from './frontend-location.mjs'
 import { ProjectApi } from './project-api.mjs'
 import { scopedCorpus } from './project-store.mjs'
@@ -40,6 +41,7 @@ const engineVersion = createHash('sha256')
       'model.mjs',
       'local-evidence.mjs',
       'query-suggestions.mjs',
+      'clarify.mjs',
       'project-api.mjs',
       'project-imports.mjs',
       'project-description.mjs',
@@ -187,6 +189,7 @@ async function work() {
       )
     )
       job.result.suggestions = suggestQueries(job.question, searchIndex)
+    job.result.assist = assistQuery(job.question, searchIndex, job.result)
     job.engineVersion = engineVersion
     job.corpusVersion = corpusVersion()
     if (job.controller.signal.aborted) throw new Error('Cancelled')

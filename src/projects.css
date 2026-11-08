@@ -1033,3 +1033,20 @@ button.primary-action:hover {
 button.query-files {
   min-height: 44px;
 }
+
+.unanswered-hint {
+  margin: 0;
+  padding: 0 20px 6px;
+  color: var(--color-secondary);
+  font-size: 13px;
+}
+.project-query-row .unanswered-badge {
+  display: inline-block;
+  line-height: 1.5;
+  margin-right: 7px;
+  padding: 0 6px;
+  border-radius: 2px;
+  background: #fff1b8;
+  color: #60430c;
+  font-size: 11px;
+}

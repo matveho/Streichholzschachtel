@@ -42,6 +42,8 @@ export type ProjectQuery = {
   prepared: boolean
   stale: boolean
   error?: string
+  /** How the answer turned out; set by the backend's conversation layer. */
+  outcome?: string
 }
 export type ProjectIssue = {
   id: string
