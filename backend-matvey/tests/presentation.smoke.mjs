@@ -43,7 +43,8 @@ for (const id of ['demo-mill-creek', 'demo-willow-creek']) {
     assert.equal(response.status, 206, document.title)
     assert.equal(await response.text(), '%PDF')
   }
-  const queries = data.queries.filter((q) => q.prepared)
+  const seededQueryIds = new Set(data.issues.map((issue) => issue.queryId))
+  const queries = data.queries.filter((q) => seededQueryIds.has(q.id))
   assert.ok(queries.length >= 2)
   for (const query of queries) {
     const job = await get('/v1/projects/' + id + '/queries/' + query.id)

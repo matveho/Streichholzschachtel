@@ -53,25 +53,27 @@ try {
   await page.getByRole('button', { name: 'Settings', exact: true }).click()
   await page.getByRole('button', { name: 'Reset demo', exact: true }).waitFor()
   await page.keyboard.press('Escape')
-  await page
-    .getByRole('button', { name: 'Edit description', exact: true })
-    .click()
-  await page
-    .getByLabel('Project description', { exact: true })
-    .fill('Editable review scope')
-  await page.getByRole('button', { name: 'Save', exact: true }).click()
-  await expect(page.locator('.project-scope')).toHaveText(
-    'Editable review scope',
-  )
-  await page.reload()
-  await expect(page.locator('.project-scope')).toHaveText(
-    'Editable review scope',
-  )
-  await page.getByRole('button', { name: 'Settings', exact: true }).click()
-  await page.getByRole('button', { name: 'Reset demo', exact: true }).click()
-  await expect(page.locator('.project-scope')).not.toHaveText(
-    'Editable review scope',
-  )
+  if (process.env.BASIS_TEST_DEMO_EDITS !== '0') {
+    await page
+      .getByRole('button', { name: 'Edit description', exact: true })
+      .click()
+    await page
+      .getByLabel('Project description', { exact: true })
+      .fill('Editable review scope')
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(page.locator('.project-scope')).toHaveText(
+      'Editable review scope',
+    )
+    await page.reload()
+    await expect(page.locator('.project-scope')).toHaveText(
+      'Editable review scope',
+    )
+    await page.getByRole('button', { name: 'Settings', exact: true }).click()
+    await page.getByRole('button', { name: 'Reset demo', exact: true }).click()
+    await expect(page.locator('.project-scope')).not.toHaveText(
+      'Editable review scope',
+    )
+  }
   await page.getByRole('link', { name: 'Projects', exact: true }).click()
   await page.getByRole('button', { name: 'New project', exact: true }).click()
   await page
@@ -192,6 +194,10 @@ try {
   await page
     .getByRole('link', { name: 'Project dashboard', exact: true })
     .click()
+  await page
+    .getByRole('heading', { name: 'Import retry review', exact: true })
+    .waitFor()
+  await expect(page.locator('.project-document-row')).toHaveCount(1)
   await page.getByRole('button', { name: 'Settings', exact: true }).click()
   await page
     .getByRole('button', { name: 'Delete project', exact: true })

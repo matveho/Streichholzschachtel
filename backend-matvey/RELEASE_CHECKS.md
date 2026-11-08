@@ -4,7 +4,7 @@ Verified on 8 November 2026 against the local Windows runtime and deployed Verce
 
 | Check | Result |
 | --- | --- |
-| `node --test tests/*.test.mjs` | 134 passed, zero failed |
+| `node --test tests/*.test.mjs` | 135 passed, zero failed |
 | `node --test tests/projects.integration.mjs` | Four passed: protected seeds, scoped live 450 mm lookup, isolation/cache/files/history, ordinary project lifecycle |
 | `node tests/projects.restart.mjs` | Passed: real API restart, ordinary project persistence, query history, issue dismissal, deleted runtime PDF recovery, seed deduplication |
 | `node tests/projects.browser.mjs` | Passed against compiled local frontend and production Vercel; overview, documents, citations, findings, persistence, bookmarks, create/edit/delete and responsive layout |
@@ -41,3 +41,5 @@ Launch and readiness controls are in CONTROLS.md; frontend contracts and persist
 The project list now uses dense rows. Collection selection uses a searchable dropdown with individually selectable documents, followed by native PDF/folder pickers. Project descriptions can be edited, including protected examples, or regenerated locally from selected document topics and types. Manual descriptions survive later imports. Reset is in Settings; source provenance is available under Source notes.
 
 Executed checks for this update: 135 backend unit tests, local project browser workflow, native folder/PDF import browser workflow (including partial failure/retry and query/PDF highlighting), and import API isolation/restart persistence. Uploaded bytes stay under ignored local project storage; private document IDs differ across projects even for identical PDFs.
+
+Production verification of the compact workspace passed through Vercel: native folder/PDF selection, automatic/manual descriptions, partial import recovery, a real query over an imported PDF, original citation highlighting, and ordinary project deletion. A 3.9 MB published engineering PDF imported and indexed all 159 pages through the public connection. Public checks preserved existing example descriptions and dismissals.
