@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/../.."
+export BASIS_STATE_DIR
+BASIS_STATE_DIR=$(mktemp -d "$PWD/backend/state/verification/run-browser-XXXXXXXX")
+export PDF_CACHE_DIR="$PWD/backend/state"
+export EXTRACTIVE_ONLY=1 GENERATION_PROVIDER=extractive
+export TESSERACT_PATH="$HOME/.local/share/basis-ocr/usr/bin/tesseract"
+export TESSDATA_PREFIX="$HOME/.local/share/basis-ocr/usr/share/tesseract-ocr/5/tessdata"
+export BASIS_FRONTEND_URL=http://127.0.0.1:8842/app
+printf 'Browser verification state: %s\n' "$BASIS_STATE_DIR"
+PORT=8840 node backend/src/server.mjs > "$BASIS_STATE_DIR/server.log" 2>&1 &
+api_pid=$!
+BASIS_GATEWAY_PORT=8842 BASIS_GATEWAY_TARGET=http://127.0.0.1:8840 node backend/demo-gateway.mjs > "$BASIS_STATE_DIR/gateway.log" 2>&1 &
+gateway_pid=$!
+trap 'kill "$gateway_pid" "$api_pid" 2>/dev/null || true; wait "$gateway_pid" "$api_pid" 2>/dev/null || true' EXIT
+node --input-type=module - <<'JS'
+for(let i=0;i<180;i++) {
+ try { const h=await(await fetch('http://127.0.0.1:8842/local-api/health')).json(); if(h.ready && !h.failures) process.exit(0); }catch{}
+ await new Promise(r=>setTimeout(r,1000));
+}
+throw new Error('Isolated browser backend not ready');
+JS
+# Refuse to test another process if either requested port was already occupied.
+kill -0 "$api_pid" "$gateway_pid"
+for suite in ${BASIS_BROWSER_SUITES:-projects project-editor project-packages ifc}; do
+ node "backend/tests/$suite.browser.mjs" > "$BASIS_STATE_DIR/$suite.log" 2>&1
+ printf 'PASS %s browser suite\n' "$suite"
+done

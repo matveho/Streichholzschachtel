@@ -1,14 +1,14 @@
 # One-click backend controls
 
-Double-click **Start Basis.cmd** in the repository root. Node.js 24 or newer must be installed. The window starts Basis if it is stopped, then presents controls. Closing the window leaves the services running. Choose **3** to stop the backend and gateway.
+Double-click **Start basis.cmd** in the repository root. Node.js 24 or newer must be installed. The window starts basis if it is stopped, then presents controls. Closing the window leaves the services running. Choose **3** to stop the backend and gateway.
 
-Keep this window open for automatic crash recovery. After adding PDFs, choose **2**, then **4** until the API reports **READY** with zero indexing failures. If startup fails, choose **6** for diagnostics, **7** for logs, or **D** to repair missing dependencies. The launcher remains available after a startup error. The older `Start Backend.cmd` forwards to this same launcher. Command-line options can also be passed directly, for example `"Start Basis.cmd" --status`.
+Keep this window open for automatic crash recovery. After adding PDFs, choose **2**, then **4** until the API reports **READY** with zero indexing failures. If startup fails, choose **6** for diagnostics, **7** for logs, or **D** to repair missing dependencies. The launcher remains available after a startup error. The older `Start Backend.cmd` forwards to this same launcher. Command-line options can also be passed directly, for example `"Start basis.cmd" --status`.
 
 | Control | Action                                                                                                             |
 | ------- | ------------------------------------------------------------------------------------------------------------------ |
-| 1       | Start; keep an already running Basis API intact                                                                    |
+| 1       | Start; keep an already running basis API intact                                                                    |
 | 2       | Build changed frontend source, restart the API, and index newly added documents                                    |
-| 3       | Stop the verified Basis API and gateway; leave the user's Ollama service alone                                     |
+| 3       | Stop the verified basis API and gateway; leave the user's Ollama service alone                                     |
 | 4       | Show API, indexing, failures, gateway and profile status                                                           |
 | 5       | Open the local interface, already connected without a key                                                          |
 | 6       | Check drive space, extractor, OCR, cache, errors and the public Vercel connection                                  |

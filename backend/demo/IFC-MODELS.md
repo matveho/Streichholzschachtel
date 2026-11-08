@@ -4,7 +4,7 @@ Parkview Exchange and North Ridge each include an IFC4 model, a structured prope
 
 ## Use
 
-Open the project and locate **IFC model register** under Supporting materials. Open the register to inspect its object properties, GlobalIds and source traces. **IFC** beside the document, or **Download IFC** inside it, downloads the original model for an external IFC viewer/CAD application. Basis currently displays the register, not an interactive 3D scene.
+Open the project and locate **IFC model register** under Supporting materials. Open the register to inspect its object properties, GlobalIds and source traces. **IFC** beside the document, or **Download IFC** inside it, downloads the original model for an external IFC viewer/CAD application. basis currently displays the register, not an interactive 3D scene.
 
 Queries run against the extracted register through the existing project-scoped retrieval and PDF-highlight pipeline. Examples:
 

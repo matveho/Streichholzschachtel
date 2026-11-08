@@ -3,7 +3,7 @@ import { chromium, expect } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 const frontend = process.env.BASIS_FRONTEND_URL || 'http://127.0.0.1:8842/app'
 const api = new URL('/local-api/v1', frontend).href
-const browser = await chromium.launch({ channel: 'chrome', headless: true })
+const browser = await chromium.launch({ ...(process.env.BASIS_BROWSER_CHANNEL ? { channel: process.env.BASIS_BROWSER_CHANNEL } : {}), headless: true })
 mkdirSync('test-results', { recursive: true })
 try {
   const page = await browser.newPage({
@@ -38,6 +38,7 @@ try {
     await page.screenshot({ path: `test-results/${id}-comparison.png` })
     await page
       .getByRole('link', { name: 'Project dashboard', exact: true })
+      .first()
       .click()
     await expect(page.locator('.project-document-row')).toHaveCount(
       d.documents.length,

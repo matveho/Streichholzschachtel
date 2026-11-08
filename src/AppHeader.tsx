@@ -24,7 +24,7 @@ export function AppHeader({
         width="44"
         height="44"
       />
-      <strong>Basis</strong>
+      <strong>basis</strong>
       <a
         className={`home-link ${home ? 'active' : ''}`}
         href={homeHref}

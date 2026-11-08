@@ -558,7 +558,7 @@ export const server = http.createServer(async (req, res) => {
 })
 server.requestTimeout = 180000
 server.listen(config.port, '127.0.0.1', () =>
-  console.log(`Basis Matvey backend: http://127.0.0.1:${config.port}`),
+  console.log(`basis Matvey backend: http://127.0.0.1:${config.port}`),
 )
 server.on('error', (error) => {
   console.error(error.message)

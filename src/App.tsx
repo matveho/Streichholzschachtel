@@ -23,7 +23,7 @@ import { QueryReport } from './QueryReport'
 import { QuerySuggestions } from './QuerySuggestions'
 import { QueryHome } from './QueryHome'
 import { QueryAssist, QueryThread } from './QueryAssist'
-import { clarificationRounds, outcomeOf } from './assist'
+import { outcomeOf } from './assist'
 import type { ThreadTurn } from './assist'
 import { AppHeader } from './AppHeader'
 import { readHistory, saveHistory } from './history'
@@ -49,7 +49,6 @@ export function QueryWorkspace({
   thread = [],
   preloadedJob,
   onUpload,
-  uploadNote = "Add the required PDF to the backend's documents folder, then restart it.",
 }: {
   entry: HistoryEntry
   settings: BackendSettings
@@ -71,8 +70,6 @@ export function QueryWorkspace({
   preloadedJob?: QueryJob
   /** Opens the project's document upload; absent where uploads aren't possible. */
   onUpload?: () => void
-  /** Shown instead of the upload button when `onUpload` is absent. */
-  uploadNote?: string
 }) {
   const queryCase = queryCases.find((c) => c.id === entry.caseId)!
   const exampleQuery = queryCase.prompt
@@ -608,12 +605,10 @@ export function QueryWorkspace({
                     assist={live.data.assist}
                     question={submitted}
                     suggestions={live.data.suggestions}
-                    rounds={clarificationRounds(thread)}
                     inProject={!!entry.projectId}
                     onRefine={refine}
                     onRephrase={rephrase}
                     onUpload={onUpload}
-                    uploadNote={uploadNote}
                   />
                 )}
                 {!nothingToCopy && (

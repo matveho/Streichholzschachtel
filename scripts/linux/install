@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/../.."
+node -e 'if(Number(process.versions.node.split(".")[0])<24)process.exit(1)'
+npm ci
+npm ci --prefix backend
+python3 -m venv backend/.venv
+backend/.venv/bin/pip install -r backend/requirements.txt
+npm run build
+mkdir -p backend/state/frontend "$HOME/.config/systemd/user"
+cp -a dist/. backend/state/frontend/
+export BASIS_INSTALL_ROOT="$PWD" BASIS_INSTALL_NODE="$(command -v node)"
+python3 - <<'PY'
+import os
+from pathlib import Path
+root=os.environ['BASIS_INSTALL_ROOT']; node=os.environ['BASIS_INSTALL_NODE']
+for name,entry,env in [('backend','src/server.mjs','Environment=PORT=8787\nEnvironment=EXTRACTIVE_ONLY=1\nEnvironment=GENERATION_PROVIDER=extractive'),('gateway','demo-gateway.mjs','')]:
+ Path.home().joinpath('.config/systemd/user/basis-'+name+'.service').write_text(f'[Unit]\nDescription=basis {name}\n[Service]\nWorkingDirectory={root}/backend\nExecStart="{node}" {entry}\n{env}\nRestart=on-failure\nRestartSec=5\nUMask=0077\n[Install]\nWantedBy=default.target\n')
+PY
+systemd-analyze --user verify "$HOME/.config/systemd/user/basis-backend.service" "$HOME/.config/systemd/user/basis-gateway.service"
+systemctl --user daemon-reload
+printf 'Installed. Run scripts/linux/basis start. Services are not enabled at login.\n'

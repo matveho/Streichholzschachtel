@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { engineeringScenarios } from './engineering-scenarios.mjs'
-const key = readFileSync('state/session-token.txt', 'utf8').trim(),
+const key = readFileSync(resolve(process.env.BASIS_STATE_DIR || 'state', 'session-token.txt'), 'utf8').trim(),
   testBase = process.env.BASIS_TEST_URL || 'http://127.0.0.1:8787',
   headers = {
     Authorization: 'Bearer ' + key,

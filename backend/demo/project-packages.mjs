@@ -44,7 +44,7 @@ export const projectPackages = [
           ],
           [
             'Deliverables and acceptance',
-            'Review package: existing conditions survey, C101/C102 servicing drawings, servicing design memo, C201/C202 grading drawings and coordination register. Design basis: current applicable EPCOR Volume 3 drainage publications, Volume 4 water standards and City Complete Streets standards.',
+            'Review package: existing conditions survey, C101/C102 servicing drawings, servicing design memo, C201/C202 grading drawings and coordination register. Design Basis: current applicable EPCOR Volume 3 drainage publications, Volume 4 water standards and City Complete Streets standards.',
             'Resolve S1 upstream grade, ST1 terminal reach grade, storm cover and water/sewer crossing X1 before detailed design. Owner preference for reduced excavation does not constitute approval of a departure from a governing criterion.',
           ],
         ],
@@ -101,7 +101,7 @@ export const projectPackages = [
         '2026-10-03',
         [
           [
-            'Design basis and limits',
+            'Design Basis and limits',
             'This memorandum records the preliminary servicing basis for PX-26017. Applicable editions are EPCOR Volume 3-03, May 2025, together with the current planning, stormwater, approval and water publications associated with the project. Approval of an alternate detail is not assumed.',
             'The network is divided into S1, a limited upstream branch serving 250 m² east retail/frontage, and S2, the remaining building service. A complete accepted whole-development flow model and downstream capacity review are not yet available.',
           ],
@@ -271,7 +271,7 @@ export const projectPackages = [
             'Deliverables: survey/geotechnical summary, G101/G102/G201 geometric plan and profile, traffic impact assessment, pavement memorandum and traffic accommodation concept. No design exception or construction authorization is included in this issue.',
           ],
           [
-            'Design basis and coordination',
+            'Design Basis and coordination',
             'Use the current applicable Alberta Highway Geometric Design Guide chapters, Traffic Impact Assessment Guidelines, Pavement Design Manual together with Design Bulletin 77 amendments, and the 2025 Traffic Accommodation in Work Zones manual.',
             'Use a reconciled base-year traffic dataset across traffic and pavement disciplines. Differences in forecasting method must be justified; traffic volumes, truck definitions, axle loading and design-lane allocation must be traceable before pavement selection.',
           ],

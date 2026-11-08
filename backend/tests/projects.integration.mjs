@@ -1,9 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 const base = process.env.BASIS_TEST_URL || 'http://127.0.0.1:8810'
 const token = readFileSync(
-  new URL('../state/session-token.txt', import.meta.url),
+  process.env.BASIS_STATE_DIR
+    ? resolve(process.env.BASIS_STATE_DIR, 'session-token.txt')
+    : new URL('../state/session-token.txt', import.meta.url),
   'utf8',
 ).trim()
 let ready = false

@@ -175,9 +175,10 @@ export function useQueryTabs({
       const index = state.tabs.findIndex((t) => t.key === key)
       if (index < 0) return
       const tabs = state.tabs.filter((t) => t.key !== key)
-      if (key !== state.active) {
+      if (key !== state.active || target === null) {
         setState((current) => ({
           ...current,
+          active: current.active === key ? null : current.active,
           tabs: current.tabs.filter((t) => t.key !== key),
         }))
         return

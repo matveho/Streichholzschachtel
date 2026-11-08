@@ -83,7 +83,7 @@ for project in PROJECTS:
     for item in project['documents']:
         path = OUT / item['file']
         doc = SimpleDocTemplate(str(path), pagesize=A4, leftMargin=48, rightMargin=48, topMargin=61, bottomMargin=60,
-            title=f"{project['name']} - {item['title']} - synthetic demonstration", author='Basis demonstration team')
+            title=f"{project['name']} - {item['title']} - synthetic demonstration", author='basis demonstration team')
         doc.doc_code = item['code']
         story = [Paragraph(escape(project['name']), styles['ProjectTitle']), Paragraph(escape(item['title']), styles['DocTitle'])]
         facts = [[Paragraph('CLIENT / OWNER', styles['SmallNote']), Paragraph(escape(project['client']), styles['ProjectBody'])],

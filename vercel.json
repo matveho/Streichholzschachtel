@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/local-api/:path*",
-      "destination": "https://composed-bbs-uses-favorites.trycloudflare.com/:path*"
+      "destination": "https://deck-mall-route-sender.trycloudflare.com/:path*"
     }
   ]
 }

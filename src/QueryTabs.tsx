@@ -2,11 +2,17 @@ import { useRef, useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import type { QueryTabsApi } from './useQueryTabs'
 
-export function QueryTabBar({ tabs }: { tabs: QueryTabsApi }) {
+export function QueryTabBar({
+  tabs,
+  dashboard,
+}: {
+  tabs: QueryTabsApi
+  dashboard?: { href: string; active: boolean }
+}) {
   const [editing, setEditing] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const cancelled = useRef(false)
-  if (!tabs.tabs.length) return null
+  if (!tabs.tabs.length && !dashboard) return null
   function commit(key: string) {
     if (!cancelled.current && draft.trim()) tabs.rename(key, draft.trim())
     cancelled.current = false
@@ -15,8 +21,19 @@ export function QueryTabBar({ tabs }: { tabs: QueryTabsApi }) {
   return (
     <nav className="query-tabs" aria-label="Open queries">
       <div className="query-tab-list">
+        {dashboard && (
+          <div className={`query-tab ${dashboard.active ? 'selected' : ''}`}>
+            <a
+              className="query-tab-name"
+              href={dashboard.href}
+              aria-current={dashboard.active ? 'page' : undefined}
+            >
+              Project dashboard
+            </a>
+          </div>
+        )}
         {tabs.tabs.map((tab) => {
-          const selected = tab.key === tabs.active
+          const selected = !dashboard?.active && tab.key === tabs.active
           return (
             <div
               className={`query-tab ${selected ? 'selected' : ''}`}
@@ -68,7 +85,13 @@ export function QueryTabBar({ tabs }: { tabs: QueryTabsApi }) {
           )
         })}
       </div>
-      <button aria-label="Open new query tab" title="Open new query tab" onClick={tabs.openNew}><Plus size={15} /></button>
+      <button
+        aria-label="Open new query tab"
+        title="Open new query tab"
+        onClick={tabs.openNew}
+      >
+        <Plus size={15} />
+      </button>
     </nav>
   )
 }

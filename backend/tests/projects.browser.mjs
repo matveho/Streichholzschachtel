@@ -1,14 +1,15 @@
+import { integrationOrigin, launchIntegrationBrowser } from './vercel-routing.mjs'
 import { chromium, expect } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { mkdirSync } from 'node:fs'
-const origin = process.env.BASIS_FRONTEND_URL || 'http://127.0.0.1:8842/app'
+const origin = integrationOrigin(process.env.BASIS_FRONTEND_URL || 'http://127.0.0.1:8842/app')
 assert.ok(
-  ['http://127.0.0.1:8842', 'http://localhost:8842'].includes(
+  [...(process.env.BASIS_VERCEL_UI === '1' ? ['https://streichholzschachtel.vercel.app'] : []), 'http://127.0.0.1:8842', 'http://localhost:8842'].includes(
     new URL(origin).origin,
   ),
   'Workspace reset checks require the isolated preview on 8842',
 )
-const browser = await chromium.launch({ channel: 'chrome', headless: true })
+const browser = await launchIntegrationBrowser(chromium)
 let createdId = ''
 try {
   const page = await browser.newPage({
@@ -50,6 +51,7 @@ try {
   await page.locator('.textLayer span').first().waitFor({ timeout: 30000 })
   await page
     .getByRole('link', { name: 'Project dashboard', exact: true })
+    .first()
     .click()
   await page
     .getByRole('region', { name: 'Potential issues' })
@@ -57,6 +59,7 @@ try {
     .first()
     .click()
   await page.getByRole('article', { name: 'Query report' }).waitFor()
+  await page.getByRole('button', { name: /^Source 1:/ }).first().click()
   await page.locator('.source-highlight').first().waitFor({ timeout: 30000 })
   await page
     .locator('.pdf-status')
@@ -90,6 +93,7 @@ try {
   await page.screenshot({ path: 'test-results/project-evidence.png' })
   await page
     .getByRole('link', { name: 'Project dashboard', exact: true })
+    .first()
     .click()
   await page
     .getByRole('region', { name: 'Potential issues' })
@@ -144,10 +148,12 @@ try {
     .first()
     .click()
   await page.getByRole('article', { name: 'Query report' }).waitFor()
+  await page.getByRole('button', { name: /^Source 1:/ }).first().click()
   await page.locator('.source-highlight').first().waitFor({ timeout: 30000 })
   assert.ok((await page.locator('.query-report').innerText()).includes('2%'))
   await page
     .getByRole('link', { name: 'Project dashboard', exact: true })
+    .first()
     .click()
   await page.getByRole('link', { name: 'Projects', exact: true }).click()
   await page.getByRole('button', { name: 'New project', exact: true }).click()

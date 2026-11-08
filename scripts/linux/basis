@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/../.."
+case "${1:-status}" in
+ start) systemctl --user start basis-backend basis-gateway ;;
+ stop) systemctl --user stop basis-gateway basis-backend ;;
+ reindex) systemctl --user restart basis-backend ;;
+ restart) systemctl --user restart basis-backend basis-gateway ;;
+ status) systemctl --user status basis-backend basis-gateway --no-pager ;;
+ logs) journalctl --user -u basis-backend -u basis-gateway -f ;;
+ health) node --input-type=module -e 'const h=await (await fetch("http://127.0.0.1:8787/health", {signal:AbortSignal.timeout(5000)})).json(); console.log(JSON.stringify(h,null,2)); process.exit(h.ready && !h.failures ? 0 : 1)' ;;
+ check) BASIS_FRONTEND_URL=http://127.0.0.1:8789/app node backend/tests/presentation.smoke.mjs ;;
+ *) echo 'Usage: basis start|stop|restart|reindex|status|logs|health|check'; exit 2 ;;
+esac

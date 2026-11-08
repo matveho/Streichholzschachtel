@@ -24,7 +24,7 @@ Two earlier suite failures were test setup races: one test started before indexi
 
 - Production: https://streichholzschachtel.vercel.app
 - On this device: API 8810; keyless gateway/UI http://127.0.0.1:8812/app/#projects.
-- Root Start Basis.cmd reads ignored local configuration and manages this project runtime. Fresh checkouts use 8787/8789 by default.
+- Root Start basis.cmd reads ignored local configuration and manages this project runtime. Fresh checkouts use 8787/8789 by default.
 - Local source lookup, no hosted inference. Prepared source comparisons avoid presentation-time inference latency.
 - Immutable local frontend builds preserve the preceding bundle. The earlier API/gateway runtime remains available during rollout; it was not replaced.
 

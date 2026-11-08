@@ -86,8 +86,8 @@ def finish(f,objects,project_id,filename):
     f.header.file_name.time_stamp='2026-11-08T12:00:00'
     f.header.file_name.author=('Cairnfield Civil Studio Ltd.',)
     f.header.file_name.organization=('Cairnfield Civil Studio Ltd.',)
-    f.header.file_name.preprocessor_version='Basis conceptual IFC generator / IfcOpenShell 0.8.4'
-    f.header.file_name.originating_system='Basis'
+    f.header.file_name.preprocessor_version='basis conceptual IFC generator / IfcOpenShell 0.8.4'
+    f.header.file_name.originating_system='basis'
     f.header.file_name.authorization='Issued for review - not for construction'
     path=OUT/filename;f.write(path)
     parsed=ifcopenshell.open(path)

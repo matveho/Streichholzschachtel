@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Ubuntu 24.04 user-space OCR; system libtesseract5 and its libraries required.
+set -euo pipefail
+ocr_root="$HOME/.local/share/basis-ocr"
+mkdir -p "$ocr_root/packages"
+cd "$ocr_root/packages"
+apt download tesseract-ocr tesseract-ocr-eng
+for package in ./*.deb; do dpkg-deb -x "$package" "$ocr_root"; done
+"$ocr_root/usr/bin/tesseract" --version
+export TESSDATA_PREFIX="$ocr_root/usr/share/tesseract-ocr/5/tessdata"
+"$ocr_root/usr/bin/tesseract" --list-langs | grep -qx eng
+mkdir -p "$HOME/.config/systemd/user/basis-backend.service.d"
+cat > "$HOME/.config/systemd/user/basis-backend.service.d/ocr.conf" <<UNIT
+[Service]
+Environment="TESSERACT_PATH=$ocr_root/usr/bin/tesseract"
+Environment="TESSDATA_PREFIX=$TESSDATA_PREFIX"
+UNIT
+systemctl --user daemon-reload
+printf 'OCR installed. Existing incomplete extraction caches need regeneration before restart.\n'

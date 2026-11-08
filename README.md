@@ -1,8 +1,8 @@
-# Basis
+# basis
 
-**Where did this number come from?** Basis helps civil engineers trace a design decision back to the drawing, report or standard behind it. Open a project, query its drawings, reports and standards, then select a citation to see the highlighted passage in the original PDF.
+**Where did this number come from?** basis helps civil engineers trace a design decision back to the drawing, report or standard behind it. Open a project, query its drawings, reports and standards, then select a citation to see the highlighted passage in the original PDF.
 
-[Open Basis](https://streichholzschachtel.vercel.app/#projects) · Built for natHacks 2026 by team Streichholzschachtel.
+[Open basis](https://streichholzschachtel.vercel.app/#projects) · Built for natHacks 2026 by team Streichholzschachtel.
 
 ## Try a design review
 
@@ -21,7 +21,7 @@ npm ci
 npm ci --prefix backend
 ```
 
-Double-click **Start Basis.cmd** and choose **5** to open the workspace. For the full PDF extraction and table-reading setup, see the [backend guide](backend/README.md). The hosted frontend connects to the presentation computer over HTTPS, so that computer and its tunnel must be online for the public demo.
+Double-click **Start basis.cmd** and choose **5** to open the workspace. For the full PDF extraction and table-reading setup, see the [backend guide](backend/README.md). The hosted frontend connects to the presentation computer over HTTPS, so that computer and its tunnel must be online for the public demo.
 
 ## Inside the repository
 

@@ -1,14 +1,16 @@
 import http from 'node:http'
-import { readFileSync, existsSync, statSync, createReadStream } from 'node:fs'
+import { createHash, timingSafeEqual } from 'node:crypto'
+import { existsSync, statSync, createReadStream } from 'node:fs'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { resolve, sep, extname } from 'node:path'
 import { readFrontendLocation } from './src/frontend-location.mjs'
 
-const key = readFileSync(
-  new URL('./state/session-token.txt', import.meta.url),
-  'utf8',
-).trim()
+import { config } from './src/config.mjs'
+
+const key = config.token
+const ingressKey = process.env.BASIS_GATEWAY_INGRESS_KEY
+const digest = value => createHash('sha256').update(value).digest()
 const target = process.env.BASIS_GATEWAY_TARGET || 'http://127.0.0.1:8787'
 const targetUrl = new URL(target)
 if (
@@ -20,6 +22,11 @@ const port = Number(process.env.BASIS_GATEWAY_PORT || 8789)
 http
   .createServer(async (req, res) => {
     try {
+      if (ingressKey && !timingSafeEqual(digest(String(req.headers['x-basis-ingress-key'] || '')), digest(ingressKey))) {
+        res.writeHead(401, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
+        res.end(JSON.stringify({ error: 'Authenticated ingress required.' }))
+        return
+      }
       const url = new URL(req.url, target)
       url.pathname = url.pathname.replace(/^\/local-api(?=\/|$)/, '') || '/'
       if (req.method === 'GET' && url.pathname === '/_basis/gateway') {
@@ -137,7 +144,8 @@ http
         const rewrite = (value) => {
           if (!value || typeof value !== 'object') return
           for (const key of ['file', 'model'])
-            if (typeof value[key] === 'string') {
+            if (typeof value[key] === 'string' &&
+                /^\/v1\/(?:projects\/[^/]+\/)?documents\/doc-[a-f0-9]+\/(?:file|model)(?:\?|$)/.test(value[key])) {
               const file = new URL(value[key], target)
               value[key] = '/local-api' + file.pathname
             }

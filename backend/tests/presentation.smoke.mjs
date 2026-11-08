@@ -5,9 +5,11 @@ import { demoProjects } from '../demo/manifest.mjs'
 
 const frontend = process.env.BASIS_FRONTEND_URL || 'http://127.0.0.1:8812/app'
 const base = new URL('/local-api', frontend).href
+const previewHeaders = process.env.BASIS_EDGE_PREVIEW === '1' ? {'x-basis-preview':'ubuntu-demo'} : {}
 async function get(path) {
   const response = await fetch(base + path, {
     signal: AbortSignal.timeout(15000),
+    headers: previewHeaders,
   })
   assert.ok(response.ok, `${path}: HTTP ${response.status}`)
   return response.json()
@@ -37,7 +39,7 @@ for (const { id } of demoProjects) {
     const response = await fetch(
       base + '/v1/projects/' + id + '/documents/' + document.id + '/file',
       {
-        headers: { Range: 'bytes=0-3' },
+        headers: { ...previewHeaders, Range: 'bytes=0-3' },
         signal: AbortSignal.timeout(15000),
       },
     )
@@ -60,10 +62,11 @@ for (const { id } of demoProjects) {
   }
   demos.push({ ...data, query: queries[0] })
 }
-const browser = await chromium.launch({ channel: 'chrome', headless: true })
+const browser = await chromium.launch({ ...(process.env.BASIS_BROWSER_CHANNEL ? { channel: process.env.BASIS_BROWSER_CHANNEL } : {}), headless: true })
 try {
   const page = await browser.newPage({
     viewport: { width: 1440, height: 1000 },
+    extraHTTPHeaders: previewHeaders,
   })
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
@@ -94,6 +97,7 @@ try {
     await page.locator('.textLayer span').first().waitFor()
     await page
       .getByRole('link', { name: 'Project dashboard', exact: true })
+      .first()
       .click()
     await page
       .getByRole('heading', { name: demo.project.name, exact: true })

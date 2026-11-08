@@ -29,7 +29,7 @@ Official discovery sources:
 
 ## Restore, reproduce and integrate
 
-- Start or restart using the root **Start Basis.cmd** controls. New seeds restore idempotently at startup. PDFs are copied from tracked `output/pdf` originals into local runtime storage; checksums repair missing/changed runtime copies.
+- Start or restart using the root **Start basis.cmd** controls. New seeds restore idempotently at startup. PDFs are copied from tracked `output/pdf` originals into local runtime storage; checksums repair missing/changed runtime copies.
 - Reset from Settings restores all four protected projects and their initial findings/history. Ordinary projects survive only when Keep on reset is enabled. Protection is enforced by the backend.
 - Generate the twelve project PDFs with `demo/build-project-packages.py` using Python with ReportLab. It imports the structured package module, produces deterministic PDFs and leaves all official references unchanged. It generates 24 pages across twelve files, including nine drawing sheets.
 - Reference PDFs newly downloaded for this package live in tracked `references/`; private user documents remain in ignored local storage. The frontend deployment excludes the backend tree.

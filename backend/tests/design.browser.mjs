@@ -69,6 +69,7 @@ try {
   assert.equal(await page.locator('.app-header .new-query').count(), 0)
   await page
     .getByRole('link', { name: 'Project dashboard', exact: true })
+    .first()
     .click()
   await query.waitFor()
   await page.getByRole('button', { name: 'Settings', exact: true }).click()

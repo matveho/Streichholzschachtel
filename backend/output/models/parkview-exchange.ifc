@@ -1,7 +1,7 @@
 ISO-10303-21;
 HEADER;
 FILE_DESCRIPTION(('ViewDefinition[DesignTransferView]'),'2;1');
-FILE_NAME('parkview-exchange.ifc','2026-11-08T12:00:00',('Cairnfield Civil Studio Ltd.'),('Cairnfield Civil Studio Ltd.'),'Basis conceptual IFC generator / IfcOpenShell 0.8.4','Basis','Issued for review - not for construction');
+FILE_NAME('parkview-exchange.ifc','2026-11-08T12:00:00',('Cairnfield Civil Studio Ltd.'),('Cairnfield Civil Studio Ltd.'),'basis conceptual IFC generator / IfcOpenShell 0.8.4','basis','Issued for review - not for construction');
 FILE_SCHEMA(('IFC4'));
 ENDSEC;
 DATA;

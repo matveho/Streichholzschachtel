@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title Basis Demo
+title basis Demo
 set PORT=8787
 set GENERATION_PROVIDER=ollama
 set LOCAL_SYNTHESIS=1

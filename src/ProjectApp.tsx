@@ -11,7 +11,6 @@ import {
   Star,
   X,
   FileText,
-  BookOpen,
   Pencil,
 } from 'lucide-react'
 import LegacyApp, { QueryWorkspace } from './App'
@@ -123,9 +122,9 @@ function Shell({
       <header className="app-header project-header">
         <a className="project-brand" href="#projects" onClick={navigateLink}>
           <img src="/basis-logo.png" alt="" width="44" height="44" />
-          <strong>Basis</strong>
+          <strong>basis</strong>
         </a>
-        <span className="project-header-title">{title}</span>
+        {title && <span className="project-header-title">{title}</span>}
         <div className="project-header-actions">
           {actions}
           <WorkspaceSettings
@@ -265,7 +264,8 @@ function ProjectDashboard({
     [category, setCategory] = useState('all'),
     [issueTab, setIssueTab] = useState('open'),
     [savedOnly, setSavedOnly] = useState(false),
-    [editing, setEditing] = useState(uploading && !project.protectedDemo),
+    [editing, setEditing] = useState(uploading),
+    [uploadOnly, setUploadOnly] = useState(uploading),
     [error, setError] = useState(''),
     [pending, setPending] = useState(false)
   const [descriptionEditing, setDescriptionEditing] = useState(false),
@@ -322,13 +322,18 @@ function ProjectDashboard({
   }
   return (
     <Shell
-      title={project.name}
       settingsProject={project}
       onSettingsChange={onRefresh}
       settings={
         <>
           {!project.protectedDemo && (
-            <button disabled={pending} onClick={() => setEditing(true)}>
+            <button
+              disabled={pending}
+              onClick={() => {
+                setUploadOnly(false)
+                setEditing(true)
+              }}
+            >
               Manage project
             </button>
           )}
@@ -414,6 +419,16 @@ function ProjectDashboard({
               <h2>
                 Project documents <span>{documents.length}</span>
               </h2>
+              <button
+                type="button"
+                className="project-upload-button"
+                onClick={() => {
+                  setUploadOnly(true)
+                  setEditing(true)
+                }}
+              >
+                <Plus size={14} /> Upload documents
+              </button>
               <label className="project-filter">
                 <Search size={14} />
                 <input
@@ -515,13 +530,6 @@ function ProjectDashboard({
             {documents.length > 0 && !shown.length && (
               <Message text="No matching documents." />
             )}
-            <div className="project-collection-summary">
-              <BookOpen size={14} />
-              <span>
-                {data.collections.map((c) => c.title).join(' · ') ||
-                  'No Reference Collections selected'}
-              </span>
-            </div>
           </section>
           <aside className="project-sidebar">
             <button
@@ -696,6 +704,7 @@ function ProjectDashboard({
       {editing && (
         <ProjectEditor
           project={project}
+          uploadOnly={uploadOnly}
           existingDocuments={documents}
           onClose={() => {
             setEditing(false)
@@ -792,7 +801,6 @@ function QueryReader({
           ? undefined
           : () => navigate(`project/${data.project.id}/upload/${job.id}`)
       }
-      uploadNote="This example project is read-only. Create a new project to upload your own documents."
     />
   )
 }
@@ -824,13 +832,14 @@ function ProjectPage({
   const onQueryRoute = section === 'new' || (section === 'query' && !!record)
   // Keep the tab buttons mounted while navigation replaces the query pane.
   function withTabs(content: React.ReactNode) {
-    return onQueryRoute ? (
+    return (
       <div className="tabbed-workspace">
         {content}
-        <QueryTabBar tabs={tabs} />
+        <QueryTabBar
+          tabs={tabs}
+          dashboard={{ href: '#project/' + id, active: !onQueryRoute }}
+        />
       </div>
-    ) : (
-      content
     )
   }
   async function run(

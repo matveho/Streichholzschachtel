@@ -13,7 +13,7 @@ for (let i = 0; i < 120; i++) {
   if (i === 119) throw new Error('Backend not ready')
   await new Promise((r) => setTimeout(r, 250))
 }
-const browser = await chromium.launch({ channel: 'chrome', headless: true })
+const browser = await chromium.launch({ ...(process.env.BASIS_BROWSER_CHANNEL ? { channel: process.env.BASIS_BROWSER_CHANNEL } : {}), headless: true })
 mkdirSync('test-results', { recursive: true })
 try {
   const page = await browser.newPage({

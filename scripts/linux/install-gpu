@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Optional pinned Ollama runtime; keeps the backend in extractive mode.
+set -euo pipefail
+runtime="$HOME/.local/share/basis-runtime"
+version=0.40.15
+archive="$runtime/ollama-$version.tar.zst"
+mkdir -p "$runtime/ollama-$version" "$HOME/.config/systemd/user"
+if [ ! -f "$archive" ]; then
+ curl -fL --retry 2 "https://github.com/ollama/ollama/releases/download/v$version/ollama-linux-amd64.tar.zst" -o "$archive.partial"
+ mv "$archive.partial" "$archive"
+fi
+printf '628c018404a4206493efd38e46251c154ede5141b8b8dc85c659b3b027c47379  %s\n' "$archive" | sha256sum -c -
+tar --zstd -xf "$archive" -C "$runtime/ollama-$version"
+cat > "$HOME/.config/systemd/user/basis-ollama.service" <<UNIT
+[Unit]
+Description=basis local GPU inference (optional)
+[Service]
+ExecStart="$runtime/ollama-$version/bin/ollama" serve
+Environment=OLLAMA_HOST=127.0.0.1:11435
+Environment="OLLAMA_MODELS=$runtime/models"
+Environment=OLLAMA_NO_CLOUD=1
+Environment=OLLAMA_NUM_PARALLEL=1
+Environment=OLLAMA_MAX_LOADED_MODELS=1
+Environment=OLLAMA_CONTEXT_LENGTH=8192
+Environment=OLLAMA_KEEP_ALIVE=5m
+Restart=on-failure
+RestartSec=5
+UMask=0077
+UNIT
+systemctl --user daemon-reload
+printf 'Installed. Start with systemctl --user start basis-ollama. Model weights are downloaded separately.\n'

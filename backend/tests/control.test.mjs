@@ -12,7 +12,7 @@ test('control ports reject invalid values and protect model service ports', () =
     assert.throws(() => validPort(value))
   assert.equal(validPort('8787'), 8787)
 })
-test('restart controls recognize Basis servers and reject unrelated processes', () => {
+test('restart controls recognize basis servers and reject unrelated processes', () => {
   assert.equal(
     isBasisProcess(
       {
@@ -52,7 +52,7 @@ test('restart controls recognize Basis servers and reject unrelated processes', 
 test('frontend rebuilds stage separately and reject unowned output paths', () => {
   const paths = managedFrontendPaths('E:/Basis-model-cache/generated-frontend')
   assert.notEqual(paths.pointer, paths.legacy)
-  assert.equal(paths.buildRoot, 'E:\\Basis-model-cache')
+  assert.equal(paths.buildRoot, resolve('E:/Basis-model-cache'))
   assert.throws(() => managedFrontendPaths('C:/Windows/System32'))
   assert.throws(() =>
     managedFrontendPaths('E:/Basis-model-cache-not-owned/documents'),

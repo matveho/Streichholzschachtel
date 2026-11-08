@@ -78,7 +78,7 @@ async function locked(action, file = lockFile) {
     }
     if (alive)
       throw new Error(
-        'Another Basis start/stop operation is in progress. Try Status in a moment.',
+        'Another basis start/stop operation is in progress. Try Status in a moment.',
       )
     unlinkSync(file)
   }
@@ -290,7 +290,7 @@ async function ensureGateway(upgrade = false) {
       )
       return
     }
-    console.log('Updating the Basis gateway; the existing API stays running.')
+    console.log('Updating the basis gateway; the existing API stays running.')
     await stopRole('gateway', gatewayPort)
   }
   const state = load()
@@ -318,7 +318,7 @@ async function start(restart = false) {
       const owner = await portOwner(apiPort)
       if (!isBasisProcess(owner, 'api'))
         throw new Error(
-          'The existing service is not a recognized Basis process; it was left untouched.',
+          'The existing service is not a recognized basis process; it was left untouched.',
         )
       const state = load()
       state.processes.api = {
@@ -330,7 +330,7 @@ async function start(restart = false) {
       save(state)
       await ensureGateway()
       console.log(
-        'Basis is already running. Restart loads the latest source and documents.',
+        'basis is already running. Restart loads the latest source and documents.',
       )
       return
     }
@@ -506,7 +506,7 @@ async function publicConnection() {
     'C:/Program Files (x86)/cloudflared/cloudflared.exe'
   if (!existsSync(exe))
     throw new Error(
-      'cloudflared is missing. Local Basis still works; set CLOUDFLARED_PATH to enable HTTPS.',
+      'cloudflared is missing. Local basis still works; set CLOUDFLARED_PATH to enable HTTPS.',
     )
   const state = load()
   const log = resolve(logsDir, 'tunnel-error.log')
@@ -541,7 +541,7 @@ async function publicConnection() {
     }
   }
   throw new Error(
-    'HTTPS address not received yet. Local Basis still works. Inspect tunnel-error.log, then try again.',
+    'HTTPS address not received yet. Local basis still works. Inspect tunnel-error.log, then try again.',
   )
 }
 async function publishConnection() {
@@ -682,7 +682,7 @@ export async function main() {
   try {
     for (;;) {
       console.log(
-        '\n1 start   2 restart / index new documents   3 stop   4 status\n5 open Basis   6 troubleshoot   7 open logs   8 rebuild interface\n9 switch offline / local review   D repair dependencies\nT check demo readiness   H HTTPS connection   P publish site connection   Q close controls',
+        '\n1 start   2 restart / index new documents   3 stop   4 status\n5 open basis   6 troubleshoot   7 open logs   8 rebuild interface\n9 switch offline / local review   D repair dependencies\nT check demo readiness   H HTTPS connection   P publish site connection   Q close controls',
       )
       const choice = (await rl.question('\nBasis > ')).trim().toLowerCase()
       try {

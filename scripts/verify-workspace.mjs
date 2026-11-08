@@ -10,7 +10,7 @@ try {
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.goto('http://127.0.0.1:5173/')
-  assert.equal(await page.title(), 'Basis')
+  assert.equal(await page.title(), 'basis')
   assert.equal(
     await page.locator('link[rel="icon"]').getAttribute('href'),
     '/basis.svg',
@@ -301,7 +301,7 @@ try {
   assert.ok(await page.locator('.query-report section').last().isVisible())
   assert.deepEqual(errors, [])
   console.log(
-    'PASS: Basis branding, vertical reports, sentence citations, variable report lengths and headings, expand/restore, minimaps, PDF navigation, zoom, resize, clipboard, query states, mobile overflow, and browser errors.',
+    'PASS: basis branding, vertical reports, sentence citations, variable report lengths and headings, expand/restore, minimaps, PDF navigation, zoom, resize, clipboard, query states, mobile overflow, and browser errors.',
   )
 } finally {
   await browser.close()

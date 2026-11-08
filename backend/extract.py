@@ -20,14 +20,17 @@ def ocr_words(page):
         raise RuntimeError('This PDF needs OCR. Install Tesseract or set TESSERACT_PATH.')
     dpi = 200
     image = page.get_pixmap(dpi=dpi, alpha=False)
-    process = subprocess.run([tesseract, 'stdin', 'stdout', '-l', 'eng', '--psm', '3', 'tsv'],
+    process = subprocess.run([tesseract, 'stdin', 'stdout', '-l', 'eng', '--psm', '3', '-c', 'tessedit_create_tsv=1'],
         input=image.tobytes('png'), capture_output=True, timeout=90,
         env={**os.environ, 'OMP_THREAD_LIMIT': '2'},
         creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
     if process.returncode:
         raise RuntimeError('Local OCR failed for a PDF page.')
+    reader = csv.DictReader(io.StringIO(process.stdout.decode('utf-8')), delimiter='\t')
+    if not {'level', 'text', 'left', 'top', 'width', 'height', 'conf'}.issubset(reader.fieldnames or []):
+        raise RuntimeError('Local OCR did not return the required TSV word geometry.')
     result = []
-    for row in csv.DictReader(io.StringIO(process.stdout.decode('utf-8')), delimiter='\t'):
+    for row in reader:
         if row.get('level') != '5' or not row.get('text', '').strip():
             continue
         x, y, width, height = [float(row[key]) * 72 / dpi for key in ['left', 'top', 'width', 'height']]

@@ -6,11 +6,13 @@ import type { Project, ProjectDocument, Collection } from './projects'
 
 export function ProjectEditor({
   project,
+  uploadOnly = false,
   existingDocuments = [],
   onClose,
   onSaved,
 }: {
   project?: Project
+  uploadOnly?: boolean
   existingDocuments?: ProjectDocument[]
   onClose: () => void
   onSaved: (id: string) => void
@@ -108,18 +110,23 @@ export function ProjectEditor({
     setError('')
     setProgress('Saving project…')
     try {
-      const response = await requestProject(
-        createdId.current ? projectPath(createdId.current) : '/v1/projects',
-        createdId.current ? 'PATCH' : 'POST',
-        {
-          name,
-          client,
-          location,
-          description: automatic ? '' : description,
-          collectionIds: collections,
-          documentIds: documents,
-        },
-      )
+      const response =
+        uploadOnly && project
+          ? { project }
+          : await requestProject(
+              createdId.current
+                ? projectPath(createdId.current)
+                : '/v1/projects',
+              createdId.current ? 'PATCH' : 'POST',
+              {
+                name,
+                client,
+                location,
+                description: automatic ? '' : description,
+                collectionIds: collections,
+                documentIds: documents,
+              },
+            )
       createdId.current = response.project.id
       setSavedId(response.project.id)
       for (let i = 0; i < files.length; i++) {
@@ -172,7 +179,11 @@ export function ProjectEditor({
       >
         <div className="project-modal-heading">
           <h1 id="project-editor-title">
-            {project || savedId ? 'Manage project' : 'New project'}
+            {uploadOnly
+              ? 'Upload documents'
+              : project || savedId
+                ? 'Manage project'
+                : 'New project'}
           </h1>
           <button
             type="button"
@@ -184,133 +195,139 @@ export function ProjectEditor({
           </button>
         </div>
         <form onSubmit={save}>
-          <label className="project-name-field">
-            Project name
-            <input
-              ref={nameInput}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              maxLength={100}
-            />
-          </label>
-          <div className="collection-search" ref={collectionPicker}>
-            <Search size={15} />
-            <input
-              role="combobox"
-              aria-label="Reference Collections"
-              aria-expanded={open}
-              aria-controls="collection-options"
-              placeholder="Add reference collection…"
-              value={search}
-              onFocus={() => setOpen(true)}
-              onChange={(e) => {
-                setSearch(e.target.value)
-                setOpen(true)
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape' && open) {
-                  setOpen(false)
-                  e.stopPropagation()
-                }
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  const first = catalog?.collections.find(
-                    (c) =>
-                      !collections.includes(c.id) &&
-                      `${c.title} ${c.authority} ${c.jurisdiction}`
-                        .toLowerCase()
-                        .includes(search.toLowerCase()),
-                  )
-                  if (open && first) toggleCollection(first, true)
-                }
-              }}
-            />
-            {open && (
-              <div
-                className="collection-results"
-                id="collection-options"
-                role="listbox"
-              >
-                {catalog?.collections
-                  .filter(
-                    (c) =>
-                      !collections.includes(c.id) &&
-                      `${c.title} ${c.authority} ${c.jurisdiction}`
-                        .toLowerCase()
-                        .includes(search.toLowerCase()),
-                  )
-                  .map((c) => (
+          <div hidden={uploadOnly}>
+            <label className="project-name-field">
+              Project name
+              <input
+                ref={nameInput}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                maxLength={100}
+              />
+            </label>
+            <div className="collection-search" ref={collectionPicker}>
+              <Search size={15} />
+              <input
+                role="combobox"
+                aria-label="Reference Collections"
+                aria-expanded={open}
+                aria-controls="collection-options"
+                placeholder="Add reference collection…"
+                value={search}
+                onFocus={() => setOpen(true)}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setOpen(true)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape' && open) {
+                    setOpen(false)
+                    e.stopPropagation()
+                  }
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    const first = catalog?.collections.find(
+                      (c) =>
+                        !collections.includes(c.id) &&
+                        `${c.title} ${c.authority} ${c.jurisdiction}`
+                          .toLowerCase()
+                          .includes(search.toLowerCase()),
+                    )
+                    if (open && first) toggleCollection(first, true)
+                  }
+                }}
+              />
+              {open && (
+                <div
+                  className="collection-results"
+                  id="collection-options"
+                  role="listbox"
+                >
+                  {catalog?.collections
+                    .filter(
+                      (c) =>
+                        !collections.includes(c.id) &&
+                        `${c.title} ${c.authority} ${c.jurisdiction}`
+                          .toLowerCase()
+                          .includes(search.toLowerCase()),
+                    )
+                    .map((c) => (
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={false}
+                        key={c.id}
+                        onClick={() => toggleCollection(c, true)}
+                      >
+                        <Plus size={14} />
+                        <span>
+                          {c.authority}
+                          <strong>{c.title}</strong>
+                        </span>
+                        <small>{c.documentCount}</small>
+                      </button>
+                    ))}
+                  {!catalog && <div>Loading…</div>}
+                </div>
+              )}
+            </div>
+            <div className="selected-collections">
+              {catalog?.collections
+                .filter((c) => collections.includes(c.id))
+                .map((c) => (
+                  <span key={c.id}>
+                    {c.title}
                     <button
                       type="button"
-                      role="option"
-                      aria-selected={false}
-                      key={c.id}
-                      onClick={() => toggleCollection(c, true)}
+                      aria-label={'Remove collection ' + c.title}
+                      onClick={() => toggleCollection(c, false)}
                     >
-                      <Plus size={14} />
-                      <span>
-                        {c.authority}
-                        <strong>{c.title}</strong>
-                      </span>
-                      <small>{c.documentCount}</small>
+                      <X size={12} />
                     </button>
-                  ))}
-                {!catalog && <div>Loading…</div>}
-              </div>
-            )}
-          </div>
-          <div className="selected-collections">
-            {catalog?.collections
-              .filter((c) => collections.includes(c.id))
-              .map((c) => (
-                <span key={c.id}>
-                  {c.title}
-                  <button
-                    type="button"
-                    aria-label={'Remove collection ' + c.title}
-                    onClick={() => toggleCollection(c, false)}
-                  >
-                    <X size={12} />
-                  </button>
-                </span>
-              ))}
-          </div>
-          <div className="selected-documents" aria-label="Selected documents">
-            {allDocuments
-              .filter(
-                (d) =>
-                  collections.some((id) =>
-                    catalog?.collections
-                      .find((c) => c.id === id)
-                      ?.documentIds.includes(d.id),
-                  ) ||
-                  existingDocuments.some(
-                    (x) => x.id === d.id && x.projectArtifact,
-                  ),
-              )
-              .map((d) => (
-                <label className="collection-document" key={d.id}>
-                  <input
-                    type="checkbox"
-                    checked={documents.includes(d.id)}
-                    onChange={(e) =>
-                      setDocuments((ids) =>
-                        e.target.checked
-                          ? [...new Set([...ids, d.id])]
-                          : ids.filter((id) => id !== d.id),
-                      )
-                    }
-                  />
-                  <span>
-                    {d.title}
-                    <small>{d.edition}</small>
                   </span>
-                </label>
-              ))}
+                ))}
+            </div>
+            <div className="selected-documents" aria-label="Selected documents">
+              {allDocuments
+                .filter(
+                  (d) =>
+                    collections.some((id) =>
+                      catalog?.collections
+                        .find((c) => c.id === id)
+                        ?.documentIds.includes(d.id),
+                    ) ||
+                    existingDocuments.some(
+                      (x) => x.id === d.id && x.projectArtifact,
+                    ),
+                )
+                .map((d) => (
+                  <label className="collection-document" key={d.id}>
+                    <input
+                      type="checkbox"
+                      checked={documents.includes(d.id)}
+                      onChange={(e) =>
+                        setDocuments((ids) =>
+                          e.target.checked
+                            ? [...new Set([...ids, d.id])]
+                            : ids.filter((id) => id !== d.id),
+                        )
+                      }
+                    />
+                    <span>
+                      {d.title}
+                      <small>{d.edition}</small>
+                    </span>
+                  </label>
+                ))}
+            </div>
           </div>
           <div className="project-import-actions">
-            <button type="button" onClick={() => fileInput.current?.click()}>
+            <button
+              type="button"
+              autoFocus={uploadOnly}
+              onClick={() => fileInput.current?.click()}
+            >
               <FilePlus size={14} />
               Add PDFs
             </button>
@@ -367,7 +384,7 @@ export function ProjectEditor({
               ))}
             </ul>
           )}
-          <details className="project-details-fields">
+          <details className="project-details-fields" hidden={uploadOnly}>
             <summary>Project details</summary>
             <div className="project-form-fields">
               <label>
@@ -429,13 +446,18 @@ export function ProjectEditor({
             </button>
             <button
               className="primary-action"
-              disabled={!name.trim() || !!progress || !catalog}
+              disabled={
+                !!progress ||
+                (uploadOnly ? files.length === 0 : !name.trim() || !catalog)
+              }
             >
               {progress
                 ? 'Saving…'
-                : project || savedId
-                  ? 'Save project'
-                  : 'Create project'}
+                : uploadOnly
+                  ? 'Upload and index'
+                  : project || savedId
+                    ? 'Save project'
+                    : 'Create project'}
             </button>
           </footer>
         </form>

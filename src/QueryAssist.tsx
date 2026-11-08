@@ -1,15 +1,15 @@
 import { useState } from 'react'
 import {
   ArrowUpRight,
-  BookOpen,
+  ListFilter,
   CornerDownLeft,
   FileUp,
-  MessageCircleQuestion,
+  SlidersHorizontal,
   PencilLine,
   SearchX,
 } from 'lucide-react'
 import type { QueryAssist as Assist, QuerySuggestion } from './backend'
-import { maxRounds, outcomeOf } from './assist'
+import { outcomeOf } from './assist'
 import type { ThreadTurn } from './assist'
 
 function Refine({
@@ -23,7 +23,7 @@ function Refine({
   onRefine: (question: string, choice: string) => void
   autoFocus?: boolean
 }) {
-  const [detail, setDetail] = useState('')
+  const [detail, setDetail] = useState(question)
   return (
     <form
       className="assist-refine"
@@ -31,19 +31,23 @@ function Refine({
         e.preventDefault()
         const extra = detail.trim()
         if (!extra) return
-        onRefine(`${question.trim().replace(/[?.!\s]+$/, '')}, ${extra}`, extra)
+        if (extra === question.trim()) return
+        onRefine(extra, 'Search revised')
       }}
     >
       <input
-        aria-label="Add detail to your question"
+        aria-label="Revised search"
         placeholder={placeholder}
         value={detail}
         autoFocus={autoFocus}
-        maxLength={300}
+        maxLength={2000}
         onChange={(e) => setDetail(e.target.value)}
       />
-      <button type="submit" disabled={!detail.trim()}>
-        Ask
+      <button
+        type="submit"
+        disabled={!detail.trim() || detail.trim() === question.trim()}
+      >
+        Run search
         <CornerDownLeft size={13} />
       </button>
     </form>
@@ -57,26 +61,47 @@ function Clarifications({
   assist?: Assist
   onRefine: (question: string, choice: string) => void
 }) {
+  const [selected, setSelected] = useState<{
+    question: string
+    label: string
+  } | null>(null)
   if (!assist?.clarifications.length) return null
   return (
-    <div className="assist-clarifications">
+    <form
+      className="assist-clarifications"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (selected) onRefine(selected.question, selected.label)
+      }}
+    >
       {assist.clarifications.map((c) => (
-        <div className="assist-choice" key={c.question}>
-          <span>{c.question}</span>
-          <div role="group" aria-label={c.question}>
+        <fieldset className="assist-choice" key={c.question}>
+          <legend>
+            {/system/i.test(c.question)
+              ? 'System'
+              : /development/i.test(c.question)
+                ? 'Development type'
+                : 'Search parameter'}
+          </legend>
+          <div className="assist-options">
             {c.options.map((option) => (
-              <button
-                key={option.label}
-                type="button"
-                onClick={() => onRefine(option.question, option.label)}
-              >
+              <label key={option.question}>
+                <input
+                  type="radio"
+                  name="search-parameter"
+                  checked={selected?.question === option.question}
+                  onChange={() => setSelected(option)}
+                />
                 {option.label}
-              </button>
+              </label>
             ))}
           </div>
-        </div>
+        </fieldset>
       ))}
-    </div>
+      <button type="submit" className="assist-apply" disabled={!selected}>
+        Apply and search
+      </button>
+    </form>
   )
 }
 
@@ -135,7 +160,7 @@ function Alternatives({
 }
 
 /**
- * Conversational help shown above a query result: close alternatives, the
+ * Search refinement shown above a query result: close alternatives, the
  * parameters still missing, or why nothing matched and what to upload. It
  * never adds engineering content of its own.
  */
@@ -144,42 +169,34 @@ export function QueryAssist({
   assist,
   question,
   suggestions = [],
-  rounds,
   inProject,
   onRefine,
   onRephrase,
   onUpload,
-  uploadNote,
 }: {
   mode: string
   assist?: Assist
   question: string
   /** Related source queries from the backend, shown as "did you mean". */
   suggestions?: QuerySuggestion[]
-  rounds: number
   inProject: boolean
   onRefine: (question: string, choice: string) => void
   onRephrase: () => void
   onUpload?: () => void
-  uploadNote: string
 }) {
-  const [refining, setRefining] = useState(false)
   const outcome = outcomeOf(mode, assist)
-  const asking = rounds < maxRounds
   const where = inProject ? "this project's documents" : 'the indexed standards'
   const actions = (
     <div className="assist-actions">
-      {onUpload ? (
+      {onUpload && (
         <button type="button" className="assist-primary" onClick={onUpload}>
           <FileUp size={14} />
           Upload documents
         </button>
-      ) : (
-        <span className="assist-note">{uploadNote}</span>
       )}
       <button type="button" onClick={onRephrase}>
         <PencilLine size={14} />
-        Rephrase question
+        Edit search
       </button>
     </div>
   )
@@ -189,23 +206,24 @@ export function QueryAssist({
       <section
         className="assist"
         role="status"
-        aria-label="Not an engineering question"
+        aria-label="Search not recognized"
       >
         <h2>
-          <BookOpen size={16} />
-          Basis searches engineering design standards
+          <ListFilter size={16} />
+          Search not recognized
         </h2>
         <p>
-          “{question}” doesn’t look like an engineering question, so there is
-          nothing in {where} to match it against. Basis answers questions about
-          municipal engineering requirements (drainage, water, roads, bridges,
-          lighting) and cites the source page for every answer. It works best
-          with specific technical terms: the element, the requirement and the
-          condition.
+          No engineering topic was identified in “{question}”. Specify an asset
+          and requirement, such as storm service minimum slope.
         </p>
+        <div className="assist-actions">
+          <button type="button" onClick={onRephrase}>
+            <PencilLine size={14} /> Edit search
+          </button>
+        </div>
         {!!assist?.examples?.length && (
           <div className="assist-details">
-            <span>Try a question like:</span>
+            <span>Example searches</span>
             <ul className="assist-examples">
               {assist.examples.map((example) => (
                 <li key={example}>
@@ -224,56 +242,25 @@ export function QueryAssist({
       </section>
     )
 
-  if (outcome === 'answered') {
-    const chips = asking && !!assist?.clarifications.length
-    return (
-      <section className="assist assist-inline" aria-label="Refine this result">
-        {chips && <Clarifications assist={assist} onRefine={onRefine} />}
-        {!!assist?.details.length && (
-          <p className="assist-precision">
-            For a more precise answer, state{' '}
-            {assist.details
-              .map((d) => d.replace(/\.$/, '').replace(/^The /, 'the '))
-              .join('; ')}
-            .
-          </p>
-        )}
-        {refining ? (
-          <Refine
-            question={question}
-            autoFocus
-            placeholder="Add the missing detail, e.g. 300 mm sanitary sewer"
-            onRefine={onRefine}
-          />
-        ) : (
-          <button
-            type="button"
-            className="assist-link"
-            onClick={() => setRefining(true)}
-          >
-            Not what you meant?
-          </button>
-        )}
-      </section>
-    )
-  }
+  if (outcome === 'answered') return null
 
   if (outcome === 'vague')
     return (
       <section
         className="assist"
         role="status"
-        aria-label="Question needs detail"
+        aria-label="Search parameters required"
       >
         <h2>
-          <MessageCircleQuestion size={16} />
-          Add detail for a sourced answer
+          <SlidersHorizontal size={16} />
+          Specify search parameters
         </h2>
         <p>
-          A search this short matches too many provisions to give a reliable
-          answer, so the result below is only the closest match.
+          Specify the asset, requirement and applicable condition to narrow the
+          search. Any related provisions below require an applicability review.
         </p>
-        <Details details={assist?.details} lead="Specify:" />
+        <Clarifications assist={assist} onRefine={onRefine} />
+        <Details details={assist?.details} lead="Search parameters" />
         <Refine
           question={question}
           placeholder="e.g. minimum slope for a 150 mm storm service"
@@ -291,15 +278,14 @@ export function QueryAssist({
       >
         <h2>
           <SearchX size={16} />
-          Outside the indexed jurisdiction:{' '}
+          Jurisdiction outside search scope:{' '}
           {assist?.jurisdiction ?? 'another municipality'}
         </h2>
         <p>
-          The indexed documents are City of Edmonton (EPCOR) standards. Their
-          values can’t be applied as{' '}
-          {assist?.jurisdiction ?? 'another municipality'}’s requirements.
-          Upload that municipality’s standards to search them, or restate the
-          question for Edmonton.
+          The selected references do not establish requirements for{' '}
+          {assist?.jurisdiction ?? 'this jurisdiction'}. Select the applicable
+          reference collection in the project settings, add its standards, or
+          revise the location.
         </p>
         {actions}
       </section>
@@ -310,24 +296,22 @@ export function QueryAssist({
       <section
         className="assist assist-warning"
         role="status"
-        aria-label="Nothing found"
+        aria-label="No matching provisions found"
       >
         <h2>
           <SearchX size={16} />
-          Sorry, no provision in {where} addresses this
+          No matching provisions found
         </h2>
         <p>
-          {assist?.missing
-            ? `This is typically governed by ${assist.missing}, which isn’t in the database.`
-            : 'The governing standard or report may not be in the database yet.'}{' '}
-          Try uploading the required document if necessary, or restate the
-          question with the specific element, parameter and condition.
+          No supported answer was identified in {where}.
+          {assist?.missing && ` Potential source gap: ${assist.missing}.`}{' '}
+          Review document coverage before revising the search.
         </p>
-        <Details details={assist?.details} lead="It may also help to state:" />
+        <Details details={assist?.details} lead="Search parameters" />
         {actions}
         <Refine
           question={question}
-          placeholder="Or add detail to your question"
+          placeholder="Asset, requirement and condition"
           onRefine={onRefine}
         />
       </section>
@@ -335,37 +319,23 @@ export function QueryAssist({
 
   // partial: the closest related source text follows below this card.
   return (
-    <section
-      className="assist"
-      role="status"
-      aria-label="Narrow down the question"
-    >
+    <section className="assist" role="status" aria-label="Refine search">
       <h2>
-        <MessageCircleQuestion size={16} />
-        No direct answer. Did you mean one of these?
+        <SlidersHorizontal size={16} />
+        Search refinement required
       </h2>
       <p>
         No provision in {where} states this directly. The closest related source
         text is below; confirm it applies before relying on it.
         {assist?.missing &&
-          ` A direct answer probably needs ${assist.missing}, which isn’t in the database.`}
+          ` Potential source gap: ${assist.missing}, not identified in the selected documents.`}
       </p>
-      {asking ? (
-        <Alternatives
-          assist={assist}
-          suggestions={suggestions}
-          onRefine={onRefine}
-        />
-      ) : (
-        <p className="assist-note">
-          Still no direct answer after narrowing. The governing document may not
-          be uploaded yet.
-        </p>
-      )}
-      <Details
-        details={assist?.details}
-        lead="To get a direct answer, specify:"
+      <Alternatives
+        assist={assist}
+        suggestions={suggestions}
+        onRefine={onRefine}
       />
+      <Details details={assist?.details} lead="Search parameters" />
       <Refine
         question={question}
         placeholder="Add detail, e.g. pipe diameter, land use or document"
@@ -376,13 +346,13 @@ export function QueryAssist({
   )
 }
 
-/** Earlier steps of this tab's conversation, oldest first. */
+/** Previous search revisions, oldest first. */
 export function QueryThread({ thread }: { thread: ThreadTurn[] }) {
   const [showAll, setShowAll] = useState(false)
   if (!thread.length) return null
   const hidden = showAll ? 0 : Math.max(0, thread.length - 3)
   return (
-    <ol className="query-thread" aria-label="Conversation so far">
+    <ol className="query-thread" aria-label="Search revision history">
       {hidden > 0 && (
         <li>
           <button
@@ -390,7 +360,7 @@ export function QueryThread({ thread }: { thread: ThreadTurn[] }) {
             className="thread-more"
             onClick={() => setShowAll(true)}
           >
-            Show {hidden} earlier {hidden === 1 ? 'question' : 'questions'}
+            Show {hidden} earlier {hidden === 1 ? 'search' : 'searches'}
           </button>
         </li>
       )}

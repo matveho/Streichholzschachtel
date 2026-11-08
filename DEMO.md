@@ -1,6 +1,6 @@
 # Two-minute walkthrough
 
-Open [Basis](https://streichholzschachtel.vercel.app/#projects) or choose **5** in the local launcher.
+Open [basis](https://streichholzschachtel.vercel.app/#projects) or choose **5** in the local launcher.
 
 1. Open **Parkview Exchange Redevelopment**. Point out the client brief, servicing drawings and EPCOR references in one workspace.
 2. In **Potential issues**, inspect the sanitary grade finding. Select the table citation, then the drawing citation. Show where the upstream flow band and proposed slope appear in the original files.

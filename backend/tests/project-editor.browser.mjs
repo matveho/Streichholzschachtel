@@ -1,14 +1,15 @@
+import { integrationOrigin, launchIntegrationBrowser } from './vercel-routing.mjs'
 import { chromium, expect } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { mkdirSync, copyFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 const root = fileURLToPath(new URL('..', import.meta.url)),
-  origin = process.env.BASIS_FRONTEND_URL || 'http://127.0.0.1:8842/app'
+  origin = integrationOrigin(process.env.BASIS_FRONTEND_URL || 'http://127.0.0.1:8842/app')
 const folder = resolve(root, 'state/ui-test-files')
 assert.ok(
   process.env.BASIS_TEST_DEMO_EDITS === '0' ||
-    ['http://127.0.0.1:8842', 'http://localhost:8842'].includes(
+    [...(process.env.BASIS_VERCEL_UI === '1' ? ['https://streichholzschachtel.vercel.app'] : []), 'http://127.0.0.1:8842', 'http://localhost:8842'].includes(
       new URL(origin).origin,
     ),
   'Destructive demo checks require the isolated preview; use BASIS_TEST_DEMO_EDITS=0 for non-reset checks elsewhere',
@@ -23,7 +24,7 @@ copyFileSync(
   resolve(folder, 'site-report.pdf'),
 )
 writeFileSync(resolve(folder, 'readme.txt'), 'Excluded from PDF import')
-const browser = await chromium.launch({ channel: 'chrome', headless: true })
+const browser = await launchIntegrationBrowser(chromium)
 let createdId
 try {
   const page = await browser.newPage({
@@ -208,6 +209,7 @@ try {
   await expect(page.locator('.live-mode')).toHaveCount(0)
   await page
     .getByRole('link', { name: 'Project dashboard', exact: true })
+    .first()
     .click()
   await page
     .getByRole('heading', { name: 'Import retry review', exact: true })

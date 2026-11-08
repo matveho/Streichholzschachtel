@@ -1,4 +1,4 @@
-# Basis backend
+# basis backend
 
 The local Node service stores each project's document associations and query history. Before searching, it limits the index to the selected project's files. Answers carry a document ID, PDF page and highlight coordinates so the frontend can take the reader back to the evidence.
 
@@ -11,7 +11,7 @@ python -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Install Tesseract with English language data to search scanned pages. Launch **Start Basis.cmd** from the repository root. Choose **2** to restart and reindex, **4** for status, or **T** to check the presentation. [Launcher controls](CONTROLS.md)
+Install Tesseract with English language data to search scanned pages. Launch **Start basis.cmd** from the repository root. Choose **2** to restart and reindex, **4** for status, or **T** to check the presentation. [Launcher controls](CONTROLS.md)
 
 ## Files and data
 

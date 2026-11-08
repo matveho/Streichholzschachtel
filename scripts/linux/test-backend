@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# A separate state directory prevents lifecycle tests touching presentation data.
+set -euo pipefail
+cd "$(dirname "$0")/../.."
+repo="$PWD"
+export BASIS_STATE_DIR
+BASIS_STATE_DIR=$(mktemp -d "$repo/backend/state/verification/run-XXXXXXXX")
+export PDF_CACHE_DIR="$repo/backend/state"
+export TESSERACT_PATH="$HOME/.local/share/basis-ocr/usr/bin/tesseract"
+export TESSDATA_PREFIX="$HOME/.local/share/basis-ocr/usr/share/tesseract-ocr/5/tessdata"
+export BASIS_TEST_URL=http://127.0.0.1:8810
+printf 'Verification state and logs: %s\n' "$BASIS_STATE_DIR"
+backend/.venv/bin/python backend/tests/ocr-output.test.py > "$BASIS_STATE_DIR/ocr.log" 2>&1
+node --test --test-concurrency=1 backend/tests/*.test.mjs > "$BASIS_STATE_DIR/unit.log" 2>&1
+PORT=8810 EXTRACTIVE_ONLY=1 GENERATION_PROVIDER=extractive node backend/src/server.mjs > "$BASIS_STATE_DIR/server.log" 2>&1 &
+server_pid=$!
+trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' EXIT
+wait_ready() {
+node --input-type=module - <<'JS'
+for (let i=0;i<300;i++) {
+  try {
+    const h=await (await fetch(process.env.BASIS_TEST_URL+'/health')).json();
+    if(h.ready) { if(h.failures) throw new Error('Index has failures'); process.exit(0); }
+  } catch(e) { if(e.message==='Index has failures') throw e; }
+  await new Promise(r=>setTimeout(r,1000));
+}
+throw new Error('Isolated backend did not become ready');
+JS
+}
+wait_ready
+kill -0 "$server_pid"
+node --test backend/tests/projects.integration.mjs > "$BASIS_STATE_DIR/projects.log" 2>&1
+node backend/tests/linux-lifecycle.integration.mjs prepare > "$BASIS_STATE_DIR/lifecycle.log" 2>&1
+kill "$server_pid"
+wait "$server_pid" || true
+PORT=8810 EXTRACTIVE_ONLY=1 GENERATION_PROVIDER=extractive node backend/src/server.mjs >> "$BASIS_STATE_DIR/server.log" 2>&1 &
+server_pid=$!
+wait_ready
+kill -0 "$server_pid"
+node backend/tests/linux-lifecycle.integration.mjs verify >> "$BASIS_STATE_DIR/lifecycle.log" 2>&1
+printf 'PASS unit suite, isolated project API, imports, isolation and restart persistence checks\n' 
