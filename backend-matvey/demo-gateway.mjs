@@ -1,6 +1,7 @@
 import http from 'node:http'
 import { readFileSync, existsSync, statSync, createReadStream } from 'node:fs'
 import { Readable } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
 import { resolve, sep, extname } from 'node:path'
 import { readFrontendLocation } from './src/frontend-location.mjs'
 
@@ -29,7 +30,7 @@ http
         res.end(
           JSON.stringify({
             service: 'basis-gateway',
-            version: 4,
+            version: 5,
             targetPort: Number(targetUrl.port),
           }),
         )
@@ -71,7 +72,7 @@ http
           'Content-Length': statSync(file).size,
           'Cache-Control': 'no-cache',
         })
-        createReadStream(file).pipe(res)
+        await pipeline(createReadStream(file), res)
         return
       }
       const allowed =
@@ -109,7 +110,9 @@ http
         ...(['POST', 'PATCH'].includes(req.method)
           ? { body: req, duplex: 'half' }
           : {}),
-        signal: AbortSignal.timeout(30000),
+        signal: AbortSignal.timeout(
+          url.pathname.endsWith('/file') ? 120000 : 30000,
+        ),
       })
       res.statusCode = upstream.status
       res.setHeader('Cache-Control', 'no-store')
@@ -128,9 +131,14 @@ http
         }
         rewrite(data)
         res.end(JSON.stringify(data))
-      } else if (upstream.body) Readable.fromWeb(upstream.body).pipe(res)
+      } else if (upstream.body)
+        await pipeline(Readable.fromWeb(upstream.body), res)
       else res.end()
     } catch {
+      if (res.headersSent || res.destroyed) {
+        res.destroy()
+        return
+      }
       if (!res.headersSent)
         res.writeHead(502, { 'Content-Type': 'application/json' })
       res.end(

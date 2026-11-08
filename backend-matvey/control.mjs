@@ -280,7 +280,7 @@ async function ensureGateway(upgrade = false) {
     const version = await probe(gatewayBase, '/_basis/gateway')
     if (
       version?.service === 'basis-gateway' &&
-      version.version >= 4 &&
+      version.version >= 5 &&
       version.targetPort === apiPort
     )
       return
