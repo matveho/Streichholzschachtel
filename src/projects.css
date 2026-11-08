@@ -4,14 +4,22 @@
   display: flex;
   flex-direction: column;
   overflow: auto;
-  background: #202328;
+  background: var(--color-background);
 }
 .project-header {
   position: sticky;
   top: 0;
   z-index: 5;
-  background: #282d33;
-  border-bottom: 1px solid #3e4650;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.project-brand img {
+  object-fit: contain;
+}
+.query-files {
+  width: 100%;
+  min-height: 44px;
+  font-size: 15px;
 }
 .project-brand {
   display: flex;
@@ -25,8 +33,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #aeb9c5;
-  font-size: 12px;
+  color: var(--color-secondary);
+  font-size: 14px;
 }
 .workspace-context {
   max-width: 40vw;
@@ -61,22 +69,22 @@ button.primary-action:hover {
 }
 .project-page-heading h1 {
   margin: 5px 0 6px;
-  font-size: 23px;
+  font-size: 24px;
   font-weight: 500;
-  color: #edf2f6;
+  color: var(--color-text);
 }
 .project-page-heading p,
 .project-scope {
   margin: 0;
-  color: #9eacba;
+  color: var(--color-secondary);
   line-height: 1.6;
 }
 .project-back {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #9eacba;
-  font-size: 12px;
+  color: var(--color-secondary);
+  font-size: 14px;
   text-decoration: none;
 }
 .projects-overview,
@@ -96,53 +104,53 @@ button.primary-action:hover {
   display: flex;
   flex-direction: column;
   padding: 21px 22px 17px;
-  border: 1px solid #414b55;
-  background: #292e35;
+  border: 1px solid var(--line);
+  background: var(--surface);
   border-radius: 4px;
   text-decoration: none;
   min-height: 250px;
 }
 .project-card:hover {
   border-color: #73b5ad;
-  background: #2c333a;
+  background: var(--surface);
 }
 .project-card-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: #8dbbb5;
+  color: var(--color-secondary);
   margin-bottom: 20px;
 }
 .project-badge {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 10px;
-  color: #b5c8cf;
-  border: 1px solid #4a5a65;
+  font-size: 12px;
+  color: var(--color-text);
+  border: 1px solid var(--line);
   padding: 3px 6px;
   border-radius: 2px;
   white-space: nowrap;
 }
 .project-discipline {
-  font-size: 11px;
-  color: #8cafc0;
+  font-size: 13px;
+  color: var(--color-secondary);
   margin-bottom: 6px;
 }
 .project-card h2 {
   margin: 0 0 9px;
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 500;
 }
 .project-card p {
   margin: 0 0 12px;
   line-height: 1.65;
-  color: #aebac7;
+  color: var(--color-secondary);
   max-width: 75ch;
 }
 .project-card p.project-client {
-  color: #d1dbe3;
-  font-size: 12px;
+  color: var(--color-text);
+  font-size: 14px;
 }
 .project-card-footer {
   display: flex;
@@ -151,18 +159,18 @@ button.primary-action:hover {
   gap: 12px;
   margin-top: auto;
   padding-top: 13px;
-  color: #a9bbc5;
-  border-top: 1px solid #ffffff12;
-  font-size: 12px;
+  color: var(--color-secondary);
+  border-top: 1px solid #01193612;
+  font-size: 14px;
 }
 .project-filter {
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid #444e59;
+  border: 1px solid var(--line);
   border-radius: 3px;
   padding: 6px 9px;
-  color: #91a0ae;
+  color: var(--color-secondary);
 }
 .project-filter input {
   width: 200px;
@@ -171,14 +179,14 @@ button.primary-action:hover {
   background: transparent;
   border: 0;
   outline: none;
-  font-size: 12px;
+  font-size: 14px;
 }
 .project-context-count {
-  color: #afc6cc;
-  border-left: 2px solid #548d89;
+  color: var(--color-secondary);
+  border-left: 2px solid var(--line-strong);
   padding: 8px 11px;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 14px;
 }
 .project-scope {
   max-width: 110ch;
@@ -191,8 +199,8 @@ button.primary-action:hover {
   align-items: start;
 }
 .project-panel {
-  background: #282d34;
-  border: 1px solid #404852;
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -203,17 +211,17 @@ button.primary-action:hover {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid #3b434c;
+  border-bottom: 1px solid var(--line);
 }
 .project-panel-heading h2 {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
   margin: 0;
   white-space: nowrap;
 }
 .project-panel-heading h2 span,
 .project-document-group h3 span {
-  color: #8d9ba8;
+  color: var(--color-secondary);
   margin-left: 7px;
   font-weight: 400;
 }
@@ -222,26 +230,26 @@ button.primary-action:hover {
   display: flex;
   gap: 3px;
   padding: 8px 10px;
-  border-bottom: 1px solid #3b434c;
+  border-bottom: 1px solid var(--line);
   overflow: auto;
 }
 .document-category-filter button,
 .project-panel-tabs button {
   padding: 5px 8px;
   white-space: nowrap;
-  color: #a6b4c1;
-  font-size: 11px;
+  color: var(--color-secondary);
+  font-size: 13px;
 }
 .project-panel button.selected {
   background: #46847c2e;
-  color: #b9e3db;
+  color: var(--color-text);
 }
 .project-document-group h3 {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.65px;
-  color: #93a4b4;
+  color: var(--color-secondary);
   margin: 0;
   padding: 16px 15px 7px;
 }
@@ -251,7 +259,7 @@ button.primary-action:hover {
   gap: 11px;
   padding: 12px 15px;
   text-decoration: none;
-  border-bottom: 1px solid #ffffff0a;
+  border-bottom: 1px solid #0119360a;
 }
 .project-document-entry {
   display: flex;
@@ -267,30 +275,30 @@ button.primary-action:hover {
   justify-content: center;
   gap: 5px;
   padding: 8px 12px;
-  color: #9bcbc5;
-  font-size: 11px;
+  color: var(--color-secondary);
+  font-size: 13px;
   text-decoration: none;
-  border: 1px solid #ffffff12;
+  border: 1px solid #01193612;
 }
 .model-download:hover {
-  background: #ffffff0a;
-  color: #c0e8e2;
+  background: #0119360a;
+  color: var(--color-text);
 }
 .model-download:focus-visible {
-  outline: 2px solid #88c4bd;
+  outline: 2px solid var(--line-strong);
   outline-offset: -2px;
 }
 .model-document-toolbar {
   display: flex;
   justify-content: flex-end;
   padding: 4px 12px;
-  border-bottom: 1px solid #ffffff12;
+  border-bottom: 1px solid #01193612;
 }
 .project-document-row:hover {
-  background: #ffffff06;
+  background: #01193606;
 }
 .project-document-row > svg {
-  color: #95aaba;
+  color: var(--color-secondary);
   flex-shrink: 0;
 }
 .project-document-row > span:first-of-type {
@@ -299,20 +307,20 @@ button.primary-action:hover {
 }
 .project-document-row strong {
   display: block;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
 .project-document-row small {
   display: block;
-  color: #8d9dac;
-  font-size: 10px;
+  color: var(--color-secondary);
+  font-size: 12px;
   margin-top: 4px;
 }
 .document-pages {
-  color: #95a3b0;
-  font-size: 11px;
+  color: var(--color-secondary);
+  font-size: 13px;
   white-space: nowrap;
 }
 .project-collection-summary {
@@ -320,10 +328,10 @@ button.primary-action:hover {
   align-items: flex-start;
   gap: 8px;
   padding: 14px 15px;
-  color: #92a8b6;
-  font-size: 11px;
+  color: var(--color-secondary);
+  font-size: 13px;
   line-height: 1.6;
-  border-top: 1px solid #3b434c;
+  border-top: 1px solid var(--line);
 }
 .project-collection-summary svg {
   flex-shrink: 0;
@@ -337,21 +345,21 @@ button.primary-action:hover {
 }
 .project-issue {
   padding: 15px;
-  border-bottom: 1px solid #3b434c;
+  border-bottom: 1px solid var(--line);
 }
 .project-issue:last-child {
   border-bottom: 0;
 }
 .project-issue h3 {
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.5;
   font-weight: 500;
-  color: #e4d9bc;
+  color: var(--color-text);
 }
 .project-issue p {
-  font-size: 12px;
-  color: #b0bdc8;
+  font-size: 14px;
+  color: var(--color-secondary);
   line-height: 1.7;
   margin: 0 0 12px;
 }
@@ -362,10 +370,10 @@ button.primary-action:hover {
   margin-bottom: 13px;
 }
 .issue-sources span {
-  font-size: 10px;
-  color: #92adbc;
-  background: #1d242a;
-  border: 1px solid #3b4b57;
+  font-size: 12px;
+  color: var(--color-secondary);
+  background: var(--surface);
+  border: 1px solid var(--line);
   padding: 3px 5px;
   border-radius: 2px;
 }
@@ -375,19 +383,19 @@ button.primary-action:hover {
   gap: 8px;
 }
 .issue-actions button {
-  font-size: 11px;
+  font-size: 13px;
   padding: 4px 6px;
-  color: #96a7b6;
+  color: var(--color-secondary);
 }
 .issue-actions button.evidence-action {
-  color: #aed8d2;
+  color: var(--color-text);
 }
 .project-query-row {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 12px 15px;
-  border-bottom: 1px solid #ffffff0c;
+  border-bottom: 1px solid #0119360c;
 }
 .project-query-row a {
   flex: 1;
@@ -395,28 +403,28 @@ button.primary-action:hover {
   text-decoration: none;
 }
 .project-query-row a:hover {
-  color: #c3e6e1;
+  color: var(--color-text);
 }
 .project-query-row span {
   display: block;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.6;
 }
 .project-query-row small {
   display: block;
   margin-top: 4px;
-  color: #889baa;
-  font-size: 10px;
+  color: var(--color-secondary);
+  font-size: 12px;
 }
 .project-query-row button {
-  color: #a3b9be;
+  color: var(--color-secondary);
   padding: 6px;
 }
 .project-empty {
   padding: 20px;
   margin: 0;
-  color: #92a2b1;
-  font-size: 12px;
+  color: var(--color-secondary);
+  font-size: 14px;
   line-height: 1.7;
 }
 .project-empty a {
@@ -427,14 +435,14 @@ button.primary-action:hover {
   display: flex;
   align-items: center;
   gap: 15px;
-  color: #b1c1cf;
+  color: var(--color-secondary);
 }
 .project-message.has-error,
 .project-error {
-  color: #e4b296;
+  color: #765b24;
 }
 .project-message button {
-  border: 1px solid #4c5b68;
+  border: 1px solid var(--line);
   padding: 5px 10px;
 }
 .project-document-view {
@@ -460,8 +468,8 @@ button.primary-action:hover {
   width: min(860px, 100%);
   max-height: calc(100dvh - 50px);
   overflow: auto;
-  background: #282e35;
-  border: 1px solid #53616c;
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 4px;
   box-shadow: 0 20px 80px #0008;
 }
@@ -470,10 +478,10 @@ button.primary-action:hover {
   align-items: center;
   justify-content: space-between;
   padding: 17px 22px;
-  border-bottom: 1px solid #46505a;
+  border-bottom: 1px solid var(--line);
 }
 .project-modal-heading h1 {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 500;
   margin: 0;
 }
@@ -487,17 +495,17 @@ button.primary-action:hover {
   margin-bottom: 24px;
 }
 .project-form-fields label {
-  font-size: 11px;
-  color: #aab9c8;
+  font-size: 13px;
+  color: var(--color-secondary);
 }
 .project-form-fields input {
   display: block;
   margin-top: 6px;
   width: 100%;
   padding: 9px;
-  color: #edf3f7;
-  background: #1f252c;
-  border: 1px solid #465461;
+  color: var(--color-text);
+  background: var(--surface);
+  border: 1px solid var(--line);
 }
 .collection-heading {
   display: flex;
@@ -507,16 +515,16 @@ button.primary-action:hover {
   gap: 12px;
 }
 .collection-heading h2 {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
   margin: 0;
 }
 .collection-heading span {
-  font-size: 11px;
-  color: #95afb8;
+  font-size: 13px;
+  color: var(--color-secondary);
 }
 .collection-option {
-  border: 1px solid #404e5a;
+  border: 1px solid var(--line);
   margin: 0 0 10px;
   padding: 13px;
   border-radius: 3px;
@@ -532,28 +540,28 @@ button.primary-action:hover {
   flex-shrink: 0;
 }
 .collection-toggle strong {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
 }
 .collection-toggle small,
 .collection-document small {
   display: block;
-  color: #91a3b2;
-  font-size: 10px;
+  color: var(--color-secondary);
+  font-size: 12px;
   line-height: 1.6;
   margin-top: 4px;
 }
 .collection-option p {
   margin: 9px 0 9px 24px;
-  font-size: 11px;
-  color: #a9b8c4;
+  font-size: 13px;
+  color: var(--color-secondary);
   line-height: 1.6;
 }
 .collection-option summary {
   cursor: pointer;
   margin-left: 24px;
-  font-size: 11px;
-  color: #a4c5c6;
+  font-size: 13px;
+  color: var(--color-secondary);
   padding: 4px 0;
 }
 .collection-document {
@@ -561,7 +569,7 @@ button.primary-action:hover {
   align-items: flex-start;
   gap: 8px;
   margin: 11px 0 7px 22px;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
 }
 .project-modal-footer {
@@ -570,7 +578,7 @@ button.primary-action:hover {
   gap: 12px;
   margin-top: 20px;
   padding-top: 14px;
-  border-top: 1px solid #46505a;
+  border-top: 1px solid var(--line);
 }
 .project-toast {
   position: fixed;
@@ -578,9 +586,9 @@ button.primary-action:hover {
   left: 50%;
   transform: translateX(-50%);
   z-index: 120;
-  background: #3d2e29;
+  background: var(--surface);
   border: 1px solid #a7765b;
-  color: #f0d1be;
+  color: #765b24;
   padding: 12px 16px;
   display: flex;
   gap: 20px;
@@ -616,7 +624,7 @@ button.primary-action:hover {
     gap: 3px;
   }
   .project-header-actions button {
-    font-size: 11px;
+    font-size: 13px;
     padding: 4px 6px;
   }
   .project-context-count {
@@ -635,7 +643,7 @@ button.primary-action:hover {
     padding: 11px;
   }
   .project-page-heading h1 {
-    font-size: 21px;
+    font-size: 22px;
   }
 }
 /* Compact project workspace */
@@ -647,7 +655,7 @@ button.primary-action:hover {
   margin-bottom: 12px;
 }
 .projects-overview .project-page-heading h1 {
-  font-size: 19px;
+  font-size: 21px;
   margin: 0;
 }
 .projects-grid {
@@ -655,7 +663,7 @@ button.primary-action:hover {
   flex-direction: column;
   gap: 0;
   margin-top: 0;
-  border: 1px solid #414b55;
+  border: 1px solid var(--line);
   border-radius: 2px;
 }
 .project-card {
@@ -668,7 +676,7 @@ button.primary-action:hover {
   min-height: 66px;
   padding: 12px 14px;
   border: 0;
-  border-bottom: 1px solid #3c444e;
+  border-bottom: 1px solid var(--line);
   border-radius: 0;
 }
 .project-card:last-child {
@@ -680,18 +688,18 @@ button.primary-action:hover {
 }
 .project-card h2 {
   grid-column: 2;
-  font-size: 14px;
+  font-size: 16px;
   margin: 0;
 }
 .project-card .project-client {
   grid-column: 3;
   margin: 0;
-  font-size: 12px;
+  font-size: 14px;
 }
 .project-card .project-card-description {
   grid-column: 4;
   margin: 0;
-  font-size: 12px;
+  font-size: 14px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -702,7 +710,7 @@ button.primary-action:hover {
   margin: 0;
   padding: 0;
   border: 0;
-  font-size: 11px;
+  font-size: 13px;
 }
 .workspace-settings {
   position: relative;
@@ -720,8 +728,8 @@ button.primary-action:hover {
   z-index: 120;
   min-width: 220px;
   padding: 4px;
-  border: 1px solid #515d68;
-  background: #292f36;
+  border: 1px solid var(--line);
+  background: var(--surface);
   box-shadow: 0 6px 18px #0006;
 }
 .workspace-settings-menu button {
@@ -732,7 +740,7 @@ button.primary-action:hover {
   padding: 8px 10px;
 }
 .workspace-settings-menu button:hover {
-  background: #39434d;
+  background: var(--surface);
 }
 .workspace-settings-menu p {
   padding: 5px;
@@ -763,9 +771,9 @@ button.primary-action:hover {
 .project-description-editor input {
   flex: 1;
   min-width: 0;
-  border: 1px solid #4b5966;
+  border: 1px solid var(--line);
   padding: 7px;
-  background: #242a30;
+  background: var(--surface);
 }
 .compact-editor {
   width: min(660px, 100%);
@@ -780,13 +788,13 @@ button.primary-action:hover {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  font-size: 12px;
+  font-size: 14px;
 }
 .project-name-field input {
   width: 100%;
   padding: 8px 10px;
-  background: #22272d;
-  border: 1px solid #4a5661;
+  background: var(--surface);
+  border: 1px solid var(--line);
 }
 .collection-search {
   position: relative;
@@ -794,8 +802,8 @@ button.primary-action:hover {
   align-items: center;
   gap: 8px;
   margin-top: 12px;
-  border: 1px solid #4a5661;
-  background: #22272d;
+  border: 1px solid var(--line);
+  background: var(--surface);
   padding: 0 9px;
 }
 .collection-search input {
@@ -813,8 +821,8 @@ button.primary-action:hover {
   z-index: 10;
   max-height: 230px;
   overflow: auto;
-  background: #2a3138;
-  border: 1px solid #596874;
+  background: var(--surface);
+  border: 1px solid var(--line);
   box-shadow: 0 5px 12px #0005;
 }
 .collection-results button {
@@ -825,21 +833,21 @@ button.primary-action:hover {
   gap: 9px;
   padding: 9px 10px;
   border: 0;
-  border-bottom: 1px solid #3a444f;
+  border-bottom: 1px solid var(--line);
 }
 .collection-results button span {
   flex: 1;
-  font-size: 10px;
-  color: #a0b0bf;
+  font-size: 12px;
+  color: var(--color-secondary);
 }
 .collection-results button strong {
   display: block;
-  color: #e1e8ee;
-  font-size: 12px;
+  color: var(--color-text);
+  font-size: 14px;
   font-weight: 500;
 }
 .collection-results button:hover {
-  background: #3a454f;
+  background: var(--surface);
 }
 .selected-collections {
   display: flex;
@@ -852,9 +860,9 @@ button.primary-action:hover {
   align-items: center;
   gap: 5px;
   padding: 3px 5px 3px 8px;
-  font-size: 11px;
-  background: #35434a;
-  border: 1px solid #526971;
+  font-size: 13px;
+  background: var(--surface);
+  border: 1px solid var(--line);
 }
 .selected-collections button {
   padding: 0;
@@ -871,14 +879,14 @@ button.primary-action:hover {
 .selected-documents .collection-document {
   padding: 7px 2px;
   margin: 0;
-  border-bottom: 1px solid #38414b;
+  border-bottom: 1px solid var(--line);
 }
 .selected-documents .collection-document span {
   min-width: 0;
-  font-size: 12px;
+  font-size: 14px;
 }
 .selected-documents .collection-document small {
-  font-size: 10px;
+  font-size: 12px;
 }
 .project-import-actions {
   display: flex;
@@ -887,7 +895,7 @@ button.primary-action:hover {
 }
 .project-import-actions button {
   padding: 6px 9px;
-  font-size: 12px;
+  font-size: 14px;
 }
 .pending-files {
   margin: 8px 0 0;
@@ -901,8 +909,8 @@ button.primary-action:hover {
   gap: 9px;
   align-items: center;
   padding: 5px 2px;
-  border-bottom: 1px solid #38414b;
-  font-size: 11px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
 }
 .pending-files li span {
   flex: 1;
@@ -912,7 +920,7 @@ button.primary-action:hover {
   white-space: nowrap;
 }
 .pending-files li small {
-  color: #a8b5c1;
+  color: var(--color-secondary);
 }
 .pending-files button {
   padding: 2px;
@@ -922,8 +930,8 @@ button.primary-action:hover {
 }
 .project-details-fields summary {
   cursor: pointer;
-  color: #a6b5c3;
-  font-size: 12px;
+  color: var(--color-secondary);
+  font-size: 14px;
 }
 .project-details-fields .project-form-fields {
   margin: 10px 0 0;
@@ -946,12 +954,12 @@ button.primary-action:hover {
   flex-shrink: 0;
 }
 .project-form-error {
-  color: #e4b296;
-  font-size: 12px;
+  color: #765b24;
+  font-size: 14px;
 }
 .project-import-progress {
-  font-size: 12px;
-  color: #9dd5cd;
+  font-size: 14px;
+  color: var(--color-secondary);
 }
 @media (max-width: 1000px) {
   .project-card {
@@ -992,9 +1000,9 @@ button.primary-action:hover {
   gap: 7px;
   padding: 7px 10px 5px;
   margin-top: 3px;
-  border-top: 1px solid #3c4650;
-  color: #9aa9b7;
-  font-size: 11px;
+  border-top: 1px solid var(--line);
+  color: var(--color-secondary);
+  font-size: 13px;
   cursor: pointer;
 }
 .demo-retention input {
@@ -1009,4 +1017,18 @@ button.primary-action:hover {
 }
 .demo-retention:has(input:disabled) {
   cursor: default;
+}
+
+.project-page-heading h1,
+.project-card h2,
+.project-panel-heading h2,
+.project-header-title,
+.workspace-context,
+.model-download {
+  font-family: var(--font-label);
+  font-weight: 700;
+}
+
+button.query-files {
+  min-height: 44px;
 }

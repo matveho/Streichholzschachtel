@@ -191,7 +191,7 @@ try {
     .getByRole('heading', { name: 'Import retry review', exact: true })
     .waitFor()
   await expect(page.locator('.project-document-row')).toHaveCount(1)
-  await page.getByRole('button', { name: 'New query', exact: true }).click()
+  await page.getByRole('button', { name: 'Query Files', exact: true }).click()
   await page
     .locator('#query')
     .fill('What is the overall width of each box planter?')

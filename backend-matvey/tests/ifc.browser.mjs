@@ -42,7 +42,9 @@ try {
       .getByRole('link', { name: 'Download IFC', exact: true })
       .waitFor()
     await page.locator('.textLayer span').first().waitFor()
-    const query = data.queries.find((q) => q.question.includes('IFC object'))
+    const query = data.queries.find(
+      (q) => q.prepared && !q.stale && q.question.includes('IFC object'),
+    )
     assert.ok(query, 'Completed real model-property query')
     const result = await (
       await fetch(api + '/projects/' + id + '/queries/' + query.id)

@@ -30,7 +30,7 @@ http
         res.end(
           JSON.stringify({
             service: 'basis-gateway',
-            version: 8,
+            version: 9,
             targetPort: Number(targetUrl.port),
           }),
         )
@@ -38,7 +38,9 @@ http
       }
       if (
         req.method === 'GET' &&
-        (['/app', '/app/', '/basis.svg'].includes(url.pathname) ||
+        (['/app', '/app/', '/basis.svg', '/basis-logo.png'].includes(
+          url.pathname,
+        ) ||
           /^\/(?:assets|documents)\//.test(url.pathname))
       ) {
         const directory = readFrontendLocation()
@@ -63,6 +65,7 @@ http
           '.mjs': 'text/javascript',
           '.css': 'text/css',
           '.svg': 'image/svg+xml',
+          '.png': 'image/png',
           '.pdf': 'application/pdf',
           '.woff': 'font/woff',
           '.woff2': 'font/woff2',

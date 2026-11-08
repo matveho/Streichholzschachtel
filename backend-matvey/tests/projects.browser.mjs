@@ -185,7 +185,7 @@ try {
   await expect(page.locator('.project-document-row')).toHaveCount(0)
   assert.ok(
     await page
-      .getByRole('button', { name: 'New query', exact: true })
+      .getByRole('button', { name: 'Query Files', exact: true })
       .isDisabled(),
   )
   await page.getByRole('button', { name: 'Settings', exact: true }).click()

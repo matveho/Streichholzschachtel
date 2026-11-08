@@ -103,7 +103,7 @@ function Shell({
     <main className="project-shell">
       <header className="app-header project-header">
         <a className="project-brand" href="#projects" onClick={navigateLink}>
-          <img src="/basis.svg" alt="" width="26" height="26" />
+          <img src="/basis-logo.png" alt="" width="44" height="44" />
           <strong>Basis</strong>
         </a>
         <span className="project-header-title">{title}</span>
@@ -307,19 +307,6 @@ function ProjectDashboard({
           )}
         </>
       }
-
-      actions={
-        <>
-          <button
-            className="primary-action"
-            disabled={!documents.length}
-            onClick={() => navigate('project/' + project.id + '/new')}
-          >
-            <Plus size={15} />
-            New query
-          </button>
-        </>
-      }
     >
       <div className="project-dashboard">
         <div className="project-page-heading">
@@ -498,6 +485,14 @@ function ProjectDashboard({
             </div>
           </section>
           <aside className="project-sidebar">
+            <button
+              className="primary-action query-files"
+              disabled={!documents.length}
+              onClick={() => navigate('project/' + project.id + '/new')}
+            >
+              <Search size={17} />
+              Query Files
+            </button>
             <section className="project-panel" aria-label="Potential issues">
               <div className="project-panel-heading">
                 <h2 title="Source-verified example findings requiring engineering review">
@@ -769,6 +764,7 @@ function ProjectPage({
             context={data.project.name}
             homeHref={'#project/' + id}
             onNew={() => navigate('project/' + id + '/new')}
+            showNewQuery={false}
           />
           {documents[record].model && (
             <div className="model-document-toolbar">

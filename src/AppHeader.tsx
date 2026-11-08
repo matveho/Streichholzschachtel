@@ -7,20 +7,22 @@ export function AppHeader({
   home = false,
   homeHref = '#home',
   context,
+  showNewQuery = true,
 }: {
   onNew: () => void
   home?: boolean
   homeHref?: string
   context?: string
+  showNewQuery?: boolean
 }) {
   return (
     <header className="app-header">
       <img
         className="brand-mark"
-        src="/basis.svg"
+        src="/basis-logo.png"
         alt=""
-        width="26"
-        height="26"
+        width="44"
+        height="44"
       />
       <strong>Basis</strong>
       <a
@@ -38,10 +40,12 @@ export function AppHeader({
         <House size={15} />
       </a>
       {context && <span className="workspace-context">{context}</span>}
-      <button className="new-query" onClick={onNew}>
-        <Plus size={14} />
-        New query
-      </button>
+      {showNewQuery && (
+        <button className="new-query" onClick={onNew}>
+          <Plus size={14} />
+          New query
+        </button>
+      )}
       <WorkspaceSettings
         projectId={homeHref.match(/^#project\/([a-zA-Z0-9-]+)/)?.[1]}
       />

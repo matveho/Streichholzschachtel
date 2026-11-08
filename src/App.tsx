@@ -237,6 +237,7 @@ export function QueryWorkspace({
           onNew={newQuery}
           homeHref={entry.projectId ? '#project/' + entry.projectId : '#home'}
           context={projectName}
+          showNewQuery={!entry.projectId}
         />
         <form
           className="query-bar"
