@@ -161,8 +161,8 @@ export const demoQuestions = [
   },
   {
     q: 'What is the posted speed limit on residential streets?',
-    expect: ['not found'],
-    mode: 'no_evidence',
+    expect: ['No direct answer'],
+    mode: 'related_evidence',
   },
   {
     q: 'How many parking stalls are required for a restaurant?',

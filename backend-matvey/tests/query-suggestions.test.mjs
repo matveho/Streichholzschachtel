@@ -32,7 +32,36 @@ const unit = {
 }
 const corpus = { documents: [doc], passages: [], units: [unit], failures: [] }
 
+test('material approval cannot transfer between pipe types and preserves exclusive application limits', () => {
+  const question = 'Is HDPE pipe approved for use in storm sewers in Edmonton?'
+  assert.equal(
+    coversRequestedConcept(question, {
+      ...unit,
+      text: 'PVC pipe is approved for use in residential areas for sanitary and storm sewers and services.',
+    }),
+    false,
+  )
+  assert.equal(
+    coversRequestedConcept(question, {
+      ...unit,
+      text: 'HDPE pipe is approved for forcemains and pipe busting applications only.',
+    }),
+    true,
+  )
+})
+
 test('a matching asset cannot stand in for the requested measurement or fact', () => {
+  assert.equal(
+    coversRequestedConcept(
+      'What minimum width is required for a box planter?',
+      {
+        ...unit,
+        text: 'The concept proposes a box planter with a width of 400 mm.',
+        frame: 'Proposed project design',
+      },
+    ),
+    false,
+  )
   assert.equal(
     coversRequestedConcept('What storm sewer cover is required?', unit),
     true,

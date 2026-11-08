@@ -54,13 +54,14 @@ function useResource<T>(path: string, context = '') {
     status: number
   }>({ key: '', data: null, error: '', status: 0 })
   const key = JSON.stringify([path, version, context])
+  const identity = JSON.stringify([path, context])
   useEffect(() => {
     const controller = new AbortController()
     let retry: ReturnType<typeof setTimeout> | undefined
     api(settings, path, { signal: controller.signal })
       .then((data) => {
         if (!controller.signal.aborted)
-          setState({ key, data, error: '', status: 200 })
+          setState({ key: identity, data, error: '', status: 200 })
       })
       .catch((error) => {
         if (!controller.signal.aborted) {
@@ -69,7 +70,7 @@ function useResource<T>(path: string, context = '') {
             return
           }
           setState({
-            key,
+            key: identity,
             data: null,
             error: error.message,
             status: error instanceof ApiError ? error.status : 0,
@@ -80,9 +81,11 @@ function useResource<T>(path: string, context = '') {
       controller.abort()
       clearTimeout(retry)
     }
-  }, [path, key, settings])
+  }, [path, key, identity, settings])
   return {
-    ...(state.key === key ? state : { key, data: null, error: '', status: 0 }),
+    ...(state.key === identity
+      ? state
+      : { key: identity, data: null, error: '', status: 0 }),
     refresh: () => setVersion((v) => v + 1),
   }
 }
@@ -457,6 +460,12 @@ function ProjectDashboard({
     setError('')
     try {
       await requestProject(projectPath(project.id) + path, method, value)
+      if (path === '/reset') {
+        setIssueTab('open')
+        setSavedOnly(false)
+        setFilter('')
+        setCategory('all')
+      }
       onRefresh()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'The operation failed.')

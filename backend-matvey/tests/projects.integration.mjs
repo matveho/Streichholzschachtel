@@ -6,6 +6,15 @@ const token = readFileSync(
   new URL('../state/session-token.txt', import.meta.url),
   'utf8',
 ).trim()
+let ready = false
+for (let attempt = 0; attempt < 120; attempt++) {
+  try {
+    ready = (await (await fetch(base + '/health')).json()).ready
+  } catch {}
+  if (ready) break
+  await new Promise((resolve) => setTimeout(resolve, 500))
+}
+assert.ok(ready, 'The isolated project API must finish indexing before checks')
 async function request(path, method = 'GET', value) {
   const response = await fetch(base + path, {
     method,
@@ -35,6 +44,18 @@ async function completed(project, question, documentIds) {
   assert.equal(job.state, 'completed')
   return job
 }
+
+test('live minimum-width research cites the governing standard instead of a proposed design value', async () => {
+  const job = await completed(
+    'demo-mill-creek',
+    'What minimum width is required for a box planter?',
+  )
+  assert.equal(job.result.mode, 'extractive_answer')
+  const text = JSON.stringify(job.result.report)
+  assert.ok(text.includes('450 mm'))
+  assert.ok(!text.includes('400 mm'))
+  assert.ok(job.result.documents.every((d) => !d.projectArtifact))
+})
 test('both protected projects expose complete documents, source-verified history and findings', async () => {
   const { data } = await request('/v1/projects')
   assert.ok(data.projects.length >= 2)

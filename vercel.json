@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/local-api/:path*",
-      "destination": "https://paradise-route-island-somerset.trycloudflare.com/:path*"
+      "destination": "https://composed-bbs-uses-favorites.trycloudflare.com/:path*"
     }
   ]
 }

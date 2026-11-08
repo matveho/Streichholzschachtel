@@ -198,7 +198,7 @@ test('short engineering nouns normalize consistently with their plural and infle
 })
 test('indexes all supplied original PDFs with usable anchors', () => {
   const expected = new Set()
-  for (const folder of ['../public/documents', 'documents'])
+  for (const folder of ['../public/documents', 'documents', 'output/pdf'])
     for (const file of readdirSync(resolve(root, folder)).filter((name) =>
       /\.pdf$/i.test(name),
     ))

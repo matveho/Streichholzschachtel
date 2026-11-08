@@ -1,0 +1,18 @@
+# This deployment is the frontend only. Local services and client files stay here.
+backend-matvey/**
+backend-matvey
+backend/**
+backend
+.git/**
+.env*
+!.env.example
+.vercel/**
+node_modules/**
+node_modules
+dist/**
+dist
+test-results/**
+playwright-report/**
+uploads/**
+*.log
+*.tsbuildinfo

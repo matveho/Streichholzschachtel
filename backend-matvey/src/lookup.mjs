@@ -11,6 +11,7 @@ import { seriesInQuestion, foreignJurisdiction } from './catalog.mjs'
 
 // Domain vocabulary that differs between how people ask and how standards write.
 const rewrites = [
+  [/\bbefore\b/gi, ' prior '],
   [/\bthermal movement\b/gi, ' thermal expansion contraction '],
   [/\bI\s*&\s*I\b/gi, ' inflow infiltration '],
   [/\bmanholes?\b/gi, ' maintenance hole '],
@@ -85,7 +86,7 @@ const valueQuestion =
 
 const generic = new Set(
   tokens(
-    'edmonton city epcor development developments minimum maximum new value values what which area areas type types land apply applies applicable use using used need needed requirement requirements required require design should many much often long show find tell give please',
+    'edmonton city epcor development developments minimum maximum new value values what which area areas type types land apply applies applicable use using used need needed requirement requirements required require design should must work many much often long show find tell give please',
   ),
 )
 
@@ -206,6 +207,24 @@ export function coversRequestedConcept(question, unit) {
   if (unit.text.length > 1000) return false
   if (
     /\bminimum\b/i.test(question) &&
+    !/\bminimum\b|\bat least\b|\bnot less than\b|\bgreater than or equal to\b|[≥]/i.test(
+      unit.text + ' ' + unit.frame,
+    )
+  )
+    return false
+  const material = question.match(/\b(HDPE|PVC|RCP|CSP)\b/i)?.[1]
+  if (material && !new RegExp('\\b' + material + '\\b', 'i').test(unit.text))
+    return false
+  // An explicitly exclusive approval scope answers a permission question even
+  // when the requested application is excluded rather than named in the clause.
+  if (
+    material &&
+    /\b(?:approved|permitted|allowed)\b/i.test(question) &&
+    /\b(?:approved|permitted|allowed)\b[^.;]{0,180}\bonly\b/i.test(unit.text)
+  )
+    return true
+  if (
+    /\bminimum\b/i.test(question) &&
     /\bless than (?:the )?minimum\b/i.test(unit.text) &&
     !/\bminimum\b[^|.;]{0,90}\d+(?:\.\d+)?\s*(?:mm|m|%)\b/i.test(unit.text)
   )
@@ -218,6 +237,15 @@ export function coversRequestedConcept(question, unit) {
   )
     return false
   const words = unitTokens(unit.text + ' ' + unit.frame)
+  // A street-furniture applicability threshold is not a residential speed limit.
+  if (
+    /\bresidential\b.*\bstreets?\b|\bstreets?\b.*\bresidential\b/i.test(
+      question,
+    ) &&
+    /\b(?:posted )?speed limits?\b/i.test(question) &&
+    ![...unitTokens('residential')].every((word) => words.has(word))
+  )
+    return false
   const content = [...unitTokens(question)].filter(
     (t) => !generic.has(t) && !/^\d/.test(t),
   )
@@ -226,9 +254,11 @@ export function coversRequestedConcept(question, unit) {
     canon(question).match(
       /^\s*(?:what|which)\s+(?:(?:is|are)\s+)?(?:(?:the|a|an)\s+)?(.+?)(?=\s+(?:for|of|at|in|on|when|where|between|under|is|are|do|does|should|can|applies|apply|required|recommended)\b|\?|$)/i,
     )?.[1] || ''
-  const requested = [...unitTokens(focus)].filter(
-    (t) => !generic.has(t) && !/^\d/.test(t),
-  )
+  const requested = [
+    ...unitTokens(
+      /^\s*(?:must|should|needs?|has|have)\b/i.test(focus) ? '' : focus,
+    ),
+  ].filter((t) => !generic.has(t) && !/^\d/.test(t))
   return (
     requested.every((t) => words.has(t)) &&
     content.filter((t) => words.has(t)).length / content.length >= 0.75

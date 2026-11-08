@@ -1,4 +1,4 @@
-import { chromium } from '@playwright/test'
+import { chromium, expect } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { mkdirSync } from 'node:fs'
 const origin = process.env.BASIS_FRONTEND_URL || 'http://127.0.0.1:5180'
@@ -12,8 +12,17 @@ try {
   page.on('pageerror', (e) => errors.push(e.message))
   page.on('dialog', (d) => d.accept())
   await page.goto(origin + '/#projects')
+  await page.evaluate(async () => {
+    for (const id of ['demo-mill-creek', 'demo-willow-creek']) {
+      const response = await fetch('/local-api/v1/projects/' + id + '/reset', {
+        method: 'POST',
+      })
+      if (!response.ok) throw new Error('Could not reset demo test state')
+    }
+  })
+  await page.reload()
   await page.getByRole('heading', { name: 'Projects', exact: true }).waitFor()
-  assert.ok((await page.locator('.project-card').count()) >= 2)
+  await page.locator('.project-card').nth(1).waitFor()
   await page
     .getByRole('link')
     .filter({ hasText: 'Mill Creek Corner Infill' })
@@ -26,8 +35,8 @@ try {
     0,
   )
   const issues = page.getByRole('region', { name: 'Potential issues' })
-  assert.equal(await issues.locator('article').count(), 2)
-  assert.equal(await page.locator('.project-document-row').count(), 13)
+  await expect(issues.locator('article')).toHaveCount(2)
+  await expect(page.locator('.project-document-row')).toHaveCount(13)
   await page.getByLabel('Filter project documents').fill('Client requirements')
   assert.equal(await page.locator('.project-document-row').count(), 1)
   await page.locator('.project-document-row').click()
@@ -74,7 +83,7 @@ try {
     .getByRole('region', { name: 'Project query history' })
     .getByRole('button', { name: 'Saved', exact: true })
     .click()
-  assert.equal(await page.locator('.project-query-row').count(), 1)
+  await expect(page.locator('.project-query-row')).toHaveCount(1)
   await page.getByRole('button', { name: 'Reset demo', exact: true }).click()
   await page.getByRole('button', { name: 'Open 2', exact: true }).waitFor()
   await page.screenshot({ path: 'test-results/project-dashboard.png' })
@@ -86,7 +95,7 @@ try {
   await page
     .getByRole('heading', { name: 'Willow Creek Bridge Renewal', exact: true })
     .waitFor()
-  assert.equal(await page.locator('.project-document-row').count(), 6)
+  await expect(page.locator('.project-document-row')).toHaveCount(6)
   assert.ok(
     !(await page.locator('.project-document-row').allInnerTexts())
       .join(' ')

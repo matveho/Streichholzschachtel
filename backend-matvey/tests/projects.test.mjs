@@ -14,8 +14,95 @@ import { ProjectStore, scopedCorpus } from '../src/project-store.mjs'
 import { ProjectApi } from '../src/project-api.mjs'
 import { demoProjects } from '../demo/manifest.mjs'
 import { restoreDemoDocuments } from '../src/demo-documents.mjs'
+import { config } from '../src/config.mjs'
+import { expandRetrieval } from '../src/retrieval-plan.mjs'
+import { draftLocal } from '../src/local-synthesis.mjs'
 
 const corpus = await buildIndex()
+test('model planning and synthesis receive only the physically scoped project context', async (t) => {
+  const { store } = fresh(t),
+    scope = store.scope('demo-willow-creek')
+  const foreign = corpus.documents.filter(
+    (d) => !scope.project.documentIds.includes(d.id),
+  )
+  const originalFetch = globalThis.fetch,
+    previous = {
+      provider: config.provider,
+      localSynthesis: config.localSynthesis,
+      extractiveOnly: config.extractiveOnly,
+    }
+  const inputs = []
+  Object.assign(config, {
+    provider: 'ollama',
+    localSynthesis: true,
+    extractiveOnly: false,
+  })
+  globalThis.fetch = async (_url, options) => {
+    const request = JSON.parse(options.body),
+      input = request.messages.find((m) => m.role === 'user').content
+    inputs.push(input)
+    for (const document of foreign)
+      assert.ok(
+        !input.includes(document.id),
+        'Foreign document in model context: ' + document.id,
+      )
+    assert.ok(
+      !input.includes('Rivermark'),
+      'Foreign private client text in model context',
+    )
+    const properties = request.format.properties
+    const output = properties.queries
+      ? {
+          queries: [
+            {
+              heading: 'Deck geometry',
+              query:
+                'bridge deck crossfall longitudinal grade box planter underdrain',
+              sections: [],
+            },
+          ],
+        }
+      : properties.answerable
+        ? { answerable: true, evidence: ['A'], unresolved: [] }
+        : properties.calculations
+          ? { calculations: [] }
+          : { findings: [] }
+    return new Response(
+      JSON.stringify({
+        message: { content: JSON.stringify(output) },
+        done_reason: 'stop',
+      }),
+      { status: 200 },
+    )
+  }
+  try {
+    const question =
+      'Compare bridge deck crossfall and longitudinal grade requirements against the preliminary bridge design and identify checks requiring engineering review.'
+    const baseline = scope.index.search(
+      'bridge deck crossfall longitudinal grade',
+    )
+    const signal = AbortSignal.timeout(10000)
+    const retrieval = await expandRetrieval(
+      question,
+      baseline,
+      scope.index,
+      signal,
+    )
+    assert.ok(
+      retrieval.passages.every((p) =>
+        scope.project.documentIds.includes(p.doc),
+      ),
+    )
+    await draftLocal(question, baseline, scope.index, signal)
+    assert.ok(
+      inputs.length >= 3,
+      'Planner, evidence selector and drafter must all be exercised',
+    )
+  } finally {
+    globalThis.fetch = originalFetch
+    Object.assign(config, previous)
+  }
+})
 test('demo document originals restore missing or modified runtime copies', (t) => {
   const directory = mkdtempSync(resolve(tmpdir(), 'basis-demo-files-'))
   t.after(() => {
