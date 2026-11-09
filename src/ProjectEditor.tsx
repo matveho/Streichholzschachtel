@@ -1,3 +1,4 @@
+import { categoryLabels, saveFileCategories } from './fileCategories'
 import { useEffect, useRef, useState } from 'react'
 import { Search, X, Plus, FolderOpen, FilePlus, RotateCcw } from 'lucide-react'
 import { api, readSettings } from './backend'
@@ -33,6 +34,8 @@ export function ProjectEditor({
   const [search, setSearch] = useState(''),
     [open, setOpen] = useState(false),
     [files, setFiles] = useState<File[]>([]),
+    [fileTypes, setFileTypes] = useState(new Map<File, string>()),
+    [existingTypes, setExistingTypes] = useState<Record<string, string>>({}),
     [error, setError] = useState(''),
     [progress, setProgress] = useState('')
   const [savedId, setSavedId] = useState(project?.id)
@@ -41,7 +44,7 @@ export function ProjectEditor({
     fileInput = useRef<HTMLInputElement>(null),
     folderInput = useRef<HTMLInputElement>(null),
     createdId = useRef(project?.id),
-    imported = useRef(new Set<string>())
+    imported = useRef(new Map<File, ProjectDocument[]>())
   useEffect(() => {
     nameInput.current?.focus()
     const controller = new AbortController()
@@ -94,11 +97,7 @@ export function ProjectEditor({
     const accepted = Array.from(list).filter(
       (f) => /\.pdf$/i.test(f.name) && f.size <= 12 * 1024 * 1024,
     )
-    const key = (f: File) =>
-      [f.webkitRelativePath || f.name, f.size, f.lastModified].join(':')
-    setFiles((current) => [
-      ...new Map([...current, ...accepted].map((f) => [key(f), f])).values(),
-    ])
+    setFiles((current) => [...new Set([...current, ...accepted])])
     setError(
       accepted.length === list.length
         ? ''
@@ -130,13 +129,8 @@ export function ProjectEditor({
       createdId.current = response.project.id
       setSavedId(response.project.id)
       for (let i = 0; i < files.length; i++) {
-        const file = files[i],
-          key = [
-            file.webkitRelativePath || file.name,
-            file.size,
-            file.lastModified,
-          ].join(':')
-        if (imported.current.has(key)) continue
+        const file = files[i]
+        if (imported.current.has(file)) continue
         setProgress(`Indexing ${i + 1}/${files.length}: ${file.name}`)
         const content = await new Promise<string>((done, reject) => {
           const reader = new FileReader()
@@ -148,7 +142,7 @@ export function ProjectEditor({
         const importedDocument = await requestProject(
           projectPath(createdId.current!) + '/documents/import',
           'POST',
-          { name: file.name, content },
+          { name: file.name, content, category: fileTypes.get(file) },
         )
         setDocuments((ids) => [
           ...new Set([
@@ -156,8 +150,14 @@ export function ProjectEditor({
             ...importedDocument.documents.map((d: ProjectDocument) => d.id),
           ]),
         ])
-        imported.current.add(key)
+        imported.current.set(file, importedDocument.documents)
       }
+      const changes = { ...existingTypes }
+      for (const [file, added] of imported.current) {
+        const category = fileTypes.get(file)
+        if (category) for (const doc of added) changes[doc.id] = category
+      }
+      saveFileCategories(createdId.current!, changes)
       onSaved(createdId.current!)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save project.')
@@ -296,29 +296,47 @@ export function ProjectEditor({
                       catalog?.collections
                         .find((c) => c.id === id)
                         ?.documentIds.includes(d.id),
-                    ) ||
-                    existingDocuments.some(
-                      (x) => x.id === d.id && x.projectArtifact,
-                    ),
+                    ) || existingDocuments.some((x) => x.id === d.id),
                 )
                 .map((d) => (
-                  <label className="collection-document" key={d.id}>
-                    <input
-                      type="checkbox"
-                      checked={documents.includes(d.id)}
-                      onChange={(e) =>
-                        setDocuments((ids) =>
-                          e.target.checked
-                            ? [...new Set([...ids, d.id])]
-                            : ids.filter((id) => id !== d.id),
-                        )
-                      }
-                    />
-                    <span>
-                      {d.title}
-                      <small>{d.edition}</small>
-                    </span>
-                  </label>
+                  <div key={d.id} className="managed-file">
+                    <label className="collection-document">
+                      <input
+                        type="checkbox"
+                        checked={documents.includes(d.id)}
+                        onChange={(e) =>
+                          setDocuments((ids) =>
+                            e.target.checked
+                              ? [...new Set([...ids, d.id])]
+                              : ids.filter((id) => id !== d.id),
+                          )
+                        }
+                      />
+                      <span>
+                        {d.title}
+                        <small>{d.edition}</small>
+                      </span>
+                    </label>
+                    {d.projectArtifact && documents.includes(d.id) && (
+                      <select
+                        aria-label={'Type for ' + d.title}
+                        value={existingTypes[d.id] ?? d.category}
+                        disabled={!!progress}
+                        onChange={(event) =>
+                          setExistingTypes((prev) => ({
+                            ...prev,
+                            [d.id]: event.target.value,
+                          }))
+                        }
+                      >
+                        {Object.entries(categoryLabels).map(([id, label]) => (
+                          <option key={id} value={id}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
                 ))}
             </div>
           </div>
@@ -369,7 +387,23 @@ export function ProjectEditor({
                   <span title={file.webkitRelativePath || file.name}>
                     {file.webkitRelativePath || file.name}
                   </span>
-                  <small>{(file.size / 1024).toFixed(0)} KB</small>
+                  <select
+                    aria-label={'Type for ' + file.name}
+                    value={fileTypes.get(file) ?? ''}
+                    disabled={!!progress}
+                    onChange={(event) =>
+                      setFileTypes((prev) =>
+                        new Map(prev).set(file, event.target.value),
+                      )
+                    }
+                  >
+                    <option value="">Automatic type</option>
+                    {Object.entries(categoryLabels).map(([id, label]) => (
+                      <option key={id} value={id}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
                   <button
                     type="button"
                     aria-label={'Remove file ' + file.name}
@@ -383,6 +417,13 @@ export function ProjectEditor({
                 </li>
               ))}
             </ul>
+          )}
+          {(files.length > 0 ||
+            (!uploadOnly &&
+              existingDocuments.some((d) => d.projectArtifact))) && (
+            <small className="file-type-note">
+              File type choices are saved in this browser.
+            </small>
           )}
           <details className="project-details-fields" hidden={uploadOnly}>
             <summary>Project details</summary>

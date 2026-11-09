@@ -1,3 +1,4 @@
+import { categoryLabels as labels, readFileCategories } from './fileCategories'
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import {
   FolderOpen,
@@ -37,13 +38,6 @@ const unansweredLabels: Record<string, string> = {
   not_found: 'Not found',
   partial: 'No direct answer',
   jurisdiction: 'Other municipality',
-}
-const labels: Record<string, string> = {
-  reference: 'Reference documents',
-  client: 'Client requirements',
-  design: 'Design documents & drawings',
-  report: 'Technical reports',
-  supporting: 'Supporting materials',
 }
 const date = (value: string) =>
   new Intl.DateTimeFormat('en-CA', {
@@ -264,7 +258,11 @@ function ProjectDashboard({
   uploading?: boolean
   onUploadDone?: () => void
 }) {
-  const { project, documents, queries, issues } = data
+  const { project, queries, issues } = data
+  const overrides = readFileCategories(project.id)
+  const documents = data.documents.map((doc) =>
+    overrides[doc.id] ? { ...doc, category: overrides[doc.id] } : doc,
+  )
   const [filter, setFilter] = useState(''),
     [category, setCategory] = useState('all'),
     [issueTab, setIssueTab] = useState('open'),
@@ -274,6 +272,7 @@ function ProjectDashboard({
     [uploadOnly, setUploadOnly] = useState(uploading),
     [error, setError] = useState(''),
     [pending, setPending] = useState(false)
+  const [nameDraft, setNameDraft] = useState<string | null>(null)
   const [descriptionEditing, setDescriptionEditing] = useState(false),
     [description, setDescription] = useState(project.description)
   const shown = documents.filter(
@@ -301,8 +300,10 @@ function ProjectDashboard({
         setCategory('all')
       }
       onRefresh()
+      return true
     } catch (e) {
       setError(e instanceof Error ? e.message : 'The operation failed.')
+      return false
     } finally {
       setPending(false)
     }
@@ -353,7 +354,53 @@ function ProjectDashboard({
           <a className="project-back" href="#projects" onClick={navigateLink}>
             <ArrowLeft size={13} /> Projects
           </a>
-          <h1>{project.name}</h1>
+          {nameDraft === null ? (
+            <div className="dashboard-project-name">
+              <h1>{project.name}</h1>
+              {!project.protectedDemo && (
+                <button
+                  title="Rename project"
+                  aria-label="Rename project"
+                  onClick={() => setNameDraft(project.name)}
+                >
+                  <Pencil size={14} />
+                </button>
+              )}
+            </div>
+          ) : (
+            <form
+              className="dashboard-project-name"
+              onSubmit={async (event) => {
+                event.preventDefault()
+                if (
+                  nameDraft.trim() &&
+                  (await action('', 'PATCH', { name: nameDraft.trim() }))
+                )
+                  setNameDraft(null)
+              }}
+            >
+              <input
+                autoFocus
+                aria-label="Project name"
+                value={nameDraft}
+                maxLength={100}
+                disabled={pending}
+                onFocus={(event) => event.target.select()}
+                onChange={(event) => setNameDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') setNameDraft(null)
+                }}
+              />
+              <button disabled={pending || !nameDraft.trim()}>Save</button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => setNameDraft(null)}
+              >
+                Cancel
+              </button>
+            </form>
+          )}
           <button
             className="primary-action query-files"
             disabled={!documents.length}
@@ -363,7 +410,9 @@ function ProjectDashboard({
           </button>
           {(project.client || project.location) && (
             <p>
-              {[project.client, project.location].filter(Boolean).join(' \u00b7 ')}
+              {[project.client, project.location]
+                .filter(Boolean)
+                .join(' \u00b7 ')}
             </p>
           )}
         </header>

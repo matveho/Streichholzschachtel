@@ -1266,3 +1266,44 @@ button.query-files:hover {
   padding: 5px;
   color: var(--color-secondary);
 }
+
+.dashboard-project-name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+.dashboard-project-name input {
+  width: min(100%, 32ch);
+  min-width: 0;
+  border: 1px solid var(--line-strong);
+  padding: 4px 6px;
+  font: inherit;
+}
+.dashboard-project-name button {
+  color: var(--color-secondary);
+}
+.managed-file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.managed-file .collection-document {
+  flex: 1 1 16rem;
+}
+.managed-file select,
+.pending-files select {
+  max-width: 45%;
+  color: var(--color-text);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font: inherit;
+  padding: 3px;
+}
+.file-type-note {
+  display: block;
+  margin-top: 6px;
+  color: var(--color-secondary);
+}
