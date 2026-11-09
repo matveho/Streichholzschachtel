@@ -1,15 +1,18 @@
 # Two minutes with Parkview Exchange
 
-**Presenter question:** Does the proposed grade for sanitary branch S1 meet the minimum for its design flow?
+Before presenting, open the [completed S1 grade review](https://streichholzschachtel.vercel.app/#project/parkview-exchange/query/ab513c56-eb35-3e15-76d3-8bd34b1a31f3) in a second browser tab. Click citation **2** and check that EPCOR Table 1.1 is legible on the projector. Leave that tab open on the table. Start the presentation in the first tab at [Projects](https://streichholzschachtel.vercel.app/#projects).
 
-Before presenting, open the [Parkview evidence view](https://streichholzschachtel.vercel.app/#project/parkview-exchange/query/ab513c56-eb35-3e15-76d3-8bd34b1a31f3) in a spare tab. Click citation **2** and check that Table 1.1 is legible on the projector. Leave that tab open as your fallback. In the presenting tab, start at [Projects](https://streichholzschachtel.vercel.app/#projects). This walkthrough reopens a completed query.
-
-| Time | On screen | What to say |
+| Time | Action | Presenter cue |
 | --- | --- | --- |
-| 0:00–0:15 | Open **Parkview Exchange Redevelopment**. Point to its drawings and reference documents. | “I’m reviewing a servicing design in Edmonton. Here are the project drawings and the standards I need to check them against.” |
-| 0:15–0:35 | Under **Potential issues → Open**, expand **Sanitary upstream grade needs revision**. Click **Inspect evidence**. | “The question is whether branch S1 is steep enough. I want to check both the designer’s inputs and the row of the standard that applies.” |
-| 0:35–1:00 | In the first paragraph of the result, click citation **3**. Point to the highlighted S1 passage in **C101 / C102**, PDF page **1**. | “The plan gives us three inputs: a 200 mm upstream pipe, a proposed grade of 0.30%, and a peak dry-weather flow of 0.34 litres per second.” |
-| 1:00–1:35 | Click citation **2** in the same paragraph. Point across the highlighted row of **EPCOR Vol. 3-03, Table 1.1**, PDF page **8**. Pause so the audience can read it. | “That flow falls between 0.25 and 0.40 litres per second. Read across: for this upstream reach, the table gives a minimum slope of 1.00%. The drawing shows 0.30%.” |
-| 1:35–2:00 | Return via **Project dashboard**. Leave the finding open. | “I’d ask the designer to confirm the flow assigned to S1 and revisit the grade. I can send them the exact drawing passage and table row behind that review comment.” |
+| 0:00–0:15 | Open **Parkview Exchange Redevelopment**. Point to the project drawings and municipal references. Click **New query**. | “We’re reviewing a proposed sewer pipe called S1. Which detail would you like me to look up: its length or its diameter?” |
+| 0:15–0:45 | Type the judge’s choice using the wording below. Click **Search** and start the 15-second clock. When the answer appears, click its citation **1** and point to the value in the PDF. | Read the value aloud and name the document it came from. |
+| 0:45–1:05 | Switch to the second browser tab. Introduce it as a **completed review** of the same pipe. Click citation **3** in the first paragraph to show drawing **C101 / C102**, PDF page **1**. | “Now the engineering question: is this pipe steep enough? The drawing shows a proposed slope of 0.30% and a peak dry-weather flow of 0.34 litres per second.” |
+| 1:05–1:40 | Click citation **2**. Point across the highlighted row in **EPCOR Vol. 3-03, Table 1.1**, PDF page **8**. Pause on the two numbers. | “That flow falls in this 0.25–0.40 band. For a 200 mm upstream pipe in that band, the minimum slope is 1.00%. The drawing shows 0.30%.” |
+| 1:40–2:00 | Return via **Project dashboard** and point to **Sanitary upstream grade needs revision** under **Potential issues**. | “I’d ask the designer to confirm the flow assigned to S1 and revisit the grade. They can open this finding and see the drawing and the exact table row behind my comment.” |
 
-If someone asks why the upstream table applies, citation **1** opens the governing text on PDF page **7**. The 0.34 L/s allocation is for branch S1, not the entire redevelopment.
+**Live search wording**
+
+- **Length** — Type “How long is sanitary pipe S1?” Expect **43 m**, cited to the **PX-IFC-001** model register, PDF page **4**.
+- **Diameter** — Type “what diameter is sanitary pipe S1?” Expect **200 mm**, cited to the **PX-DM-001** servicing design memo, PDF page **1**.
+
+**15-second fallback:** If a clear cited answer hasn’t appeared within 15 seconds of clicking Search, switch to the preloaded grade review and say, “Let’s open a review we completed earlier on this same pipe.” Continue at the drawing step. If the live search asks for clarification, make that switch immediately.
