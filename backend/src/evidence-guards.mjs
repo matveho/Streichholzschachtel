@@ -1,7 +1,28 @@
 // Conservative vetoes for source extraction ambiguity and unsupported exemptions.
 // These checks may withhold a claim; they never approve an engineering conclusion.
 const exemption = /\b(?:no\s+(?:mandatory|required)\b|not\s+(?:required|necessary|mandated)|does\s+not\s+require|exempt(?:ed|ion)?\b)/i
-export function evidenceInterpretationIssue(claim, source, question = '') {
+export function evidenceInterpretationIssue(claim, source, question = '', {projectEvidence = ''} = {}) {
+  const projectBasis = question + ' ' + projectEvidence
+  if (/\bESALs?\b/i.test(source) &&
+      /\b(?:governing|exceeds?|meets?|complies|shortfall|satisfies|adequate|sufficient)\b/i.test(claim) &&
+      !/\b(?:design|cumulative|project)\s+ESALs?\s*(?:(?:of|is|are|were|estimated at)\s*|[:=]\s*)?\d|\b\d+(?:\.\d+)?\s*(?:million|M)?\s+(?:design\s+)?ESALs?\b|\bESALs?\s*[:=]\s*\d/i.test(projectBasis))
+    return 'This pavement criterion depends on design ESALs. AADT and truck percentage do not establish cumulative axle loading; provide the project design ESALs before selecting a minimum or reporting a project comparison.'
+  const roleIssue = pavementComparisonRoleIssue(claim, source, projectBasis)
+  if (roleIssue) return roleIssue
+  const atFinal = /\bat\s+(?:FAC|final acceptance(?: certificate)?|final acceptance inspection)\b/i.test(source)
+  const atConstruction = /\bat\s+(?:CCC|construction completion(?: certificate)?)\b/i.test(source)
+  if (atFinal !== atConstruction) {
+    const retained = atFinal
+      ? /\bFAC\b|\bfinal acceptance\b/i.test(claim)
+      : /\bCCC\b|\bconstruction completion\b/i.test(claim)
+    if (!retained)
+      return 'The cited requirement is specific to an acceptance stage. Preserve the FAC/final acceptance or CCC/construction completion qualifier; it is not a universal testing rule.'
+  }
+  if (/\b(?:for each|under these|in this|for these|for those)\s+(?:process(?:es)?|methods?|cases?|conditions?|procedures?)\b/i.test(source) &&
+      /\bgoverning\b|\bappl(?:ies|icable) to (?:this|the) project\b|\b(?:meets?|complies with) (?:the )?(?:minimum|requirement|standard)/i.test(claim) &&
+      !/\bgoverning\b|\bapplicable to (?:this|the) project\b/i.test(source))
+    return 'The cited clause refers to an undefined process or condition. Include its governing context before asserting that it establishes a project requirement.'
+
   const feasibility = /\b(?:when|if)\b[^!?]{0,120}\b(?:not practical|not feasible|impractical|unachievable)\b/i
   const established = /\b(?:is|are|was|were)\s+not\s+(?:practical|feasible)\s*[.;]/i.test(question)
   if (feasibility.test(source) && !established &&
@@ -16,8 +37,12 @@ export function evidenceInterpretationIssue(claim, source, question = '') {
   if (exemption.test(claim) && !exemption.test(source))
     return 'Missing evidence cannot establish an exemption or prove that a requirement does not exist. The cited evidence must explicitly support the claimed exemption.'
   const flattened = [...source.matchAll(/\b[A-Za-z]\s*=\s*[A-Za-z]{2,}\s+(\d+(?:\.\d+)?)(?=[\s.,;]|$)/g)]
-  if (/\b(?:multipl(?:y|ied|ication)|divid(?:e|ed)|division|denominator|numerator)\b/i.test(claim) &&
-      flattened.some(match => new RegExp(`\\b${match[1].replace('.', '\\.')}\\b`).test(claim)))
+  if (flattened.some(match => {
+    const factor = match[1].replace('.', '\\.')
+    const namedOperator = /\b(?:multipl(?:y|ied|ication)|divid(?:e|ed)|division|denominator|numerator)\b/i.test(claim) && new RegExp(`\\b${factor}\\b`).test(claim)
+    const symbolicOperator = new RegExp(`(?:[×*÷/]\\s*${factor}\\b|\\b${factor}\\s*[×*÷/])`).test(claim)
+    return namedOperator || symbolicOperator
+  }))
     return 'The extracted equation does not preserve its operators. Inspect the original formula before asserting multiplication or division.'
   const absoluteLimits = [...source.matchAll(/\b(?:below|less than)\s+(\d+(?:\.\d+)?)\s*([a-zA-Z]+(?:\/[a-zA-Z]+)?)[^.]*?\b(?:not be allowed|prohibited|not permitted)/gi)]
   if (/\b(?:unless|except)\b/i.test(claim) && absoluteLimits.some(match => claim.includes(match[1]) && claim.includes(match[2])))
@@ -55,4 +80,14 @@ export function reversedBound(claim, source) {
     const matching = cited.filter(other => other.value === bound.value && other.unit === bound.unit)
     return matching.length && matching.every(other => other.direction !== bound.direction)
   })
+}
+
+export function pavementComparisonRoleIssue(claim, source, projectBasis) {
+  if (!/\b(?:exceeds?|meets?|complies|greater than|less than|shortfall|satisfies|adequate|sufficient)\b/i.test(claim)) return null
+  const belowRecycledLayer = /\b(?:below|beneath|under)\s+(?:the\s+)?(?:CIR|cold[ -]in[ -]place recycling)\s+layer/i
+  if (belowRecycledLayer.test(source) && !belowRecycledLayer.test(projectBasis))
+    return 'The reference thickness concerns asphalt retained beneath a recycled layer. The project evidence does not establish that structural role for the proposed layer; keep these quantities separate.'
+  if (/\b(?:ACP|asphalt(?: concrete)?)\s+overlay\b/i.test(source) && !/\boverlay\b/i.test(projectBasis))
+    return 'The reference concerns a pavement overlay. Establish that the proposed layer is an overlay before comparing its thickness with this criterion.'
+  return null
 }

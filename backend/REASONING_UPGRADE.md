@@ -1,11 +1,11 @@
-# Local reasoning upgrade — in validation
+# Local reasoning and comparison runtime
 
-The live demo remains extractive while this upgrade is tested on main with isolated state.
+The live demo uses the pinned Qwen3.5 model for explicit project/reference comparisons. General reviews remain extractive; unrestricted synthesis and thinking are not qualified. Historical snapshots below are superseded by the latest release evidence at the end.
 
 ## Implemented
 
 - Default local model selection: qwen3:32b-q4_K_M. Explicit OLLAMA_MODEL overrides remain supported.
-- LOCAL_REASONING=1 enables reasoning only for calls marked reasoning:true: evidence selection, arithmetic proposals, findings and evidence review. Retrieval planning remains non-thinking.
+- LOCAL_REASONING=1 enables reasoning only for calls marked reasoning:true: arithmetic proposals, findings and evidence review. Retrieval planning and source-ID selection remain non-thinking.
 - LOCAL_REASONING_TOKENS (default 4096) augments each call's output budget; LOCAL_CONTEXT_TOKENS defaults to 16384. Both settings are range-validated. Completion at the token limit remains a failure; incomplete output is not released.
 - Ollama endpoints must be loopback, matching the existing llama.cpp restriction. Reasoning traces are excluded from returned results; only parsed final JSON is used.
 - Foreign-jurisdiction checks run before local model retrieval/generation. The Toronto/Edmonton regression verifies that neither retrieval nor generation executes. Scope messages no longer describe every reference collection as Edmonton-only.
@@ -105,3 +105,85 @@ and clauses remain eligible. This fix was added after that GPU run started and
 is not covered by its model results. Regression `run-u68RrDUL`: 188/188 tests plus
 isolated API/import/isolation/restart checks passed, including the real sanitary
 provision being rejected as a storm finding. Live inference remains extractive.
+
+
+## Newer GPU candidate and acceptance-stage fidelity
+
+Qwen3.5 35B-A3B Q4_K_M is installed in the same user-local Ollama runtime,
+manifest digest `72aac7c28be8ff9b81c2a270eb489c88e6d822a76ec0cb7bf34d965768848567`.
+Official package: https://ollama.com/library/qwen3.5:35b-a3b-q4_K_M.
+It ran fully GPU-resident: 21,598,411,160 bytes at 8192 context and
+21,782,960,536 bytes at 16384 context. Whole-GPU observed memory at 16K was
+26,891 MiB, including the existing desktop workload.
+
+Raw direct evidence benchmark: 23/24 in 24.508 seconds, with one false approval
+for a flattened formula. Both natural-language and symbolic operator guesses are
+now conservatively vetoed when the original extraction does not preserve them.
+The model is a working infrastructure candidate, not a qualified production
+answer provider.
+
+The completed 32B run `run-gpu-PYSUeYUF` passed 2/7 in 446 seconds. The newer
+candidate's direct run `run-gpu-9nok18LF` also passed 2/7 in 156 seconds
+(minor-system and shallow-soil-exemption). Source-scope code differs between
+these snapshots, so these timings are observed run durations, not a controlled
+model-only speedup. Completeness, capacity calculations and acceptance-stage
+interpretation still require work. Added case IDs, runtime model/provider and
+missing-term/source diagnostics without changing the quality gates.
+
+Investigation of the exact-area answer found FAC-only testing rules being
+presented as general testing counts/exemptions. New vetoes require preserving
+FAC/final-acceptance and CCC/construction-completion qualifiers. Stable regression
+`run-N8cVQkP4`: 190/190 tests plus API/import/isolation/restart checks passed.
+
+Thinking over source-ID selection exhausted a 4096-token reasoning budget in
+34 seconds (`run-gpu-TTvb7O9b`) and later an 8192-token budget in 193 seconds;
+outputs were correctly withheld. Source selection now remains direct even when
+LOCAL_REASONING=1; arithmetic, findings and evidence review retain the optional
+bounded mode. The 24 real-corpus retrieval tests pass and verify that stage
+contract. Targeted decision-only thinking validation is still running; inspect
+`/tmp/basis-qwen35-decision-thinking.log` and its state directory before starting
+another GPU evaluation. No live switch from extractive inference has occurred.
+
+
+## Validated comparison release
+
+Deployed model alias: `basis-qwen35-comparisons:72aac7c28be8` (the manifest digest
+above is checked before activation). `LOCAL_SYNTHESIS_POLICY=comparisons` enables
+explicit project/reference comparisons; general reviews, approval requests,
+reference-only scopes and explicit source-only requests stay on the existing
+extractive path. `all` remains an experimental evaluation setting.
+
+A dedicated comparison check collates already-selected project and reference
+provisions, reports their actual difference using independently verified
+arithmetic, and preserves structural position, process, acceptance-stage and
+load-input qualifiers. Each derived comparison carries both source roles.
+Atomic observations alone do not establish a completed comparison. Missing
+bases produce an unresolved comparison with validated source text, not a
+one-sided inferred minimum or automatic compliance decision.
+
+Adversarial validation exposed pavement overlay/remaining-asphalt versus new-layer
+confusion and selection of ESAL-dependent minima without project design ESALs.
+Added explicit vetoes and positive controls; AADT/truck percentage cannot silently
+become cumulative axle loading. These are evidence qualification checks, not
+embedded regulatory values. Shared source units now retain stable labels and
+coverage reports identify reused evidence rather than falsely reporting it absent.
+
+Latest stable regression `run-nZuLBeVb`: 202/202 tests plus isolated
+API/import/isolation/restart checks passed. Nine strengthened capability cases
+passed in `run-gpu-jocctzBf`; the bounded workflow
+is recorded by `/tmp/basis-qwen35-bounded-workflow.log`. Width comparison: 4.455 s;
+cover comparison: 5.706 s. Results include a real 50 mm width difference and
+0.35 m storm-cover shortfall with both original-source roles. Negative cases
+include missing highway design basis even with the proposed value supplied.
+
+Isolated browser `run-browser-53t6QqO7` passed UI submission, the 50 mm arithmetic,
+both original PDF highlights, reload/history, offline general review and IFC
+findings. The public Vercel browser passed the same comparison (stored query
+`26a23197-d810-4da7-afe6-b36a68f70f0e`). Public extractive rollback, restoration of
+comparison mode and retained query history were executed successfully.
+
+The decision-only thinking trial completed drafting but exhausted its bounded
+review output after 254 seconds. It is not enabled in the release. Broader
+engineering synthesis remains unfinished: the seven-case direct candidates
+previously scored 2/7. Do not present this bounded comparison release as a
+qualified general engineering-design assistant.

@@ -3,6 +3,7 @@ import { evidenceInterpretationIssue } from './evidence-guards.mjs'
 import { foreignJurisdiction } from './catalog.mjs'
 import { attachReviewCoverage } from './review-coverage.mjs'
 import { config } from './config.mjs'
+import { permitsLocalSynthesis, hasPairedProjectComparison } from './generation-policy.mjs'
 import { mergeApprovedSynthesis } from './synthesis-repair.mjs'
 import { tokens, rankProvisions } from './search.mjs'
 import { generate } from './model.mjs'
@@ -107,7 +108,7 @@ function supportedNumbers(claim, sources, question, calculations = []) {
   )
 }
 
-export function validateSynthesis(output, passages, question) {
+export function validateSynthesis(output, passages, question, documents = []) {
   const byId = new Map(passages.map((p) => [p.id, p]))
   const sections = []
   const issues = []
@@ -232,7 +233,7 @@ export function validateSynthesis(output, passages, question) {
           reason:'The cited provision belongs to a different sewer system in its governing source section. Preserve storm/sanitary scope.' })
         continue
       }
-      const interpretationIssue = evidenceInterpretationIssue(claim.text, sourceText, question)
+      const interpretationIssue = evidenceInterpretationIssue(claim.text, sourceText, question, {projectEvidence:evidence.filter(e => documents.find(d => d.id === e.passage.doc)?.projectArtifact).map(e => e.excerpt).join(' ')})
       if (interpretationIssue) {
         rejected++
         issues.push({ ...(claim.check ? {check: claim.check} : {}), claim: claim.text, reason: interpretationIssue })
@@ -822,6 +823,9 @@ export async function answer(
       progress,
       sourceOnly,
     })
+  if (config.localSynthesis && ['ollama', 'llamacpp'].includes(config.provider) &&
+      !permitsLocalSynthesis(question, searchIndex.corpus.documents, config.localSynthesisPolicy))
+    return answerFromUnits(question, searchIndex, {publicBase, token, signal, progress, sourceOnly:true})
   progress('Retrieving source passages')
   let passages = searchIndex.search(question)
   if (!passages.length) {
@@ -898,7 +902,7 @@ export async function answer(
         }
       }
       if (draft.answerable) {
-        checked = validateSynthesis(draft, passages, question)
+        checked = validateSynthesis(draft, passages, question, searchIndex.corpus.documents)
         if (checked.sections.length) {
           progress('Checking findings against their exact source evidence')
           checked = await auditConclusion(checked)
@@ -916,7 +920,7 @@ export async function answer(
             draft.plan,
           )
           if (repaired.answerable) {
-            let corrected = validateSynthesis(repaired, passages, question)
+            let corrected = validateSynthesis(repaired, passages, question, searchIndex.corpus.documents)
             if (corrected.sections.length) {
               corrected = await auditConclusion(corrected)
               if (process.env.BASIS_DEBUG_RETRIEVAL === '1')
@@ -931,6 +935,17 @@ export async function answer(
             }
           }
         }
+      }
+      if (config.localSynthesisPolicy === 'comparisons' &&
+          !hasPairedProjectComparison(checked.sections, searchIndex.corpus.documents)) {
+        const evidence = checked.sections.filter(section => section.heading).map(section => ({
+          ...section,
+          heading: 'Source evidence · ' + (searchIndex.corpus.documents.find(doc => doc.id === section.claims[0]?.evidence[0]?.passage.doc)?.label || 'Document'),
+        }))
+        const result = renderResult(evidence, searchIndex.corpus, publicBase, token, 'insufficient_evidence',
+          ['The cited material does not establish the requested project-to-reference comparison. Confirm the applicable design basis and provide both quantities.'])
+        result.report.unshift({heading:'Comparison not established',sentences:[{text:'Confirm the applicable design basis and both the proposed and reference quantities before completing this comparison.'}]})
+        return attachReviewCoverage(result, retrieval.topics, draft.plan, {...checked,sections:evidence})
       }
       if (checked.sections.some((s) => !s.heading)) {
         const hasConclusion = checked.sections.some((s) => !s.heading)
@@ -1128,7 +1143,7 @@ export async function answer(
           signal,
         )
         if (revised.answerable) {
-          const corrected = validateSynthesis(revised, passages, question)
+          const corrected = validateSynthesis(revised, passages, question, searchIndex.corpus.documents)
           if (corrected.sections.length) {
             const audited = await review(corrected.sections, question, signal)
             corrected.sections = audited.sections

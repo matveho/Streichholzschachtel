@@ -31,3 +31,18 @@ test('maximum allocations cannot become minimum requirements and opposite bounds
   assert.match(evidenceInterpretationIssue('The maximum pipe cover is 2.4 m.','Minimum pipe cover is 2.4 m.'),/reverses/)
   assert.equal(evidenceInterpretationIssue('Minimum width is 400 mm and maximum width is 500 mm.','Minimum width is 400 mm and maximum width is 500 mm.'),null)
 })
+
+test('comparison checks share stable source labels after ranking clones units',async()=>{
+ const {labelEvidenceGroups}=await import('../src/local-synthesis.mjs')
+ const standard={passage:{doc:'standard',id:'std-p1'},excerpt:'Minimum width is 450 mm.'}
+ const project={passage:{doc:'project',id:'project-p1'},excerpt:'Proposed width is 400 mm.'}
+ const groups=[{units:[standard,project]},{units:[{...project,score:10},{...standard,score:9}]}]
+ const labels=labelEvidenceGroups(groups)
+ assert.equal(labels.all.length,2)
+ for(const group of groups)for(const unit of group.units){
+  const id=labels.unitLabel(unit)
+  assert.equal(labels.byLabel.get(id).excerpt,unit.excerpt)
+  assert.equal(labels.byLabel.get(id).passage.doc,unit.passage.doc)
+ }
+ assert.throws(()=>labels.unitLabel({passage:{doc:'foreign'},excerpt:project.excerpt}),/outside/)
+})

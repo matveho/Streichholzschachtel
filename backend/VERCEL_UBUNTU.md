@@ -60,3 +60,13 @@ Operations: scripts/linux/install-tunnel installs the pinned binary and user uni
 Rollback: restoring route version ee867141-c85f-4c86-b507-a5b698aab18c reinstates preview-only Ubuntu access and sends normal requests to the old deployment's destination. That old backend is down, so it is not a working availability fallback. For a working rollback, first restore an approved backend/backup, validate it, then stage/promote this same route to its reachable HTTPS origin. Preserve Ubuntu writes before moving state. To remove external access immediately, stop basis-tunnel. No guarantee of uptime across logout/reboot or Quick Tunnel URL stability is made. The localhost data consists of the seeded corpus and local state; any additional Windows state still needs the home-agent backup handoff.
 
 IFC scan deployment verification (2026-11-08): main `6b43ff5`; production deployment `dpl_C2vFYmKomdFoTpRXtw4CGqcrhcC7`. Active project routing version `1d77a501-ec2d-4998-a085-231332e9d00d`. Public browser verified 13 automatic Parkview IFC findings and successful Rescan. Isolated browser verified evidence inspection, dismissal preservation, downloads and source navigation. Backend verification: 178 tests passed, plus isolated API/import/isolation/restart checks. IFC-focused suites: 16 tests passed including all five planted contradictions and the compliant control. Tunnel unit uses Wants rather than Requires for the gateway so restarting the gateway does not rotate the Quick Tunnel URL.
+
+
+GPU comparison backend release: the active Ubuntu service uses the pinned
+`basis-qwen35-comparisons:72aac7c28be8` alias under the comparisons policy.
+General reviews remain extractive. The public browser submitted the width
+comparison, verified 50 mm arithmetic and opened both PDF highlights. Mode
+rollback/restoration preserves query history and leaves this project's HTTPS
+route unchanged. Commands: `scripts/linux/basis mode extractive` and
+`scripts/linux/basis mode comparisons`; see UBUNTU.md for prerequisites and
+validation. Unrestricted generation and thinking remain experimental.

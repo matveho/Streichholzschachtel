@@ -56,6 +56,7 @@ const engineVersion = createHash('sha256')
       'local-synthesis.mjs',
       'linked-tables.mjs',
       'evidence-guards.mjs',
+      'generation-policy.mjs',
       'review-coverage.mjs',
       'synthesis-repair.mjs',
       'evidence-units.mjs',
@@ -83,7 +84,7 @@ const engineVersion = createHash('sha256')
       localModelManifest +
       config.extractiveOnly +
       config.localSynthesis +
-      JSON.stringify({reasoning: config.localReasoning, reasoningTokens: config.localReasoningTokens, contextTokens: config.localContextTokens, findingsPerCheck: config.maxFindingsPerCheck}) +
+      JSON.stringify({synthesisPolicy: config.localSynthesisPolicy, reasoning: config.localReasoning, reasoningTokens: config.localReasoningTokens, contextTokens: config.localContextTokens, findingsPerCheck: config.maxFindingsPerCheck}) +
       config.entailmentDir +
       config.entailmentPython +
       verifierManifest,
@@ -356,6 +357,7 @@ export const server = http.createServer(async (req, res) => {
                   : config.model,
         units: corpus?.units?.length || 0,
         provider: config.provider,
+        generationPolicy: config.extractiveOnly ? 'extractive' : config.localSynthesisPolicy,
         activeQueries: Number(!!activeJob) + Number(!!projectApi?.active),
         queuedQueries:
           queue.filter((j) => j.state === 'queued').length +

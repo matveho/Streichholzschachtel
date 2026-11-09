@@ -36,3 +36,48 @@ test('feasibility exceptions do not become ordinary project requirements',()=>{
  assert.match(issue('The project uses the 2.0 m exception.',source),/feasibility exception/)
  assert.equal(issue('The project uses the 2.0 m exception.',source,'The normal arrangement is not practical.'),null)
 })
+
+test('acceptance-stage testing rules cannot become universal counts or exemptions',()=>{
+ const source='At FAC, Guelph Permeameter testing must be conducted once per 1000 m2; this is not required for facilities with an impervious surface such as concrete or asphalt on top.'
+ assert.match(issue('Testing must be conducted once per 1000 m2.',source),/acceptance stage/)
+ assert.match(issue('Testing is not required for facilities with an impervious surface.',source),/acceptance stage/)
+ assert.equal(issue('At FAC, testing must be conducted once per 1000 m2.',source),null)
+ assert.equal(issue('At final acceptance, testing is not required for facilities with an impervious surface.',source),null)
+ const construction='At CCC, submit the required inspection records.'
+ assert.match(issue('Inspection records must be submitted.',construction),/acceptance stage/)
+ assert.equal(issue('At construction completion, submit the inspection records.',construction),null)
+})
+
+test('symbolic operators cannot reconstruct a flattened PDF formula',()=>{
+ const source='The extracted equation is Q = CIA 360.'
+ assert.match(issue('The formula is Q = CIA / 360.',source),/operators/)
+ assert.match(issue('Use Q = CIA × 360.',source),/operators/)
+ assert.match(issue('The formula is Q = 360 * CIA.',source),/operators/)
+ assert.equal(issue('The formula is Q = CIA / 360.','The equation is Q = CIA / 360.'),null)
+})
+
+test('an undefined process cannot establish the governing project minimum',()=>{
+ const source='For each process a minimum 50 mm ACP overlay is required.'
+ assert.match(issue('The governing standard requires a minimum asphalt pavement thickness of 50 mm for the ACP overlay.',source),/undefined process/)
+ assert.match(issue('The proposed plate meets the minimum requirement.','For each process a minimum 50 mm steel plate is required.'),/undefined process/)
+ assert.equal(issue('The reference states a 50 mm ACP overlay for each process; confirm the applicable process.',source),null)
+ assert.equal(issue('The governing standard requires a 50 mm overlay.','The governing standard requires a 50 mm overlay.'),null)
+})
+
+test('pavement comparisons preserve layer position and construction process',()=>{
+ const source='It is recommended that a minimum asphalt materials thickness of 50 mm remains below the CIR layer to support equipment.'
+ const claim='The proposed 110 mm asphalt layer exceeds the recommended minimum of 50 mm below CIR layers.'
+ assert.match(issue(claim,source,'Compare the proposed new asphalt layer.'),/structural role/)
+ assert.equal(issue(claim,source,'Compare 110 mm of remaining asphalt below the CIR layer with this criterion.'),null)
+ assert.match(issue('The proposed 110 mm layer exceeds the 50 mm overlay minimum.','For each process a minimum 50 mm ACP overlay is required.','Compare the new pavement layer.'),/overlay/)
+ assert.equal(issue('The proposed 110 mm overlay exceeds the reference 50 mm overlay minimum.','A minimum 50 mm ACP overlay is required.','Compare the proposed overlay.'),null)
+})
+
+test('AADT and truck percentage cannot select an ESAL-based pavement minimum',()=>{
+ const source='Minimum first-stage asphalt thickness for design ESALs less than 2 million is 60 mm.'
+ const claim='The project proposes 110 mm, which exceeds the governing minimum thickness of 60 mm.'
+ assert.match(issue(claim,source,'The highway has 7200 AADT with 10% trucks.'),/design ESALs/)
+ assert.match(issue(claim,source,'Compare this project.',{projectEvidence:'Trial asphalt thickness is 110 mm. No ESAL-based adequacy is claimed.'}),/design ESALs/)
+ assert.equal(issue(claim,source,'The project is designed for 1 million ESALs.'),null)
+ assert.equal(issue('The reference lists a 60 mm criterion for design ESALs below 2 million.',source,'Compare the project.'),null)
+})

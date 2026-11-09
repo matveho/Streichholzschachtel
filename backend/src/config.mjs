@@ -41,6 +41,7 @@ export const config = {
   anthropicEffort: process.env.ANTHROPIC_EFFORT || 'medium',
   extractiveOnly: process.env.EXTRACTIVE_ONLY === '1',
   localSynthesis: process.env.LOCAL_SYNTHESIS === '1',
+  localSynthesisPolicy: process.env.LOCAL_SYNTHESIS_POLICY || 'all',
   entailmentDir: process.env.ENTAILMENT_MODEL_DIR || '',
   entailmentPython: process.env.ENTAILMENT_PYTHON || '',
   frontendUrl:
@@ -101,3 +102,6 @@ for (const [name, min, max] of [['maxFindingsPerCheck', 2, 8],
   if (!Number.isInteger(config[name]) || config[name] < min || config[name] > max)
     throw new Error(`Invalid ${name}; expected an integer between ${min} and ${max}.`)
 }
+
+if (!['all', 'comparisons'].includes(config.localSynthesisPolicy))
+  throw new Error('LOCAL_SYNTHESIS_POLICY must be all or comparisons.')

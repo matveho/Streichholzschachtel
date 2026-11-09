@@ -65,6 +65,7 @@ if (caseId && !/^[a-z0-9-]+$/.test(caseId))
 const cases = caseId ? suite.filter((c) => c.id === caseId) : suite
 if (!cases.length) throw new Error('No quality cases matched the selected ID')
 mkdirSync('test-results', { recursive: true })
+const runHealth = await (await fetch(testBase + '/health')).json()
 const outputs = []
 for (const c of cases) {
   const start = Date.now()
@@ -109,7 +110,20 @@ for (const c of cases) {
       (c.noAnswer ||
         ['local_synthesis', 'cited_synthesis'].includes(job.result?.mode) ||
         (c.allowLookup && job.result?.mode === 'source_lookup'))
+  const sourceCount = new Set(job.result?.references?.map(r => r.doc) || []).size
+  const diagnostics = {
+    missingEvidenceTerms: (c.terms || []).filter(term => !term.test(text)).map(String),
+    missingFindingTerms: (c.findingTerms || []).filter(term => !term.test(findings)).map(String),
+    forbiddenTerms: (c.forbidden || []).filter(term => term.test(text)).map(String),
+    requiredSources: c.minSources || (c.noAnswer ? 0 : 1),
+    actualSources: sourceCount,
+    expectsNoAnswer: !!c.noAnswer,
+  }
   outputs.push({
+    ...(c.id ? {caseId:c.id} : {}),
+    model: runHealth.model,
+    provider: runHealth.provider,
+    diagnostics,
     question: c.question,
     passed,
     state: job.state,
@@ -128,6 +142,7 @@ for (const c of cases) {
     JSON.stringify({
       passed,
       evidenceChecksPassed,
+      ...(!passed ? {diagnostics} : {}),
       seconds: outputs.at(-1).seconds,
       mode: job.result?.mode,
     }),

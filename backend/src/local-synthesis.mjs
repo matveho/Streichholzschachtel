@@ -6,6 +6,7 @@ import { generate } from './model.mjs'
 import { tokens, rankProvisions } from './search.mjs'
 import { verifyCalculations } from './calculations.mjs'
 import { scopedRepair } from './synthesis-repair.mjs'
+import { permitsLocalSynthesis } from './generation-policy.mjs'
 
 export function cleanSourceCallout(text, labels) {
   if (typeof text !== 'string') return text
@@ -44,6 +45,8 @@ export function boundFindingCalculations(ids, calculations, sources, question) {
 }
 
 export function focusedInstruction(role, hasSharedRequirement) {
+  if (role === 'comparison')
+    return 'State the project value and reference criterion, then their actual difference using verified calculations. Cite BOTH source roles for the comparison. Compare only the same property, structural position, process and acceptance stage. An asphalt overlay, remaining material below recycling, and a new pavement layer are different roles. If applicability or either value is missing, state that the comparison is unresolved. Do not grant approval or infer which publication governs.'
   if (role === 'original-system')
     return 'State only the existing-system obligation and its stated scope. Do not infer that it prohibits the alternative or invent a connection arrangement.'
   if (hasSharedRequirement)
@@ -117,6 +120,22 @@ export const sourceContext = (u, id, documents = []) => ({
   ...(u.mixedConditions ? { mixedConditions: true } : {}),
 })
 
+export function labelEvidenceGroups(groups) {
+  const key = unit => unit.passage.doc + ':' + unit.excerpt
+  const unique = new Map()
+  for (const unit of groups.flatMap(group => group.units))
+    if (!unique.has(key(unit))) unique.set(key(unit), unit)
+  const all = [...unique.values()]
+  const ids = new Map(all.map((unit, i) => [key(unit), label(i)]))
+  const byLabel = new Map(all.map((unit, i) => [label(i), unit]))
+  const unitLabel = unit => {
+    const id = ids.get(key(unit))
+    if (!id) throw new Error('The evidence unit is outside the selected source scope')
+    return id
+  }
+  return {all, byLabel, unitLabel}
+}
+
 export async function draftLocal(
   question,
   passages,
@@ -131,7 +150,8 @@ export async function draftLocal(
     const groups = [],
       unresolved = [],
       seen = new Set(),
-      originalSystemKeys = new Set()
+      originalSystemKeys = new Set(),
+      selectedTopics = new Map()
     for (const topic of topics || [
       { heading: 'Governing provisions', query: question, passages },
     ]) {
@@ -193,7 +213,9 @@ export async function draftLocal(
         },
         signal,
         800,
-        { ...options, reasoning: true },
+        // Selecting source IDs is retrieval. Reserve bounded thinking for
+        // calculations, findings and their independent evidence review.
+        { ...options, reasoning: false },
       )
       unresolved.push(...(selected.unresolved || []))
       if (selected.answerable !== true) {
@@ -204,6 +226,7 @@ export async function draftLocal(
         .filter((id) => byLabel.has(id))
         .slice(0, 12)
         .map((id) => byLabel.get(id))
+      selectedTopics.set(topic.heading, selectedUnits.map(unit => unit.passage.doc + ':' + unit.excerpt))
       const chosen = [...selectedUnits, ...linkedTableEvidence(selectedUnits, ranked)]
         .filter((u) => {
           const key = u.passage.doc + ':' + u.excerpt
@@ -221,10 +244,20 @@ export async function draftLocal(
           units: chosen,
         })
     }
-    plan = { groups, unresolved, originalSystemKeys: [...originalSystemKeys] }
+    if (permitsLocalSynthesis(question, index.corpus.documents, 'comparisons')) {
+      const documents = new Map(index.corpus.documents.map(d => [d.id, d]))
+      const candidates = rankProvisions(groups.flatMap(g => g.units), question)
+      const sides = [false, true].map(projectArtifact => candidates.filter(u => !!documents.get(u.passage.doc)?.projectArtifact === projectArtifact).slice(0, 6))
+      if (sides.every(units => units.length)) groups.push({
+        id:`check-${groups.length}`,heading:'Project-to-reference comparison',query:question,role:'comparison',units:sides.flat(),
+      })
+    }
+    const sharedEvidence = Object.fromEntries([...selectedTopics].filter(([heading, keys]) => keys.length && !groups.some(group => group.heading === heading)).map(([heading, keys]) => [heading,
+      groups.filter(group => group.units.some(unit => keys.includes(unit.passage.doc + ':' + unit.excerpt))).map(group => group.id),
+    ]))
+    plan = { groups, unresolved, originalSystemKeys: [...originalSystemKeys], sharedEvidence }
   }
-  const all = plan.groups.flatMap((g) => g.units),
-    byLabel = new Map(all.map((u, i) => [label(i), u]))
+  const {all, byLabel, unitLabel} = labelEvidenceGroups(plan.groups)
   if (!all.length)
     return { answerable: false, sections: [], unresolved: plan.unresolved }
   const context = all.map((u, i) => sourceContext(u, label(i), index.corpus.documents))
@@ -277,6 +310,7 @@ export async function draftLocal(
     .filter((u) => /\b(?:must|shall|required)\b/i.test(u.excerpt))
     .slice(0, 3)
   for (const group of plan.groups) {
+    if (config.localSynthesisPolicy === 'comparisons' && group.role !== 'comparison') continue
     const cached = plan.draftFindings[group.id] || []
     const repair = scopedRepair(cached, issues, group.id)
     if (
@@ -295,16 +329,17 @@ export async function draftLocal(
         ? shared
         : []
     const focused = group.units.map((unit) =>
-      sourceContext(unit, label(all.indexOf(unit)), index.corpus.documents),
+      sourceContext(unit, unitLabel(unit), index.corpus.documents),
     )
     const drafted = await generate(
       'Include calculation IDs only when this specific finding relies on their derived values; otherwise use calculations: []. Keep source IDs and section numbers out of the finding text. ' +
-        'Write concise engineering findings using ONLY these selected source provisions and independently verified calculations. Answer the project question directly. Each finding must make ONE factual point in one sentence, with its own supporting source IDs. When comparing a method with an asset-specific requirement, cite BOTH the method scope and asset requirement. A universal requirement has no size cutoff unless that same clause states one. Cover every distinct requirement in this focused check with separate findings, up to the supplied findingBudget. Never combine an absolute prohibition and an exception to a different requirement in one sentence. Project figures are assumptions. Project-document allocations and constraints are not governing minima; distinguish the proposed value from the reference criterion and cite both when comparing. Preserve conditions and recommendations versus requirements. Do not transfer thresholds between asset types. A permission to use an alternative does not establish that a separately required service or approval can be omitted. If sources differ, identify the unresolved interface rather than granting unconditional permission. Use computed figures only from verifiedCalculations; never invent arithmetic, approval or edition precedence. Cite IDs only in the evidence array, never in the text. Details will be displayed separately. Return {findings:[{text:"Direct supported finding",evidence:["A","B"]}]}. ' +
+        'Write concise engineering findings using ONLY these selected source provisions and independently verified calculations. Answer the project question directly. Each finding must make ONE factual point in one sentence, with its own supporting source IDs. When comparing a method with an asset-specific requirement, cite BOTH the method scope and asset requirement. A universal requirement has no size cutoff unless that same clause states one. Cover every distinct requirement in this focused check with separate findings, up to the supplied findingBudget. Never combine an absolute prohibition and an exception to a different requirement in one sentence. Project figures are assumptions. Every derived project/reference comparison must cite both the project value and reference criterion. Project-document allocations and constraints are not governing minima; distinguish the proposed value from the reference criterion and cite both when comparing. Preserve conditions and recommendations versus requirements. Do not transfer thresholds between asset types. A permission to use an alternative does not establish that a separately required service or approval can be omitted. If sources differ, identify the unresolved interface rather than granting unconditional permission. Use computed figures only from verifiedCalculations; never invent arithmetic, approval or edition precedence. Cite IDs only in the evidence array, never in the text. Details will be displayed separately. Return {findings:[{text:"Direct supported finding",evidence:["A","B"]}]}. ' +
         (groupIssues.length
           ? 'Repair the conclusion using the validation issues. Omit unsupported quantities and keep source wording for unverified arithmetic.'
           : ''),
       {
         question: group.query || group.heading,
+        originalQuestion: question,
         focusedCheck: group.heading,
         findingBudget: config.maxFindingsPerCheck,
         suppliedProject: projectDescription(question),
@@ -313,7 +348,7 @@ export async function draftLocal(
         alreadyRetainedFindings: repair.retained.map((finding) => finding.text),
         provisions: focused,
         crossCuttingRequirements: sharedForCheck.map((unit) =>
-          sourceContext(unit, label(all.indexOf(unit)), index.corpus.documents),
+          sourceContext(unit, unitLabel(unit), index.corpus.documents),
         ),
         obligation:
           'Respect the cross-cutting requirements. Permission for an alternative does not waive a separate requirement. State an unresolved interface instead of granting permission to omit it.',
@@ -346,7 +381,7 @@ export async function draftLocal(
                     enum: [
                       ...new Set([
                         ...focused.map((u) => u.id),
-                        ...sharedForCheck.map((u) => label(all.indexOf(u))),
+                        ...sharedForCheck.map((u) => unitLabel(u)),
                       ]),
                     ],
                   },
@@ -416,11 +451,10 @@ export async function draftLocal(
       ...(calculations.length ? { calculations } : {}),
     }
   })
-  let offset = 0
   const sections = plan.groups.map((g) => ({
     heading: g.heading,
     claims: g.units.map((u) => {
-      const id = label(offset++)
+      const id = unitLabel(u)
       return {
         check: g.id,
         text: u.excerpt[0].toUpperCase() + u.excerpt.slice(1),

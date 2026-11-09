@@ -25,6 +25,7 @@ test('retrieval section numbers never become project inputs to selection or draf
   const original = { ...config }
   t.after(() => Object.assign(config, original))
   config.provider = 'ollama'
+  config.localReasoning = true
   const question =
     'Describe the design requirements for box planters used on a four-unit corner-lot infill development.'
   const baseline = search.search(question),
@@ -32,6 +33,7 @@ test('retrieval section numbers never become project inputs to selection or draf
   const section = catalog.find((s) => s.heading === '1.5 Box Planter Design')
   assert.ok(section)
   const requests = []
+  const thinking = []
   const outputs = [
     {
       queries: [
@@ -52,6 +54,7 @@ test('retrieval section numbers never become project inputs to selection or draf
   t.mock.method(globalThis, 'fetch', async (_url, options) => {
     const body = JSON.parse(options.body)
     requests.push(JSON.parse(body.messages[1].content))
+    thinking.push(body.think)
     return new Response(
       JSON.stringify({
         message: { content: JSON.stringify(outputs.shift()) },
@@ -73,6 +76,7 @@ test('retrieval section numbers never become project inputs to selection or draf
   )
   assert.equal(requests[1].question, 'box planter design requirements')
   assert.equal(requests[2].question, 'box planter design requirements')
+  assert.deepEqual(thinking, [false, false, true], 'Only finding synthesis uses thinking; retrieval and source-ID selection stay direct')
 })
 
 test('section selection honors model priority while enforcing the program budget independently of JSON schema hints', () => {
@@ -609,4 +613,19 @@ test('a sanitary velocity limit cannot be recast as a storm sewer finding', () =
   const result = validateSynthesis(draft, [unit.passage], 'What maximum flow velocity applies to storm sewers?')
   assert.equal(result.sections.length, 0)
   assert.ok(result.issues.some(issue=>/different sewer system/.test(issue.reason)))
+})
+
+test('comparison policy keeps a general engineering review offline without calling a model', async (t) => {
+  const original={...config}
+  t.after(()=>Object.assign(config,original))
+  Object.assign(config,{provider:'ollama',localSynthesis:true,extractiveOnly:false,localSynthesisPolicy:'comparisons'})
+  let calls=0
+  t.mock.method(globalThis,'fetch',async()=>{calls++;throw Error('General reviews must remain offline')})
+  const result=await answer('Before excavation, review a 450 mm storm main with 1.7 m cover. Can we use it without insulation?',search,{
+    publicBase:'http://localhost',token:'test',signal:new AbortController().signal,
+  })
+  assert.equal(calls,0)
+  assert.notEqual(result.mode,'local_synthesis')
+  assert.ok(result.references.length>0)
+  assert.ok(result.references.every(r=>r.regions.length>0))
 })
