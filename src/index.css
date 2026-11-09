@@ -1557,7 +1557,6 @@ button,
 .requirements-review th,.requirements-review td { text-align: left; vertical-align: top; padding: 10px; border-bottom: 1px solid #d5d7d8; min-width: 130px; white-space: pre-line; }
 .requirements-review th { font-weight: 600; background: #f1f3f3; }
 .requirements-review td:last-child { min-width: 65px; }
-.issue-preference label { display: flex; gap: 8px; align-items: center; font-size: 13px; cursor: pointer; }
 
 .capacity-inputs { margin: 12px 0; padding: 12px; border: 1px solid #d5d7d8; border-radius: 6px; }
 .capacity-inputs summary { cursor: pointer; font-weight: 600; }

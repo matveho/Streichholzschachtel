@@ -167,7 +167,7 @@ authorized endpoint; changing model policy cannot repair it.
 
 ## Review tools for the live demonstration
 
-1. On a project dashboard, toggle **Show project issues** off and back on.
+1. On a project dashboard, open **Settings**, then toggle **Show project issues** off and back on.
    Findings and previous dismissals return; each project has its own preference.
 2. Run the box-planter comparison and expand **Requirements check**. Show the
    450 mm criterion, 400 mm proposal and independently verified 50 mm difference;

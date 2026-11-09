@@ -259,11 +259,6 @@ function ProjectDashboard({
   onQueryDeleted: (id: string) => void
 }) {
   const { project, documents, queries, issues } = data
-  const [issueSetting,setIssueSetting]=useState({projectId:project.id,persisted:project.issuesEnabled,value:project.issuesEnabled !== false})
-  if(issueSetting.projectId!==project.id||issueSetting.persisted!==project.issuesEnabled)
-    setIssueSetting({projectId:project.id,persisted:project.issuesEnabled,value:project.issuesEnabled !== false})
-  const issuesEnabled=issueSetting.value
-  const setIssuesEnabled=(value:boolean)=>setIssueSetting({projectId:project.id,persisted:project.issuesEnabled,value})
   const [filter, setFilter] = useState(''),
     [category, setCategory] = useState('all'),
     [issueTab, setIssueTab] = useState('open'),
@@ -593,10 +588,6 @@ function ProjectDashboard({
             )}
           </section>
           <aside className="project-sidebar">
-            <div className="project-panel issue-preference">
-              <label><input type="checkbox" checked={issuesEnabled} disabled={pending}
-                onChange={async event=>{const enabled=event.target.checked;setIssuesEnabled(enabled);if(!await action('', 'PATCH', {issuesEnabled:enabled}))setIssuesEnabled(!enabled)}} /> Show project issues</label>
-            </div>
             {project.issuesEnabled !== false && <section className="project-panel" aria-label="Potential issues">
               <div className="project-panel-heading">
                 <h2 title="Document and IFC findings requiring engineering review">

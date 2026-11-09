@@ -72,14 +72,14 @@ export function WorkspaceSettings({
       setPending(false)
     }
   }
-  async function persist(value: boolean) {
-    if (!current || current.protectedDemo) return
+  async function persist(field: 'persistOnReset' | 'issuesEnabled', value: boolean) {
+    if (!current || (field === 'persistOnReset' && current.protectedDemo)) return
     setPending(true)
     setError('')
-    setContext({ ...current, persistOnReset: value })
+    setContext({ ...current, [field]: value })
     try {
       const result = await requestProject(projectPath(current.id), 'PATCH', {
-        persistOnReset: value,
+        [field]: value,
       })
       setContext(result.project)
       onProjectChange?.()
@@ -124,6 +124,13 @@ export function WorkspaceSettings({
             Reset workspace
           </button>
           {current && (
+            <label className="demo-retention">
+              <input type="checkbox" checked={current.issuesEnabled !== false}
+                disabled={pending} onChange={e=>void persist('issuesEnabled',e.target.checked)} />
+              <span>Show project issues</span>
+            </label>
+          )}
+          {current && (
             <label
               className="demo-retention"
               title={
@@ -139,7 +146,7 @@ export function WorkspaceSettings({
                   current.protectedDemo || current.persistOnReset === true
                 }
                 disabled={pending || current.protectedDemo}
-                onChange={(e) => void persist(e.target.checked)}
+                onChange={(e) => void persist('persistOnReset', e.target.checked)}
               />
               <span>Keep on reset</span>
               {current.protectedDemo && <Lock size={11} aria-label="Locked" />}
