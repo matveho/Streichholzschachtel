@@ -30,12 +30,16 @@ JS
 wait_ready
 kill -0 "$server_pid"
 node --test backend/tests/projects.integration.mjs > "$BASIS_STATE_DIR/projects.log" 2>&1
-node backend/tests/linux-lifecycle.integration.mjs prepare > "$BASIS_STATE_DIR/lifecycle.log" 2>&1
+BASIS_GATEWAY_PORT=8812 BASIS_GATEWAY_TARGET=http://127.0.0.1:8810 node backend/demo-gateway.mjs > "$BASIS_STATE_DIR/gateway.log" 2>&1 &
+gateway_pid=$!
+trap 'kill "$gateway_pid" "$server_pid" 2>/dev/null || true; wait "$gateway_pid" "$server_pid" 2>/dev/null || true' EXIT
+BASIS_TEST_URL=http://127.0.0.1:8812/local-api wait_ready
+BASIS_TEST_URL=http://127.0.0.1:8812/local-api node backend/tests/linux-lifecycle.integration.mjs prepare > "$BASIS_STATE_DIR/lifecycle.log" 2>&1
 kill "$server_pid"
 wait "$server_pid" || true
 PORT=8810 EXTRACTIVE_ONLY=1 GENERATION_PROVIDER=extractive node backend/src/server.mjs >> "$BASIS_STATE_DIR/server.log" 2>&1 &
 server_pid=$!
 wait_ready
 kill -0 "$server_pid"
-node backend/tests/linux-lifecycle.integration.mjs verify >> "$BASIS_STATE_DIR/lifecycle.log" 2>&1
+BASIS_TEST_URL=http://127.0.0.1:8812/local-api node backend/tests/linux-lifecycle.integration.mjs verify >> "$BASIS_STATE_DIR/lifecycle.log" 2>&1
 printf 'PASS unit suite, isolated project API, imports, isolation and restart persistence checks\n' 

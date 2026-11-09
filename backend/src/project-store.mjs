@@ -427,7 +427,7 @@ export class ProjectStore {
           project.id,
           [...project.documentIds].sort(),
           corpus.documents
-            .map((d) => [d.id, d.version, d.extractionVersion || ''])
+            .map((d) => [d.id, d.version, d.extractionVersion || '',d.category || ''])
             .sort(),
         ]),
       )

@@ -30,6 +30,7 @@ import {
   discardImport,
   removeProjectImports,
   finishImport,
+  setImportCategory,
 } from './project-imports.mjs'
 
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/
@@ -644,6 +645,28 @@ export class ProjectApi {
           this.comparison(projectId).issues.map((issue) => issue.id),
         ),
       })
+    const documentMatch=route.match(/^\/documents\/(doc-[a-f0-9]+)$/)
+    if (documentMatch && req.method==='PATCH') {
+      this.store.document(projectId,documentMatch[1])
+      const document=this.store.documents.get(documentMatch[1])
+      if (document.ownerProjectId!==projectId || !document.originalFilename)
+        throw problem(403,'Only uploaded documents can have their category changed.')
+      if (this.importing) throw problem(409,'Wait for the current document import to finish before editing categories.')
+      const {category}=await input()
+      setImportCategory(projectId,document.id,category)
+      const old=this.store.corpus
+      try {
+        this.store.attach(projectId,[{...document,category}],{...old,documents:old.documents.map(record=>record.id===document.id?{...record,category}:record)})
+      } catch(error) {
+        setImportCategory(projectId,document.id,document.category)
+        throw error
+      }
+      this.scopeCache.clear()
+      this.comparisonCache.clear()
+      for (const key of this.evidence.keys()) if (key.startsWith(projectId+'/')) this.evidence.delete(key)
+      if (project.protectedDemo) this.prepareSeeds(projectId)
+      return json(200,{document:this.store.document(projectId,document.id),project:this.project(projectId)})
+    }
     const modelMatch = route.match(/^\/documents\/(doc-[a-f0-9]+)\/model$/)
     if (modelMatch && req.method === 'GET') {
       this.store.document(projectId, modelMatch[1])

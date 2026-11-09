@@ -13,9 +13,21 @@ The frontend uses the keyless `/local-api` gateway. The underlying API requires 
 | PATCH | `/v1/projects/:project/issues/:issue` | Persist `{status:"dismissed"}` or `"open"` |
 | GET / POST | `/v1/projects/:project/queries` | History / submit `{question,documentIds?,sourceOnly?,id?}`; pollable job |
 | GET / PATCH / DELETE | `/v1/projects/:project/queries/:query` | Read / bookmark with `{saved:true}` / cancel |
+| PATCH | `/v1/projects/:project/documents/:document` | Change an uploaded document category with `{category}`; returns `{document, project}` |
+| POST | `/v1/projects/:project/documents/import` | Upload `{name,content,category?}`; base64 PDF content, optional category |
 | GET | `/v1/projects/:project/documents/:document/file` | Original PDF, association/ownership enforced, byte ranges supported |
 
 Citation geometry and the existing PDF renderer are reused. `src/projects.ts` provides frontend contracts; `src/backend.ts` supports scoped submission and reopening jobs. Routes are `#projects`, `#project/ID`, `#project/ID/new`, `#project/ID/query/QUERY`, `#project/ID/document/DOCUMENT`.
+
+Import and category edits accept `reference`, `client`, `design`, `report`, or
+`supporting`. Omitting `category` on import preserves filename guessing. For an
+uploaded document, `PATCH /v1/projects/:project/documents/:document` with
+`{"category":"design"}` returns the updated `document` and `project`. Category
+edits persist after reload and reindex, including repeated uploads of identical
+PDF bytes in the same project. Other projects' documents return 404; shared
+references and seeded documents cannot be recategorized. Uploads remain owned
+by their project for every category. Project renaming continues to use the
+existing `PATCH /v1/projects/:project` with `{"name":"New name"}`.
 
 Multi-role pipe reviews may include optional `result.projectInputs` with
 `kind: "pipe_measurements"`, `origin: "question"`,
