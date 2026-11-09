@@ -411,20 +411,6 @@ button.primary-action:hover {
 .project-query-row .query-delete-button {
   color: #a32626;
 }
-.query-delete-confirmation {
-  flex-basis: 100%;
-  padding: 10px 12px;
-  border: 1px solid #a3262633;
-  border-radius: 6px;
-  background: #fff7f6;
-  font-size: 13px;
-}
-.query-delete-confirmation p {
-  margin: 0 0 6px;
-}
-.query-delete-confirmation button {
-  margin-right: 10px;
-}
 .project-empty {
   padding: 20px;
   margin: 0;

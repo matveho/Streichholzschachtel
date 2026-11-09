@@ -268,7 +268,6 @@ function ProjectDashboard({
     [uploadOnly, setUploadOnly] = useState(uploading),
     [error, setError] = useState(''),
     [pending, setPending] = useState(false)
-  const [deletingQuery, setDeletingQuery] = useState<string | null>(null)
   const [nameDraft, setNameDraft] = useState<string | null>(null)
   const [descriptionEditing, setDescriptionEditing] = useState(false),
     [description, setDescription] = useState(project.description)
@@ -753,37 +752,14 @@ function ProjectDashboard({
                     aria-label="Delete query"
                     title="Delete query"
                     disabled={pending}
-                    onClick={() => setDeletingQuery(query.id)}
+                    onClick={async () => {
+                      if (await action('/queries/' + query.id, 'DELETE'))
+                        onQueryDeleted(query.id)
+                    }}
                   >
                     <Trash2 size={14} />
                   </button>
-                  {deletingQuery === query.id && (
-                    <div
-                      className="query-delete-confirmation"
-                      role="group"
-                      aria-label="Confirm query deletion"
-                      onKeyDown={(event) => {
-                        if (event.key === 'Escape') setDeletingQuery(null)
-                      }}
-                    >
-                      <p>Delete this query{query.saved ? ' and remove it from Saved' : ''}?</p>
-                      <button autoFocus disabled={pending} onClick={() => setDeletingQuery(null)}>
-                        Keep query
-                      </button>
-                      <button
-                        className="query-delete-button"
-                        disabled={pending}
-                        onClick={async () => {
-                          if (await action('/queries/' + query.id, 'DELETE')) {
-                            setDeletingQuery(null)
-                            onQueryDeleted(query.id)
-                          }
-                        }}
-                      >
-                        Delete permanently
-                      </button>
-                    </div>
-                  )}
+
                 </div>
               ))}
               {visibleQueries.length > historyLimit && (
