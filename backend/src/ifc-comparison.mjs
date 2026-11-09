@@ -231,7 +231,7 @@ function classifiedCells(passage, models) {
     [/^minimum intersection spacing/i, 'MinIntersectionSpacing_m'],
   ]
   const result = []
-  for (const cell of cells.values()) {
+  for (const [cellId,cell] of cells) {
     const propertyName = columns.find(([pattern]) => pattern.test(cell.column))?.[1]
     if (!propertyName) continue
     const value = clean(cell.lines.map((l) => l.text).join(' ')).match(/^(\d+(?:\.\d+)?)\s*(m|%)(?:\s*(?:\[\d+(?:\s*,\s*\d+)*\]|\d+(?:\s*,\s*\d+)*))*$/)
@@ -247,6 +247,7 @@ function classifiedCells(passage, models) {
         excerpt: `${cell.row} — ${cell.column}: ${clean(cell.lines.map((l) => l.text).join(' '))}. Table notes and exceptions require engineering review.`,
         model: model.name, elementId: element.elementId, propertyName,
         regions: cell.lines.map((l) => l.rect).filter(Boolean),
+        tableEvidence:{cellId,row:cell.row,column:cell.column,value:clean(cell.lines.map(line=>line.text).join(' '))},
       })
     }
   }
@@ -378,6 +379,7 @@ export function compareIfcDocuments(models, documents, passages) {
                       label: doc.label || doc.title,
                       excerpt: source.excerpt || chunk,
                       regions: source.regions || [],
+                      ...(source.tableEvidence?{tableEvidence:source.tableEvidence}:{}),
                     },
                   ],
                 })

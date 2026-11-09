@@ -15,7 +15,7 @@ import { compareIfcDocuments, readIfcProperties } from './ifc-comparison.mjs'
 import { root } from './config.mjs'
 import { ProjectStore, problem } from './project-store.mjs'
 import { demoProjects } from '../demo/manifest.mjs'
-import { preparedEvidence, projectResult } from './project-evidence.mjs'
+import { preparedEvidence, projectResult, ifcFindingEvidence } from './project-evidence.mjs'
 import { answer, renderUnits } from './answer.mjs'
 import { lookup, UnitIndex } from './lookup.mjs'
 import { suggestQueries } from './query-suggestions.mjs'
@@ -102,6 +102,10 @@ export class ProjectApi {
   }
   stale(job) {
     try {
+      if(job.ifcFinding){
+        this.comparison(job.projectId)
+        if(this.comparisonCache.get(job.projectId)?.signature!==job.ifcFinding.signature)return true
+      }
       return (
         job.engineVersion !== this.engineVersion ||
         this.store.scope(job.projectId, job.documentIds).version !==
@@ -262,8 +266,26 @@ export class ProjectApi {
       ...compareIfcDocuments(models, documents, scope.corpus.passages),
       errors,
     }
+    for(const issue of result.issues){
+      const evidence=ifcFindingEvidence(issue,scope.corpus,projectId)
+      issue.queryId=evidence?preparedId(projectId,'ifc/'+issue.id+'/'+signature):null
+      issue.verified=!!evidence
+      if(evidence)this.evidence.set(projectId+'/'+issue.id,{signature,result:evidence,queryId:issue.queryId})
+    }
     this.comparisonCache.set(projectId, { signature, result })
     return result
+  }
+  openIfcFinding(projectId,id){
+    const issue=this.comparison(projectId).issues.find(issue=>issue.queryId===id&&issue.verified)
+    const evidence=issue&&this.evidence.get(projectId+'/'+issue.id)
+    if(!evidence?.result)throw problem(404,'Current IFC finding evidence is unavailable in this project.')
+    const scope=this.scope(projectId)
+    const now=new Date().toISOString()
+    const job={id,projectId,question:issue.title,state:'completed',stage:'Source-verified IFC property comparison',sourceOnly:true,prepared:false,
+      documentIds:scope.corpus.documents.map(document=>document.id),scopeVersion:scope.version,engineVersion:this.engineVersion,
+      createdAt:now,completedAt:now,result:evidence.result,ifcFinding:{issueId:issue.id,signature:evidence.signature}}
+    this.jobs.set(projectId+'/'+id,job);this.persist(job)
+    return job
   }
   issues(projectId) {
     const project = this.store.get(projectId),
@@ -737,7 +759,11 @@ export class ProjectApi {
     }
     const queryMatch = route.match(/^\/queries\/([a-f0-9-]{36})$/)
     if (queryMatch) {
-      const job = this.raw(projectId, queryMatch[1])
+      let job
+      try{job=this.raw(projectId,queryMatch[1])}catch(error){
+        if(error.status!==404||req.method!=='GET')throw error
+        job=this.openIfcFinding(projectId,queryMatch[1])
+      }
       if (req.method === 'GET') return json(200, this.serialize(job))
       if (req.method === 'PATCH') {
         this.store.saveQuery(projectId, job.id, (await input()).saved)

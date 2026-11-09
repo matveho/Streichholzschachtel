@@ -57,6 +57,15 @@ Unresolved value/unit definitions appear in `comparison.unitDiagnostics` and
 scan errors, and are excluded from numeric comparisons. This does not establish
 compliance or perform geometric clash detection.
 
+Source-anchored IFC findings expose a `queryId` that opens through the existing
+project-query API. The report uses `mode: "ifc_comparison"` and includes
+`result.ifcFinding` with model, element, property and compared values. Model
+properties and document evidence are shown separately. PDF citations require
+valid original passage or extracted table-cell coordinates. Evidence reports
+are created on inspection and persist across restarts. Changing model bytes or
+the document scope invalidates previous evidence snapshots; a rescan provides
+the current link. A finding without anchored source evidence has no query link.
+
 Omitted document IDs select project associations. Explicit `[]` selects nothing. Foreign IDs are rejected. Indexes physically contain only selected project documents, passages and layout units. Retrieval, subqueries, expansions, model context and fallback suggestions receive that scoped index. Returned citation/document IDs are checked again. Cache identity includes project, document and engine revisions. Scope changes withhold obsolete cached result bodies. Private artifacts are excluded from legacy global retrieval/files.
 
 Collection membership is explicit. Users can deselect individual documents. Synthetic artifacts have owner projects and cannot be assigned elsewhere. Deleting an ordinary project removes its associations/history without deleting shared reference PDFs.

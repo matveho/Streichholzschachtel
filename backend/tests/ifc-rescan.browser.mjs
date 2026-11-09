@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
-import {mkdirSync} from 'node:fs'
+import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
+import {resolve,basename} from 'node:path'
 import {chromium} from '@playwright/test'
 
 const frontend=process.env.BASIS_FRONTEND_URL
@@ -13,6 +14,7 @@ try {
  const before=await(await fetch(base)).json()
  const dynamic=before.issues.filter(issue=>!issue.prepared)
  assert.ok(dynamic.length>=13)
+ assert.ok(dynamic.every(issue=>issue.verified&&issue.queryId),'Every current finding needs its own anchored evidence view')
  const issue=dynamic.find(issue=>issue.status==='open')
  assert.ok(issue)
  await page.goto(frontend+'/#project/parkview-exchange')
@@ -45,5 +47,41 @@ try {
  await card().locator(':scope > summary').click()
  mkdirSync('test-results',{recursive:true})
  await page.screenshot({path:'test-results/ifc-rescan-browser.png',fullPage:true})
- console.log('PASS real issues window, rescan, stable finding identities, dismissal after reload, restore and original IFC download')
+ await card().getByRole('button',{name:'Inspect evidence',exact:true}).click()
+ const report=page.getByRole('article',{name:'Query report'})
+ await report.waitFor()
+ assert.match(await report.innerText(),/IFC property/)
+ assert.match(await report.innerText(),/Document evidence/)
+ const job=await(await fetch(base+'/queries/'+issue.queryId)).json()
+ assert.equal(job.state,'completed');assert.equal(job.result.mode,'ifc_comparison')
+ assert.equal(job.result.ifcFinding.id,issue.id)
+ for(const reference of job.result.references){
+  assert.ok(reference.regions.every(rect=>rect.length===4&&rect.every(Number.isFinite)&&rect[2]>0&&rect[3]>0))
+  await page.getByRole('button',{name:new RegExp('^Source '+reference.id+':')}).first().click()
+  await page.locator('.source-highlight:visible').first().waitFor()
+  await page.waitForFunction(()=>document.querySelectorAll('.pdf-status').length===0)
+ }
+ await page.reload();await report.waitFor()
+ assert.equal((await(await fetch(base+'/queries/'+issue.queryId)).json()).stale,false)
+ await page.getByRole('button',{name:new RegExp('^Source '+job.result.references[0].id+':')}).first().click()
+ await page.locator('.source-highlight:visible').first().waitFor()
+ await page.waitForFunction(()=>document.querySelectorAll('.pdf-status').length===0)
+ await page.screenshot({path:'test-results/ifc-finding-evidence.png',fullPage:true})
+ // Modify only a runtime copy in this disposable verification state. Even a
+ // non-semantic model revision must invalidate an older evidence snapshot.
+ const registered=before.documents.find(document=>document.modelFile)
+ assert.ok(registered&&basename(registered.modelFile)===registered.modelFile)
+ const modelPath=resolve(process.env.BASIS_STATE_DIR,'demo-documents',registered.modelFile)
+ const original=readFileSync(modelPath)
+ try{
+  writeFileSync(modelPath,Buffer.concat([original,Buffer.from('\n')]))
+  const changed=await(await fetch(base+'/rescan',{method:'POST'})).json()
+  const current=changed.issues.find(current=>current.id===issue.id)
+  assert.ok(current.queryId&&current.queryId!==issue.queryId)
+  const stale=await(await fetch(base+'/queries/'+issue.queryId)).json()
+  assert.equal(stale.stale,true);assert.equal(stale.result,undefined)
+  const updated=await(await fetch(base+'/queries/'+current.queryId)).json()
+  assert.equal(updated.stale,false);assert.equal(updated.result.mode,'ifc_comparison')
+ }finally{writeFileSync(modelPath,original)}
+ console.log('PASS issues rescan, dismissal/restore, IFC download, dynamic evidence report and PDF highlight, reload and invalidation after a model revision')
 } finally {await browser.close()}
