@@ -1270,3 +1270,94 @@ button.query-files:hover {
   font: inherit;
   padding: 3px;
 }
+.project-panel-tabs .scan-trigger {
+  margin-inline-start: auto;
+  font-size: 12px;
+  gap: 5px;
+}
+.scan-trigger span {
+  color: var(--color-issues);
+  font-weight: 700;
+}
+.scan-dialog {
+  width: min(580px, calc(100vw - 32px));
+  max-height: min(520px, 78dvh);
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  color: var(--color-text);
+  background: var(--surface);
+}
+.scan-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.scan-dialog::backdrop {
+  background: #01193652;
+}
+.scan-dialog header,
+.scan-filter,
+.scan-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.scan-dialog header {
+  padding: 15px 18px 4px;
+  justify-content: space-between;
+}
+.scan-dialog header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.scan-dialog header button {
+  padding: 6px;
+}
+.scan-summary {
+  margin: 0 18px 12px;
+  color: var(--color-secondary);
+  font-size: 14px;
+}
+.scan-filter {
+  border-bottom: 1px solid var(--line);
+  padding: 0 12px;
+  gap: 4px;
+}
+.scan-filter button {
+  padding: 8px;
+}
+.scan-filter [aria-pressed='true'] {
+  box-shadow: inset 0 -2px var(--color-text);
+}
+.scan-list {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 18px;
+  font-size: 13px;
+}
+.scan-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.scan-list li {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  justify-content: space-between;
+}
+.scan-list li div {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.scan-list li small {
+  display: block;
+  color: var(--color-secondary);
+}
+.scan-list li span {
+  max-width: 55%;
+  color: var(--color-secondary);
+}
+.scan-notice {
+  border-left: 2px solid var(--color-issues);
+  padding-left: 8px;
+}

@@ -71,6 +71,17 @@ test('recover the project connection and open cited evidence from project histor
             documents: [doc],
             queries: [job],
             issues: [],
+            comparison: {
+              modelCount: 2,
+              errors: [],
+              coverage: Array.from({ length: 17 }, (_, i) => ({
+                doc: 'file-' + i,
+                label: 'Document ' + i,
+                category: 'reference',
+                checks: i < 4 ? 2 : 0,
+                reason: 'No matching element identifier.',
+              })),
+            },
             collections: [],
           },
         })
@@ -97,6 +108,23 @@ test('recover the project connection and open cited evidence from project histor
     available = true
     await page.getByRole('button', { name: 'Retry' }).click()
     await page.getByRole('link', { name: /Servicing review/ }).click()
+    const scanButton = page.getByRole('button', { name: 'Scan details' })
+    const issues = page.getByRole('region', { name: 'Potential issues' })
+    const before = await issues.boundingBox()
+    await scanButton.click()
+    const scan = page.getByRole('dialog', { name: 'IFC scan coverage' })
+    await expect(scan).toContainText('4 of 17 files compared against 2 models')
+    await expect(scan.getByRole('listitem')).toHaveCount(4)
+    await scan.getByRole('button', { name: 'Not compared (13)' }).click()
+    await expect(scan.getByRole('listitem')).toHaveCount(13)
+    assert.equal((await issues.boundingBox()).height, before.height)
+    assert(
+      await scan
+        .locator('.scan-list')
+        .evaluate((el) => el.scrollHeight > el.clientHeight),
+    )
+    await page.keyboard.press('Escape')
+    await expect(scanButton).toBeFocused()
     await page.getByRole('link', { name: /What is the upstream grade/ }).click()
     await page.locator('.citations button').first().click()
     const pane = page.locator('.pdf-pane:visible')
