@@ -720,6 +720,8 @@ button.primary-action:hover {
 }
 .project-card-footer {
   grid-column: 5;
+  gap: 6px;
+  white-space: nowrap;
   margin: 0;
   padding: 0;
   border: 0;
@@ -976,7 +978,7 @@ button.primary-action:hover {
 }
 @media (max-width: 1000px) {
   .project-card {
-    grid-template-columns: 24px minmax(140px, 1fr) minmax(140px, 1fr) 150px;
+    grid-template-columns: 24px minmax(140px, 1fr) minmax(140px, 1fr) 180px;
   }
   .project-card .project-card-description {
     display: none;

@@ -214,15 +214,16 @@ function ProjectsOverview() {
                 )}
                 <div className="project-card-footer">
                   <span>
-                    {project.documentCount} documents · {project.openIssueCount}{' '}
-                    issues
+                    {project.documentCount}{' '}
+                    {project.documentCount === 1 ? 'document' : 'documents'}
                   </span>
-                  {project.openIssueCount > 0 && (
-                    <span className="overview-issue-count">
-                      <TriangleAlert size={14} /> {project.openIssueCount}{' '}
-                      {project.openIssueCount === 1 ? 'issue' : 'issues'}
-                    </span>
-                  )}
+                  <span className="overview-issue-count">
+                    {project.openIssueCount > 0 && (
+                      <TriangleAlert size={14} aria-hidden="true" />
+                    )}
+                    {project.openIssueCount}{' '}
+                    {project.openIssueCount === 1 ? 'issue' : 'issues'}
+                  </span>
                 </div>
               </a>
             ))}
