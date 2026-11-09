@@ -403,6 +403,20 @@ export class ProjectStore {
       : project.savedQueryIds.filter((q) => q !== queryId)
     this.write(data)
   }
+  forgetQuery(id, queryId) {
+    const data = this.read(), project = data.projects.find(p => p.id === id)
+    if (!project) throw problem(404, 'Project not found.')
+    project.savedQueryIds = project.savedQueryIds.filter(q => q !== queryId)
+    project.deletedQueryIds = [...new Set([...(project.deletedQueryIds || []), queryId])]
+    this.write(data)
+  }
+  reopenQuery(id, queryId) {
+    const data = this.read(), project = data.projects.find(p => p.id === id)
+    if (!project) throw problem(404, 'Project not found.')
+    if (!project.deletedQueryIds?.includes(queryId)) return
+    project.deletedQueryIds = project.deletedQueryIds.filter(q => q !== queryId)
+    this.write(data)
+  }
   scope(id, selection) {
     const project = this.get(id),
       ids = selection === undefined ? project.documentIds : selection

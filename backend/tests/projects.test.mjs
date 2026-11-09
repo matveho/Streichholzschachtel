@@ -6,6 +6,7 @@ import {
   readFileSync,
   writeFileSync,
   unlinkSync,
+  existsSync,
 } from 'node:fs'
 import { resolve, sep } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -145,6 +146,55 @@ function fresh(t) {
   })
   return { folder, store: new ProjectStore(corpus, folder) }
 }
+
+test('deleting a saved query removes its file and bookmark and stays deleted after restart',async t=>{
+ const {folder}=fresh(t),api=new ProjectApi(corpus,folder,'delete-test')
+ const seed=api.history('parkview-exchange').find(query=>query.sourceOnly)
+ assert.ok(seed)
+ api.store.saveQuery('parkview-exchange',seed.id,true)
+ const documents=[...api.store.get('parkview-exchange').documentIds]
+ assert.throws(()=>api.deleteQuery('demo-mill-creek',seed.id),{status:404})
+ assert.equal(api.deleteQuery('parkview-exchange',seed.id).deleted,true)
+ assert.equal(existsSync(resolve(api.folder('parkview-exchange'),seed.id+'.json')),false)
+ assert.ok(!api.store.get('parkview-exchange').savedQueryIds.includes(seed.id))
+ assert.ok(!api.history('parkview-exchange').some(query=>query.id===seed.id))
+ assert.deepEqual(api.store.get('parkview-exchange').documentIds,documents)
+ assert.equal(api.deleteQuery('parkview-exchange',seed.id).deleted,true,'Deletion retries are idempotent')
+ const restarted=new ProjectApi(corpus,folder,'delete-test')
+ assert.ok(!restarted.history('parkview-exchange').some(query=>query.id===seed.id),'Automatic seed recovery must not restore deleted history')
+ assert.throws(()=>restarted.raw('parkview-exchange',seed.id),{status:404})
+ await assert.rejects(restarted.submit('parkview-exchange',{id:seed.id,question:seed.question,sourceOnly:true}),{status:410})
+})
+
+test('deleting finding history preserves Issues evidence and permits an explicit fresh inspection',t=>{
+ const {folder}=fresh(t),api=new ProjectApi(corpus,folder,'delete-test'),projectId='parkview-exchange'
+ const issues=api.issues(projectId)
+ for(const finding of [issues.find(issue=>issue.prepared&&issue.verified&&issue.queryId),issues.find(issue=>!issue.prepared&&issue.verified&&issue.queryId)]){
+  assert.ok(finding)
+  api.readQuery(projectId,finding.queryId)
+  api.deleteQuery(projectId,finding.queryId)
+  assert.ok(!api.history(projectId).some(query=>query.id===finding.queryId))
+  assert.ok(api.issues(projectId).some(issue=>issue.id===finding.id&&issue.verified))
+  const reopened=api.readQuery(projectId,finding.queryId)
+  assert.equal(reopened.state,'completed')
+  assert.ok(reopened.result.references.every(reference=>reference.regions.length))
+  assert.equal(api.store.get(projectId).savedQueryIds.includes(finding.queryId),false)
+ }
+})
+
+test('deletion aborts work, removes it from the queue and prevents late persistence',t=>{
+ const {folder}=fresh(t),api=new ProjectApi(corpus,folder,'delete-test'),projectId='demo-mill-creek'
+ const scope=api.scope(projectId),id='11111111-1111-1111-1111-111111111111'
+ const job={id,projectId,question:'An obsolete query',state:'running',stage:'Searching',createdAt:new Date().toISOString(),engineVersion:'delete-test',scopeVersion:scope.version,documentIds:scope.corpus.documents.map(doc=>doc.id),controller:new AbortController()}
+ api.jobs.set(projectId+'/'+id,job);api.queue.push(job);api.active=job;api.persist(job)
+ api.deleteQuery(projectId,id)
+ assert.equal(job.controller.signal.aborted,true)
+ assert.equal(api.queue.length,0)
+ assert.equal(api.jobs.has(projectId+'/'+id),false)
+ api.persist({...job,state:'completed',result:{report:[]}})
+ assert.equal(existsSync(resolve(api.folder(projectId),id+'.json')),false)
+ assert.throws(()=>api.raw(projectId,id),{status:404})
+})
 test('all complete protected demonstration projects restore without duplicates', (t) => {
   const { store, folder } = fresh(t)
   assert.equal(store.list().length, demoProjects.length)

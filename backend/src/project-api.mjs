@@ -79,6 +79,7 @@ export class ProjectApi {
     return scope
   }
   persist(job) {
+    if (this.store.get(job.projectId).deletedQueryIds?.includes(job.id)) return
     const folder = this.folder(job.projectId)
     mkdirSync(folder, { recursive: true })
     const file = resolve(folder, job.id + '.json')
@@ -87,6 +88,8 @@ export class ProjectApi {
   }
   raw(projectId, id) {
     if (!uuid.test(id)) throw problem(404, 'Query not found in this project.')
+    if (this.store.get(projectId).deletedQueryIds?.includes(id))
+      throw problem(404, 'Query not found in this project.')
     const key = projectId + '/' + id
     if (this.jobs.has(key)) return this.jobs.get(key)
     const file = resolve(this.folder(projectId), id + '.json')
@@ -162,7 +165,7 @@ export class ProjectApi {
       .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
       .slice(0, 200)
   }
-  prepareSeeds(only) {
+  prepareSeeds(only, queryId) {
     for (const spec of demoProjects.filter((p) => !only || p.id === only)) {
       const scope = this.scope(spec.id)
       for (const issue of spec.issues) {
@@ -198,6 +201,8 @@ export class ProjectApi {
         }
         if (!result) continue
         const id = preparedId(spec.id, query.id)
+        if (queryId && queryId !== id) continue
+        if (this.store.get(spec.id).deletedQueryIds?.includes(id)) continue
         const job = {
           id,
           projectId: spec.id,
@@ -283,6 +288,9 @@ export class ProjectApi {
     const issue=this.comparison(projectId).issues.find(issue=>issue.queryId===id&&issue.verified)
     const evidence=issue&&this.evidence.get(projectId+'/'+issue.id)
     if(!evidence?.result)throw problem(404,'Current IFC finding evidence is unavailable in this project.')
+    // An explicit Inspect evidence action can open a new report for a current
+    // finding; deleting history must not remove the finding or its evidence.
+    this.store.reopenQuery(projectId,id)
     const scope=this.scope(projectId)
     const now=new Date().toISOString()
     const job={id,projectId,question:issue.title,state:'completed',stage:'Source-verified IFC property comparison',sourceOnly:true,prepared:false,
@@ -295,6 +303,13 @@ export class ProjectApi {
     let job
     try{job=this.raw(projectId,id)}catch(error){
       if(error.status!==404)throw error
+      const spec=demoProjects.find(project=>project.id===projectId)
+      const query=spec?.queries.find(query=>query.issueId&&preparedId(projectId,query.id)===id)
+      if(query&&this.evidence.has(projectId+'/'+query.issueId)){
+        this.store.reopenQuery(projectId,id)
+        this.prepareSeeds(projectId,id)
+        return this.raw(projectId,id)
+      }
       return this.openIfcFinding(projectId,id)
     }
     // An engine update may invalidate the cached rendering while the current
@@ -355,6 +370,20 @@ export class ProjectApi {
     if (!folder.startsWith(this.queryRoot + sep))
       throw problem(500, 'Unsafe project-history path.')
     if (existsSync(folder)) rmSync(folder, { recursive: true, force: true })
+  }
+  deleteQuery(projectId, id) {
+    if (!uuid.test(id)) throw problem(404, 'Query not found in this project.')
+    const deleted = this.store.get(projectId).deletedQueryIds?.includes(id)
+    const job = deleted ? this.jobs.get(projectId + '/' + id) : this.raw(projectId, id)
+    this.store.forgetQuery(projectId, id)
+    job?.controller?.abort()
+    if (job) job.state = 'cancelled'
+    this.queue = this.queue.filter(candidate => candidate !== job && !(candidate.projectId === projectId && candidate.id === id))
+    this.jobs.delete(projectId + '/' + id)
+    const file = resolve(this.folder(projectId), id + '.json')
+    rmSync(file, {force:true})
+    rmSync(file + '.tmp', {force:true})
+    return {id, projectId, deleted:true}
   }
   dropUploads(projectId) {
     const corpus = this.store.corpus,
@@ -440,6 +469,8 @@ export class ProjectApi {
     const scope = this.scope(projectId, input.documentIds)
     const id = input.id || randomUUID()
     if (!uuid.test(id)) throw problem(400, 'Query ID must be a UUID.')
+    if (this.store.get(projectId).deletedQueryIds?.includes(id))
+      throw problem(410, 'This query was deleted. Run a new query to search again.')
     let previous
     try {
       previous = this.raw(projectId, id)
@@ -775,16 +806,12 @@ export class ProjectApi {
     }
     const queryMatch = route.match(/^\/queries\/([a-f0-9-]{36})$/)
     if (queryMatch) {
+      if (req.method === 'DELETE')
+        return json(200, this.deleteQuery(projectId, queryMatch[1]))
       const job=req.method==='GET'?this.readQuery(projectId,queryMatch[1]):this.raw(projectId,queryMatch[1])
       if (req.method === 'GET') return json(200, this.serialize(job))
       if (req.method === 'PATCH') {
         this.store.saveQuery(projectId, job.id, (await input()).saved)
-        return json(200, this.serialize(job))
-      }
-      if (req.method === 'DELETE') {
-        job.controller?.abort()
-        job.state = 'cancelled'
-        this.persist(job)
         return json(200, this.serialize(job))
       }
     }

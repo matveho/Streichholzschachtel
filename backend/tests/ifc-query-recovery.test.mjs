@@ -12,7 +12,7 @@ function fixture(){
  api.comparisonCache=new Map([['p',{signature:'model-v1'}]])
  api.comparison=()=>({issues:[{id:'ifc-test',queryId:id,verified:true,title:'Current model finding'}]})
  api.scope=()=>({version:'scope',corpus:{documents:[{id:'doc'}]}})
- api.store={scope:()=>({version:'scope'}),get:()=>({savedQueryIds:[]})}
+ api.store={scope:()=>({version:'scope'}),get:()=>({savedQueryIds:[]}),reopenQuery:()=>{}}
  const writes=[];api.persist=job=>writes.push(job)
  return {api,old,writes}
 }

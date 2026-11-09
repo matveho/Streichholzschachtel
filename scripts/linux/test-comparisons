@@ -30,7 +30,7 @@ throw Error('Isolated comparison backend not ready')
 JS
 kill -0 "$api_pid" "$gateway_pid"
 for suite in ${BASIS_BROWSER_SUITES:-comparisons}; do
-  case "$suite" in comparisons|pipe-measurements|demo-review|ifc-rescan|document-query) ;; *) printf 'Unknown browser suite: %s\n' "$suite" >&2; exit 1 ;; esac
+  case "$suite" in comparisons|pipe-measurements|demo-review|ifc-rescan|document-query|query-history) ;; *) printf 'Unknown browser suite: %s\n' "$suite" >&2; exit 1 ;; esac
   node "backend/tests/$suite.browser.mjs" > "$BASIS_STATE_DIR/$suite.log" 2>&1
   printf 'PASS %s browser workflow\n' "$suite"
 done

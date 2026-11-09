@@ -14,6 +14,7 @@ import {
   X,
   FileText,
   Pencil,
+  Trash2,
 } from 'lucide-react'
 import { QueryWorkspace } from './App'
 import { ProjectDocumentReader } from './ProjectDocumentReader'
@@ -247,6 +248,7 @@ function ProjectDashboard({
   onQueryFiles,
   uploading = false,
   onUploadDone,
+  onQueryDeleted,
 }: {
   data: ProjectData
   onRefresh: () => void
@@ -254,6 +256,7 @@ function ProjectDashboard({
   /** Opens the document manager straight away (from a query's upload button). */
   uploading?: boolean
   onUploadDone?: () => void
+  onQueryDeleted: (id: string) => void
 }) {
   const { project, documents, queries, issues } = data
   const [filter, setFilter] = useState(''),
@@ -265,6 +268,7 @@ function ProjectDashboard({
     [uploadOnly, setUploadOnly] = useState(uploading),
     [error, setError] = useState(''),
     [pending, setPending] = useState(false)
+  const [deletingQuery, setDeletingQuery] = useState<string | null>(null)
   const [nameDraft, setNameDraft] = useState<string | null>(null)
   const [descriptionEditing, setDescriptionEditing] = useState(false),
     [description, setDescription] = useState(project.description)
@@ -731,6 +735,7 @@ function ProjectDashboard({
                     </small>
                   </a>
                   <button
+                    disabled={pending}
                     aria-label={query.saved ? 'Unsave query' : 'Save query'}
                     onClick={() =>
                       void action('/queries/' + query.id, 'PATCH', {
@@ -743,6 +748,42 @@ function ProjectDashboard({
                       fill={query.saved ? 'currentColor' : 'none'}
                     />
                   </button>
+                  <button
+                    className="query-delete-button"
+                    aria-label="Delete query"
+                    title="Delete query"
+                    disabled={pending}
+                    onClick={() => setDeletingQuery(query.id)}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  {deletingQuery === query.id && (
+                    <div
+                      className="query-delete-confirmation"
+                      role="group"
+                      aria-label="Confirm query deletion"
+                      onKeyDown={(event) => {
+                        if (event.key === 'Escape') setDeletingQuery(null)
+                      }}
+                    >
+                      <p>Delete this query{query.saved ? ' and remove it from Saved' : ''}?</p>
+                      <button autoFocus disabled={pending} onClick={() => setDeletingQuery(null)}>
+                        Keep query
+                      </button>
+                      <button
+                        className="query-delete-button"
+                        disabled={pending}
+                        onClick={async () => {
+                          if (await action('/queries/' + query.id, 'DELETE')) {
+                            setDeletingQuery(null)
+                            onQueryDeleted(query.id)
+                          }
+                        }}
+                      >
+                        Delete permanently
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
               {visibleQueries.length > historyLimit && (
@@ -1025,6 +1066,11 @@ function ProjectPage({
         data={data}
         onRefresh={resource.refresh}
         onQueryFiles={tabs.openNew}
+        onQueryDeleted={(queryId) => {
+          settledJobs.delete(queryId)
+          for (const tab of tabs.tabs)
+            if (tab.target === queryId) tabs.close(tab.key)
+        }}
         uploading={section === 'upload'}
         onUploadDone={
           section === 'upload'

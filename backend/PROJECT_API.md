@@ -12,12 +12,19 @@ The frontend uses the keyless `/local-api` gateway. The underlying API requires 
 | POST | `/v1/demo/reset` | Workspace demo reset: delete ordinary projects with `persistOnReset !== true`, their imports and history; restore all protected seeds |
 | PATCH | `/v1/projects/:project/issues/:issue` | Persist `{status:"dismissed"}` or `"open"` |
 | GET / POST | `/v1/projects/:project/queries` | History / submit `{question,documentIds?,sourceOnly?,id?}`; pollable job |
-| GET / PATCH / DELETE | `/v1/projects/:project/queries/:query` | Read / bookmark with `{saved:true}` / cancel |
+| GET / PATCH / DELETE | `/v1/projects/:project/queries/:query` | Read / bookmark with `{saved:true}` / delete from history and Saved |
 | PATCH | `/v1/projects/:project/documents/:document` | Change an uploaded document category with `{category}`; returns `{document, project}` |
 | POST | `/v1/projects/:project/documents/import` | Upload `{name,content,category?}`; base64 PDF content, optional category |
 | GET | `/v1/projects/:project/documents/:document/file` | Original PDF, association/ownership enforced, byte ranges supported |
 
 Citation geometry and the existing PDF renderer are reused. `src/projects.ts` provides frontend contracts; `src/backend.ts` supports scoped submission and reopening jobs. Routes are `#projects`, `#project/ID`, `#project/ID/new`, `#project/ID/query/QUERY`, `#project/ID/document/DOCUMENT`.
+
+Query deletion cancels outstanding work, removes the result and Saved bookmark,
+and persists across restarts, including automatically seeded history entries.
+Repeating a successful deletion returns `{deleted:true}`. Resubmitting its old
+query ID returns 410; a rerun must use a new ID. Project documents and findings
+are retained. Explicitly opening current issue evidence can create a fresh
+source report even after its old history entry was deleted.
 
 Import and category edits accept `reference`, `client`, `design`, `report`, or
 `supporting`. Omitting `category` on import preserves filename guessing. For an
