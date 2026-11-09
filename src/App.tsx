@@ -37,6 +37,12 @@ export type RunContext = {
   fresh?: boolean
 }
 
+const narrowViewer = window.matchMedia('(max-width: 720px)')
+function subscribeViewerWidth(update: () => void) {
+  narrowViewer.addEventListener('change', update)
+  return () => narrowViewer.removeEventListener('change', update)
+}
+
 export function QueryWorkspace({
   entry,
   onRun,
@@ -111,7 +117,12 @@ export function QueryWorkspace({
   const datasetKey =
     settings.mode === 'static' ? entry.caseId : (live.data?.id ?? 'pending')
 
-  const [layout, setLayout] = useState<'split' | 'tabs'>('split')
+  const narrow = useSyncExternalStore(
+    subscribeViewerWidth,
+    () => narrowViewer.matches,
+  )
+  const [preferredLayout, setLayout] = useState<'split' | 'tabs'>('split')
+  const layout = narrow ? 'tabs' : preferredLayout
   const [tab, setTab] = useState<DocId>(sourceIds[0] ?? '')
   const [comparison, setComparison] = useState<DocId[]>(sourceIds.slice(0, 2))
   const [opened, setOpened] = useState<DocId[]>(sourceIds.slice(0, 2))
@@ -371,49 +382,51 @@ export function QueryWorkspace({
                 </button>
               ))}
             </div>
-            <div className="layout-controls">
-              {layout === 'split' && sourceIds.length > 2 && (
-                <select
-                  className="compare-select"
-                  aria-label="Compare document"
-                  value={comparison[1]}
-                  onChange={(e) => {
-                    const id = e.target.value as DocId
-                    setComparison((prev) => [prev[0], id])
-                    setOpened((prev) =>
-                      prev.includes(id) ? prev : [...prev, id],
-                    )
-                    setTab(id)
-                  }}
+            {!narrow && (
+              <div className="layout-controls">
+                {layout === 'split' && sourceIds.length > 2 && (
+                  <select
+                    className="compare-select"
+                    aria-label="Compare document"
+                    value={comparison[1]}
+                    onChange={(e) => {
+                      const id = e.target.value as DocId
+                      setComparison((prev) => [prev[0], id])
+                      setOpened((prev) =>
+                        prev.includes(id) ? prev : [...prev, id],
+                      )
+                      setTab(id)
+                    }}
+                  >
+                    {sourceIds
+                      .filter((id) => id !== comparison[0])
+                      .map((id) => (
+                        <option key={id} value={id}>
+                          {documents[id].title}
+                        </option>
+                      ))}
+                  </select>
+                )}
+                <button
+                  className={layout === 'tabs' ? 'active' : ''}
+                  aria-label="Single document view"
+                  aria-pressed={layout === 'tabs'}
+                  title="Single document"
+                  onClick={() => setLayout('tabs')}
                 >
-                  {sourceIds
-                    .filter((id) => id !== comparison[0])
-                    .map((id) => (
-                      <option key={id} value={id}>
-                        {documents[id].title}
-                      </option>
-                    ))}
-                </select>
-              )}
-              <button
-                className={layout === 'tabs' ? 'active' : ''}
-                aria-label="Single document view"
-                aria-pressed={layout === 'tabs'}
-                title="Single document"
-                onClick={() => setLayout('tabs')}
-              >
-                <PanelTop size={15} />
-              </button>
-              <button
-                className={layout === 'split' ? 'active' : ''}
-                aria-label="Side-by-side view"
-                aria-pressed={layout === 'split'}
-                title="Side by side"
-                onClick={() => setLayout('split')}
-              >
-                <Columns2 size={15} />
-              </button>
-            </div>
+                  <PanelTop size={15} />
+                </button>
+                <button
+                  className={layout === 'split' ? 'active' : ''}
+                  aria-label="Side-by-side view"
+                  aria-pressed={layout === 'split'}
+                  title="Side by side"
+                  onClick={() => setLayout('split')}
+                >
+                  <Columns2 size={15} />
+                </button>
+              </div>
+            )}
           </div>
           <div className={`document-panes ${layout}`}>
             {sourceIds.map((id) => (

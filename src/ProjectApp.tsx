@@ -223,7 +223,12 @@ function ProjectsOverview() {
                     {project.documentCount} documents · {project.openIssueCount}{' '}
                     issues
                   </span>
-                  <ArrowUpRight size={17} />
+                  {project.openIssueCount > 0 && (
+                    <span className="overview-issue-count">
+                      <TriangleAlert size={14} /> {project.openIssueCount}{' '}
+                      {project.openIssueCount === 1 ? 'issue' : 'issues'}
+                    </span>
+                  )}
                 </div>
               </a>
             ))}
@@ -264,6 +269,7 @@ function ProjectDashboard({
     [category, setCategory] = useState('all'),
     [issueTab, setIssueTab] = useState('open'),
     [savedOnly, setSavedOnly] = useState(false),
+    [historyLimit, setHistoryLimit] = useState(10),
     [editing, setEditing] = useState(uploading),
     [uploadOnly, setUploadOnly] = useState(uploading),
     [error, setError] = useState(''),
@@ -281,10 +287,7 @@ function ProjectDashboard({
     (issue) => issue.status === 'open',
   ).length
   const visibleIssues = issues.filter((issue) => issue.status === issueTab),
-    visibleQueries = queries.filter((q) => !savedOnly || q.saved),
-    unanswered = queries.filter(
-      (q) => !q.stale && q.outcome && q.outcome in unansweredLabels,
-    )
+    visibleQueries = queries.filter((q) => !savedOnly || q.saved)
   const route = (tail = '') => '#project/' + project.id + tail
   async function action(path: string, method: string, value?: unknown) {
     setPending(true)
@@ -357,6 +360,14 @@ function ProjectDashboard({
               {[project.client, project.location].filter(Boolean).join(' · ')}
             </p>
           </div>
+          <button
+            className="primary-action query-files"
+            disabled={!documents.length}
+            onClick={onQueryFiles}
+          >
+            <Search size={17} />
+            New query
+          </button>
         </div>
         {descriptionEditing ? (
           <form
@@ -419,51 +430,51 @@ function ProjectDashboard({
               <h2>
                 Project documents <span>{documents.length}</span>
               </h2>
-              <label className="project-filter">
-                <Search size={14} />
-                <input
-                  aria-label="Filter project documents"
-                  placeholder="Find a document"
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                />
-              </label>
-              <button
-                type="button"
-                className="project-upload-button"
-                aria-label="Upload documents"
-                title="Upload documents"
-                onClick={() => {
-                  setUploadOnly(true)
-                  setEditing(true)
-                }}
-              >
-                <Plus size={14} /> Upload
-              </button>
-            </div>
-            <div
-              className="document-category-filter"
-              role="group"
-              aria-label="Document categories"
-            >
-              {[
-                ['all', 'All'],
-                ...Object.entries(labels)
-                  .filter(([id]) => documents.some((d) => d.category === id))
-                  .map(([id, label]) => [
-                    id,
-                    label.replace(' documents', '').replace(' & drawings', ''),
-                  ]),
-              ].map(([id, label]) => (
-                <button
-                  key={id}
-                  className={category === id ? 'selected' : ''}
-                  onClick={() => setCategory(id)}
+              <div className="register-tools">
+                <select
+                  aria-label="Filter by document category"
+                  value={category}
+                  onChange={(event) => setCategory(event.target.value)}
                 >
-                  {label}
+                  <option value="all">All categories</option>
+                  {Object.entries(labels)
+                    .filter(([id]) => documents.some((d) => d.category === id))
+                    .map(([id, label]) => (
+                      <option key={id} value={id}>
+                        {label}
+                      </option>
+                    ))}
+                </select>
+                <label className="project-filter">
+                  <Search size={14} />
+                  <input
+                    aria-label="Filter project documents"
+                    placeholder="Find a document"
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="project-upload-button"
+                  aria-label="Upload documents"
+                  title="Upload documents"
+                  onClick={() => {
+                    setUploadOnly(true)
+                    setEditing(true)
+                  }}
+                >
+                  <Plus size={14} /> Upload
                 </button>
-              ))}
+              </div>
             </div>
+            {shown.length > 0 && (
+              <div className="register-columns" aria-hidden="true">
+                <span>Document</span>
+                <span>Revision / edition</span>
+                <span>Pages</span>
+              </div>
+            )}
             {!documents.length && (
               <div className="project-empty">
                 <p>
@@ -500,17 +511,17 @@ function ProjectDashboard({
                           href={route('/document/' + doc.id)}
                           onClick={navigateLink}
                         >
-                          <FileText size={17} />
+                          <FileText size={15} />
                           <span>
                             <strong>{doc.title}</strong>
                             <small>
                               {doc.label} · {doc.edition}
                             </small>
                           </span>
-                          <span className="document-pages">
-                            {doc.pages} pp.
+                          <span className="register-edition">
+                            {doc.edition || '�'}
                           </span>
-                          <ArrowUpRight size={14} />
+                          <span className="document-pages">{doc.pages}</span>
                         </a>
                         {doc.model && (
                           <a
@@ -534,14 +545,6 @@ function ProjectDashboard({
             )}
           </section>
           <aside className="project-sidebar">
-            <button
-              className="primary-action query-files"
-              disabled={!documents.length}
-              onClick={onQueryFiles}
-            >
-              <Search size={17} />
-              Query Files
-            </button>
             <section className="project-panel" aria-label="Potential issues">
               <div className="project-panel-heading">
                 <h2 title="Document and IFC findings requiring engineering review">
@@ -613,21 +616,38 @@ function ProjectDashboard({
                 </button>
               </div>
               {visibleIssues.map((issue) => (
-                <article className="project-issue" key={issue.id}>
-                  <h3>{issue.title}</h3>
+                <details className="project-issue" key={issue.id}>
+                  <summary>
+                    {issue.status === 'open' && (
+                      <TriangleAlert
+                        className="issue-warning"
+                        size={14}
+                        aria-hidden="true"
+                      />
+                    )}
+                    <strong>{issue.title}</strong>
+                    <ChevronRight
+                      className="issue-chevron"
+                      size={14}
+                      aria-hidden="true"
+                    />
+
+                    <div className="issue-sources">
+                      {[
+                        ...new Set(
+                          issue.citations.map(
+                            (c) => `${c.label} · p. ${c.page}`,
+                          ),
+                        ),
+                      ].map((label) => (
+                        <span key={label}>{label}</span>
+                      ))}
+                    </div>
+                  </summary>
                   {issue.category && (
                     <p>{labels[issue.category] || issue.category}</p>
                   )}
                   <p>{issue.explanation}</p>
-                  <div className="issue-sources">
-                    {[
-                      ...new Set(
-                        issue.citations.map((c) => `${c.label} · p. ${c.page}`),
-                      ),
-                    ].map((label) => (
-                      <span key={label}>{label}</span>
-                    ))}
-                  </div>
                   <div className="issue-actions">
                     {!issue.queryId && (
                       <details>
@@ -670,7 +690,7 @@ function ProjectDashboard({
                       Evidence is unavailable; the finding cannot be relied on.
                     </p>
                   )}
-                </article>
+                </details>
               ))}
               {!visibleIssues.length && (
                 <p className="project-empty">
@@ -680,37 +700,6 @@ function ProjectDashboard({
                 </p>
               )}
             </section>
-            {unanswered.length > 0 && (
-              <section
-                className="project-panel"
-                aria-label="Unanswered questions"
-              >
-                <div className="project-panel-heading">
-                  <h2 title="Questions the project documents could not answer">
-                    Unanswered questions <span>{unanswered.length}</span>
-                  </h2>
-                </div>
-                <p className="unanswered-hint">
-                  These may need documents that aren't in the project yet.
-                </p>
-                {unanswered.slice(0, 5).map((query) => (
-                  <div className="project-query-row" key={query.id}>
-                    <a
-                      href={route('/query/' + query.id)}
-                      onClick={navigateLink}
-                    >
-                      <span>{query.question}</span>
-                      <small>
-                        <span className="unanswered-badge">
-                          {unansweredLabels[query.outcome!]}
-                        </span>
-                        {date(query.createdAt)}
-                      </small>
-                    </a>
-                  </div>
-                ))}
-              </section>
-            )}
             <section
               className="project-panel"
               aria-label="Project query history"
@@ -726,11 +715,18 @@ function ProjectDashboard({
                   Saved
                 </button>
               </div>
-              {visibleQueries.slice(0, 10).map((query) => (
+              {visibleQueries.slice(0, historyLimit).map((query) => (
                 <div className="project-query-row" key={query.id}>
                   <a href={route('/query/' + query.id)} onClick={navigateLink}>
                     <span>{query.question}</span>
                     <small>
+                      {!query.stale &&
+                        query.outcome &&
+                        unansweredLabels[query.outcome] && (
+                          <span className="unanswered-badge">
+                            {unansweredLabels[query.outcome]}
+                          </span>
+                        )}
                       {query.state !== 'completed' ? query.state + ' · ' : ''}
                       {date(query.createdAt)}
                       {query.stale ? ' · Documents changed' : ''}
@@ -751,6 +747,14 @@ function ProjectDashboard({
                   </button>
                 </div>
               ))}
+              {visibleQueries.length > historyLimit && (
+                <button
+                  className="history-more"
+                  onClick={() => setHistoryLimit((limit) => limit + 10)}
+                >
+                  Show more queries
+                </button>
+              )}
               {!visibleQueries.length && (
                 <p className="project-empty">
                   {savedOnly ? 'No saved queries.' : 'No queries yet.'}
