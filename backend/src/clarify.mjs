@@ -170,6 +170,9 @@ const refine = (question, label) =>
  * 'jurisdiction' or 'off_topic'.
  */
 export function assistQuery(question, searchIndex, result) {
+  if(result.requiredInputs?.kind==='pipe_review_inputs')return {
+    outcome:'partial',details:result.requiredInputs.fields.map(field=>`${field.label}${field.unit?` (${field.unit})`:''}: ${field.reason}`),clarifications:[],
+  }
   if(result.requiredInputs?.kind==='capacity_review_inputs')return {
     outcome:'vague',details:result.requiredInputs.fields.map(field=>`${field.label} (${field.unit}): ${field.reason}`),clarifications:[],
   }

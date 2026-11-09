@@ -30,6 +30,15 @@ try{
  assert.equal(inputs.origin,'question')
  assert.equal(inputs.measurements.length,3)
  assert.ok(!inputs.measurements.some(record=>record.role==='service'&&record.property==='diameter'))
+ const missing=completed.result.requiredInputs
+ assert.equal(missing.kind,'pipe_review_inputs')
+ // This extractive response retrieves service-specific clauses, with no
+ // diameter cutoff. Do not invent missing inputs for unreturned main rules.
+ assert.deepEqual(missing.fields.map(field=>field.key),['storm_service_cover_datum'])
+ assert.ok(missing.fields.every(field=>field.referenceIds.length&&field.referenceIds.every(id=>completed.result.references.some(reference=>reference.id===id&&reference.regions.length))))
+ await report.getByRole('heading',{name:'Project inputs to confirm',exact:true}).waitFor()
+ assert.match(await report.innerText(),/Storm service cover datum/)
+ assert.equal(completed.result.assist.outcome,'partial')
  assert.match(await report.innerText(),/storm main · diameter: 450 mm/)
  assert.match(await report.innerText(),/storm main · cover: 1\.7 m/)
  assert.match(await report.innerText(),/storm service · cover: 2 m/)
@@ -41,6 +50,7 @@ try{
  await page.waitForFunction(()=>document.querySelectorAll('.pdf-status').length===0)
  await page.reload();await heading.waitFor()
  assert.match(await report.innerText(),/Query inputs are review assumptions/)
+ assert.match(await report.innerText(),/Storm service cover datum/)
  mkdirSync('test-results',{recursive:true})
  await page.screenshot({path:'test-results/pipe-measurements-browser.png',fullPage:true})
  assert.deepEqual(errors,[])

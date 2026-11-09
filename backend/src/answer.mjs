@@ -6,6 +6,7 @@ import { testingCountGap, capacityDifferenceGap } from './answer-completeness.mj
 import { attachReferenceCriteria, supplementaryReferenceCriteria } from './related-criteria.mjs'
 import { config } from './config.mjs'
 import { pipeProjectMeasurementIssue, pipeProjectMeasurements, attachProjectMeasurements } from './project-measurements.mjs'
+import { attachPipeReviewInputs } from './pipe-review-inputs.mjs'
 import {findDemoReview,capacityReviewDefinition} from '../demo/review-scenarios.mjs'
 import {capacityReviewRequest} from './capacity-review-inputs.mjs'
 import {SearchIndex} from './search.mjs'
@@ -923,7 +924,7 @@ export async function answer(question, searchIndex, options) {
   }
   const worked=example?workedCapacityReview(question,searchIndex,example):null
   const response=worked?{...renderResult(worked.sections,searchIndex.corpus,options.publicBase,options.token,'verified_review',['Source-verified worked review. Supplied scenario figures are assumptions; source applicability and engineering approval require review.']),reviewInputs:worked.inputs}:example?{...await answerFromUnits(question,searchIndex,{...options,sourceOnly:true}),mode:'insufficient_evidence',requiredInputs:{kind:'worked_review_basis',action:'Confirm the worked review source documents and supplied inputs before completing this calculation.'}}:await answerCore(question,searchIndex,options)
-  const result=attachProjectMeasurements(response,question)
+  const result=attachPipeReviewInputs(attachProjectMeasurements(response,question),question)
   return example ? {...result,reviewExample:{id:example.id,title:example.title,documentIds:example.documentIds},notes:[...(result.notes||[]),'Worked scenario: supplied figures are assumptions; this review uses the identified drainage design references.']} : result
 }
 

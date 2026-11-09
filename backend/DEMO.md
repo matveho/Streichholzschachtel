@@ -71,6 +71,15 @@ unnecessary. If optional arithmetic planning fails, independently supported
 source findings can still be reviewed; missing calculations are disclosed.
 These are rejection safeguards, not proof that every accepted claim is correct.
 
+Cover reviews also return a **Project inputs to confirm** checklist. Missing
+measurement datums and diameter-dependent inputs are bound to the individual
+main or service and linked to the actual returned source clauses. The checklist
+does not request a diameter when those clauses have no diameter condition, and
+does not turn source evidence into a compliance finding. A response that only
+retrieves service clauses remains incomplete for the main; its checklist is
+limited to those returned criteria. Reconcile the reference basis before
+applying a criterion, even after supplying its requested measurements.
+
 Reproduce the broader qualification separately from the presentation runtime:
 
 ```bash

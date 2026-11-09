@@ -378,7 +378,7 @@ export function applicableEvidence(question, evidence, {pipeScope} = {}) {
         }
         else if (pipeLengthCondition) supplied = undefined
         if (supplied?.size !== 1) {
-          unresolvedConditions.push({unit:m[2],sourceCondition:m[0]})
+          unresolvedConditions.push({unit:m[2],sourceCondition:m[0],...(diameterCondition?{property:'diameter',role:pipeScope.role,system:pipeScope.system}:{})})
           continue // Missing or multiple quantities need interpretation.
         }
         const suppliedValue = [...supplied][0],
