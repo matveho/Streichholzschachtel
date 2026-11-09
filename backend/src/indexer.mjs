@@ -651,11 +651,14 @@ export async function buildIndex(progress = () => {}, onlyFiles) {
   return { documents, passages, units, failures }
 }
 
-export function locateQuote(passage, quote) {
+export function locateQuote(passage, quote, quoteStart) {
   const text = normalize(passage.text),
     excerpt = normalize(quote)
-  const start = text.toLowerCase().indexOf(excerpt.toLowerCase())
-  if (excerpt.length < 18 || start < 0) return null
+  const start = quoteStart === undefined
+    ? text.toLowerCase().indexOf(excerpt.toLowerCase())
+    : quoteStart
+  if (excerpt.length < 18 || !Number.isInteger(start) || start < 0 ||
+      text.slice(start, start + excerpt.length).toLowerCase() !== excerpt.toLowerCase()) return null
   if (/[\p{L}\d]/u.test(excerpt[0]) && /[\p{L}\d]/u.test(text[start - 1] || ''))
     return null
   if (
@@ -683,7 +686,7 @@ export function locateQuote(passage, quote) {
   const regions = []
   let cursor = 0
   for (const line of passage.lines) {
-    const end = cursor + line.text.length
+    const end = cursor + normalize(line.text).length
     if (end > start && cursor < start + excerpt.length) {
       if (
         passage.extraction === 'ocr' &&
@@ -697,5 +700,5 @@ export function locateQuote(passage, quote) {
     cursor = end + 1
   }
   if (!regions.length) return null
-  return { excerpt: text.slice(start, start + excerpt.length), regions }
+  return { excerpt: text.slice(start, start + excerpt.length), regions, quoteStart: start }
 }

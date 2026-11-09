@@ -1,6 +1,6 @@
 import { quantityUnits } from './indexer.mjs'
 import { conveyanceScope, pipeRole, applicableEvidence } from './applicability.mjs'
-import { evidenceUnits, isProvision } from './evidence-units.mjs'
+import { evidenceUnits, isProvision, evidenceUnitKey } from './evidence-units.mjs'
 
 // Classify the quoted criterion, never its authority or project compliance.
 export function depthCriterion(unit) {
@@ -52,12 +52,12 @@ export function relatedCriteriaEvidence(selected, ranked, question) {
     return criterion ? [{ ...criterion, doc: unit.passage.doc }] : []
   })
   const seen = new Set(
-    selected.map((unit) => unit.passage.doc + ':' + unit.excerpt),
+    selected.map(evidenceUnitKey),
   )
   const added = []
   const addedDocuments = new Set(selected.map(unit=>unit.passage.doc))
   for (const unit of ranked) {
-    const key = unit.passage.doc + ':' + unit.excerpt
+    const key = evidenceUnitKey(unit)
     if (seen.has(key) || addedDocuments.has(unit.passage.doc)) continue
     const candidate = depthCriterion(unit)
     if (

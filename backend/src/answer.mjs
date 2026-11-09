@@ -182,15 +182,15 @@ export function validateSynthesis(output, passages, question, documents = [], {c
       for (const ev of claim.evidence) {
         const passage = byId.get(ev.passageId)
         if (!passage || typeof ev.quote !== 'string') continue
-        const anchor = locateQuote(passage, ev.quote)
+        const anchor = locateQuote(passage, ev.quote, ev.quoteStart)
         if (anchor) {
-          const unit = evidenceUnits([passage], 30000).find(u => normalize(u.excerpt) === normalize(anchor.excerpt))
+          const unit = evidenceUnits([passage], 30000).find(u => u.quoteStart === anchor.quoteStart && normalize(u.excerpt) === normalize(anchor.excerpt))
           if (!incompatiblePipeRole(claim.text, unit || {excerpt:anchor.excerpt,heading:passage.section}))
             evidence.push({ passage, ...anchor })
         }
       }
       for (const entry of [...evidence]) {
-        const unit = evidenceUnits([entry.passage], 30000).find(u => normalize(u.excerpt) === normalize(entry.excerpt))
+        const unit = evidenceUnits([entry.passage], 30000).find(u => u.quoteStart === entry.quoteStart && normalize(u.excerpt) === normalize(entry.excerpt))
         if (unit?.conditionEvidence && !evidence.some(e => e.passage.id === entry.passage.id && e.excerpt === unit.conditionEvidence.excerpt))
           evidence.push({passage:entry.passage,...unit.conditionEvidence})
       }
@@ -256,7 +256,7 @@ export function validateSynthesis(output, passages, question, documents = [], {c
 
       const foreignSystem = evidence.some(e => {
         const units = evidenceUnits([e.passage], 30000)
-        const unit = units.find(u => normalize(u.excerpt).includes(normalize(e.excerpt)) || normalize(e.excerpt).includes(normalize(u.excerpt)))
+        const unit = units.find(u => u.quoteStart === e.quoteStart && (normalize(u.excerpt).includes(normalize(e.excerpt)) || normalize(e.excerpt).includes(normalize(u.excerpt))))
         return incompatibleConveyanceEvidence(question, unit || {excerpt:e.excerpt, heading:e.passage.section})
       })
       if (foreignSystem) {
@@ -666,7 +666,7 @@ export function renderResult(
     for (const claim of section.claims) {
       const refs = []
       for (const ev of claim.evidence) {
-        const key = `${ev.passage.id}:${ev.excerpt}`
+        const key = JSON.stringify([ev.passage.id, ev.excerpt, ev.regions])
         let id = used.get(key)
         if (!id) {
           id = String(references.length + 1)
@@ -684,6 +684,7 @@ export function renderResult(
             rect: [left, top, right - left, bottom - top],
             regions,
             excerpt: ev.excerpt,
+            ...(ev.quoteStart !== undefined ? { quoteStart: ev.quoteStart } : {}),
             extraction: ev.passage.extraction || 'text',
           })
         }

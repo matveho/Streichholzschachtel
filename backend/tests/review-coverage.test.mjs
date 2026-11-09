@@ -94,11 +94,12 @@ const unit = (text, page = 1) => ({
   passage: { doc: 'guide', page },
   excerpt: text,
 })
-const proof = (source) => ({ passage: source.passage, excerpt: source.excerpt })
+const proof = (source) => ({ passage: source.passage, excerpt: source.excerpt, quoteStart: source.quoteStart })
 const reference = (source, id) => ({
   doc: source.passage.doc,
   page: source.passage.page,
   excerpt: source.excerpt,
+  quoteStart: source.quoteStart,
   id,
 })
 
@@ -256,9 +257,14 @@ test('a source used in a shared check does not create a duplicate review backlog
   )
 })
 
-test('repeated text on another page cannot credit the wrong source anchor', () => {
+for (const occurrence of [false, true]) test(`repeated text on another ${occurrence ? 'occurrence' : 'page'} cannot credit the wrong source anchor`, () => {
   const first = unit('The same text appears on multiple pages.', 1),
     second = unit('The same text appears on multiple pages.', 2)
+  if (occurrence) {
+    second.passage.page = first.passage.page
+    first.quoteStart = 10
+    second.quoteStart = 100
+  }
   const output = attachReviewCoverage(
     { report: [], references: [reference(first, '1'), reference(second, '2')] },
     [],

@@ -5,7 +5,7 @@ const sourceKey = (source) => {
   const page = source.passage?.page ?? source.page
   const text = source.excerpt ?? source.text
   return doc && typeof text === 'string'
-    ? `${doc}/${page}/${normalize(text)}`
+    ? JSON.stringify([doc, page, normalize(text), source.quoteStart ?? null])
     : null
 }
 
@@ -27,6 +27,7 @@ function sourceLedger(units, findings, references) {
     return {
       doc: unit.passage.doc,
       page: unit.passage.page,
+      ...(unit.quoteStart !== undefined ? { quoteStart: unit.quoteStart } : {}),
       status: uses.has(key)
         ? 'cited_in_finding'
         : refs.length

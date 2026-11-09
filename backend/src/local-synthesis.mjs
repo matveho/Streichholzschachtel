@@ -1,4 +1,4 @@
-import { evidenceUnits, isProvision } from './evidence-units.mjs'
+import { evidenceUnits, isProvision, evidenceUnitKey } from './evidence-units.mjs'
 import { applicableEvidence } from './applicability.mjs'
 import { linkedTableEvidence } from './linked-tables.mjs'
 import { relatedCriteriaEvidence, depthCriterion } from './related-criteria.mjs'
@@ -105,6 +105,7 @@ export const sourceContext = (u, id, documents = []) => ({
   sourceTitle: documents.find(d => d.id === u.passage.doc)?.title || '',
   id,
   document: u.passage.doc,
+  page: u.passage.page,
   section: u.heading
     .split(' · ')
     .map((s) => s.replace(/^\d+(?:\.\d+)+\.?\s+/, ''))
@@ -130,7 +131,7 @@ export const sourceContext = (u, id, documents = []) => ({
 })
 
 export function labelEvidenceGroups(groups) {
-  const key = unit => unit.passage.doc + ':' + unit.excerpt
+  const key = evidenceUnitKey
   const unique = new Map()
   for (const unit of groups.flatMap(group => group.units))
     if (!unique.has(key(unit))) unique.set(key(unit), unit)
@@ -235,10 +236,10 @@ export async function draftLocal(
         .filter((id) => byLabel.has(id))
         .slice(0, 12)
         .map((id) => byLabel.get(id))
-      selectedTopics.set(topic.heading, selectedUnits.map(unit => unit.passage.doc + ':' + unit.excerpt))
+      selectedTopics.set(topic.heading, selectedUnits.map(evidenceUnitKey))
       const chosen = [...selectedUnits, ...linkedTableEvidence(selectedUnits, ranked), ...relatedCriteriaEvidence(selectedUnits, ranked, topic.scope || topic.query)]
         .filter((u) => {
-          const key = u.passage.doc + ':' + u.excerpt
+          const key = evidenceUnitKey(u)
           if (topic.role === 'original-system') originalSystemKeys.add(key)
           if (seen.has(key)) return false
           seen.add(key)
@@ -262,7 +263,7 @@ export async function draftLocal(
       })
     }
     const sharedEvidence = Object.fromEntries([...selectedTopics].filter(([heading, keys]) => keys.length && !groups.some(group => group.heading === heading)).map(([heading, keys]) => [heading,
-      groups.filter(group => group.units.some(unit => keys.includes(unit.passage.doc + ':' + unit.excerpt))).map(group => group.id),
+      groups.filter(group => group.units.some(unit => keys.includes(evidenceUnitKey(unit)))).map(group => group.id),
     ]))
     plan = { groups, unresolved, originalSystemKeys: [...originalSystemKeys], sharedEvidence }
   }
@@ -314,7 +315,7 @@ export async function draftLocal(
   plan.draftFindings ||= {}
   const shared = all
     .filter((u) =>
-      plan.originalSystemKeys?.includes(u.passage.doc + ':' + u.excerpt),
+      plan.originalSystemKeys?.includes(evidenceUnitKey(u)),
     )
     .filter((u) => /\b(?:must|shall|required)\b/i.test(u.excerpt))
     .slice(0, 3)
@@ -428,12 +429,13 @@ export async function draftLocal(
     ids.flatMap((id) => {
       const unit = byLabel.get(id)
       return [
-        { passageId: unit.passage.id, quote: unit.excerpt },
+        { passageId: unit.passage.id, quote: unit.excerpt, quoteStart: unit.quoteStart },
         ...(unit.contextEvidence
           ? [
               {
                 passageId: unit.passage.id,
                 quote: unit.contextEvidence.excerpt,
+                quoteStart: unit.contextEvidence.quoteStart,
               },
             ]
           : []),
@@ -441,11 +443,14 @@ export async function draftLocal(
     })
   const findings = (conclusion.findings || []).map((finding) => {
     finding = { ...finding, text: cleanSourceCallout(finding.text, byLabel) }
+    const group = plan.groups.find(group => group.id === finding.check)
+    const sharedForCheck = group && /\breplace(?:ment)?\b|\bin lieu\b|\bsubstitut|\balternative\b/i.test(group.heading + ' ' + group.query) ? shared : []
+    const allowed = new Set([...(group?.units || []), ...sharedForCheck].map(unitLabel))
     let cited = alignEvidence(
       finding.text,
-      [...byLabel.keys()],
+      [...allowed],
       byLabel,
-      (finding.evidence || []).filter((id) => byLabel.has(id)),
+      (finding.evidence || []).filter((id) => allowed.has(id)),
     )
     const calculations = boundFindingCalculations(
       finding.calculations,

@@ -374,3 +374,45 @@ actual UI review submission, partial-check coverage, independent source-use
 invariants, the pending-source PDF highlight and reload/history. Use
 `scripts/linux/test-review-coverage` to reproduce that isolated experimental
 workflow without changing the production mode.
+
+## Source occurrence integrity
+
+Identical wording no longer merges independent source occurrences. Extraction,
+table supplementation, check selection and drafting preserve document, page,
+passage, section and table context. Local source context includes the PDF page.
+Citation correction is restricted to the check's selected provisions and its
+explicit cross-cutting requirements; another check cannot supply an accidental
+positive proof.
+
+Within one passage, a server-generated `quoteStart` identifies the selected
+occurrence in normalized source text. Validation verifies the exact text at that
+offset, retains the matching asset context and renders its actual PDF regions.
+Malformed offsets fail closed. Legacy quotes without an offset remain supported.
+Reference deduplication and coverage tracking preserve distinct occurrences on
+the same page. Highlight line offsets use the same whitespace and Unicode
+normalization as quote matching.
+
+Regressions reproduced three independent source labels collapsing into one,
+repeated requirements being discarded across pages, and identical clauses under
+different headings losing their separate highlights. The fixes verify extraction
+through rendered citations, not just the label helper.
+
+The intermediate source-label-only engineering run `run-gpu-9SCBXYXv` passed
+6/8 under the existing strict finding gates. The infill report retained both the
+alternative permission and private-servicing obligation, citing both for its
+unresolved replacement interface. Capacity arithmetic and damaged-LID testing
+remained incomplete. This run predates the subsequent extraction/offset fixes
+and is not qualification of unrestricted current synthesis.
+
+Bounded reasoning trials on damaged LID with 2,048 and 4,096 extra tokens
+(`run-gpu-g0fVx1ZZ`, `run-gpu-CvcuO0eh`) both hit the structured output limit
+and correctly released no generated answer. They took 25 and 34 seconds;
+increasing this budget did not demonstrate useful capability. Production keeps
+reasoning disabled and the pinned comparison model unchanged.
+
+Final anchor regression `run-GZ00Fd69` passed 254/254 unit tests plus OCR,
+isolated project APIs, imports, isolation and restart persistence. Browser
+`run-browser-r5HWjThR` passed scoped reference reconciliation with both PDF
+highlights, persistence, and the IFC workflow. GPU comparison browser
+`run-browser-JZM5DVlS` passed the derived width difference, both source PDF
+highlights, history reload, offline general review and automatic IFC findings.

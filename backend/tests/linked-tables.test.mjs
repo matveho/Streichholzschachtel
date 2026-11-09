@@ -29,3 +29,9 @@ test('same-page named methods link tables despite stale paragraph section metada
  const remote={...correct,passage:{doc:'storm',page:15}}
  assert.deepEqual(linked([source],[correct,unrelated,remote]),[correct])
 })
+
+test('identical table wording in another criterion column remains independent evidence', () => {
+ const minimum={...row('storm',10,rule.heading,'2.2','Storm main 300 mm'),tableColumn:'Minimum diameter'}
+ const exception={...minimum,tableColumn:'Exception diameter'}
+ assert.deepEqual(linked([rule,minimum],[minimum,exception]),[exception])
+})

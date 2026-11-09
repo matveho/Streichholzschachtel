@@ -1,5 +1,21 @@
 import { normalize, locateQuote } from './indexer.mjs'
 
+// Ranking clones a unit; its score is not part of its identity. Repeated text
+// on another page or under another asset heading is independent evidence.
+export const evidenceUnitKey = (unit) => JSON.stringify([
+  unit.passage.doc,
+  unit.passage.page ?? null,
+  unit.passage.id ?? null,
+  unit.quoteStart ?? null,
+  unit.excerpt,
+  unit.heading ?? null,
+  unit.scope ?? [],
+  unit.tableColumn ?? null,
+  unit.tableRowLabel ?? null,
+  unit.contextEvidence?.excerpt ?? null,
+  unit.conditionEvidence?.excerpt ?? null,
+])
+
 // Keep actionable provisions, category definitions, and labelled table data.
 // Navigation and introductory prose otherwise consume the selector's small
 // context and displace the actual requirements.
@@ -34,6 +50,13 @@ export function isProvision(unit) {
 
 function sourceBlocks(passage) {
   const blocks = []
+  let cursor = 0
+  const starts = passage.lines.map(line => {
+    const start = cursor
+    cursor += normalize(line.text).length + 1
+    return start
+  })
+  let blockStart = 0
   let lines = [],
     heading = passage.section,
     sectionHeading = passage.section,
@@ -46,6 +69,7 @@ function sourceBlocks(passage) {
     if (lines.length)
       blocks.push({
         text: lines.join(' '),
+        start: blockStart,
         heading,
         tableCaption: inTable ? tableCaption : '',
         scope,
@@ -132,6 +156,7 @@ function sourceBlocks(passage) {
     ) {
       flush()
       heading = `${heading ? heading + ' · ' : ''}${next}`
+      blockStart = starts[i]
       lines.push(text, next)
       i++
       continue
@@ -151,6 +176,7 @@ function sourceBlocks(passage) {
       i++
       continue
     }
+    if (!lines.length) blockStart = starts[i]
     lines.push(text)
   }
   flush()
@@ -208,10 +234,14 @@ export function evidenceUnits(
             continue
           if (/\b(?:a|an|the|of|to|and|or|must|shall)\s*$/i.test(quote))
             continue
-          const key = passage.doc + ':' + quote
+          const blockText = normalize(block.text)
+          const withinBlock = blockText.toLowerCase().indexOf(quote.toLowerCase(), normalize(block.text.slice(0, segment.index || 0)).length)
+          if (withinBlock < 0) continue
+          const quoteStart = block.start + withinBlock
+          const key = evidenceUnitKey({ passage, excerpt: quote, quoteStart, heading: block.heading, scope: block.scope, tableColumn: block.tableColumn, tableRowLabel: block.tableRowLabel })
           if (seen.has(key) || characters + quote.length > maxCharacters)
             continue
-          const anchor = locateQuote(passage, quote)
+          const anchor = locateQuote(passage, quote, quoteStart)
           if (!anchor) continue
           const caption =
             block.tableCaption && block.tableCaption !== quote
@@ -223,7 +253,7 @@ export function evidenceUnits(
           const previous = segmentIndex > 0 ? normalize(segments[segmentIndex - 1].segment) : ''
           const condition = /^(?:If|When)\s+(?:this|that|the|a minimum)\b/i.test(quote) &&
             /\b(?:when|if)\b[^!?]{0,120}\b(?:not practical|not feasible|impractical|unachievable)\b/i.test(previous)
-            ? locateQuote(passage, previous) : null
+            ? locateQuote(passage, previous, block.start + blockText.toLowerCase().lastIndexOf(previous.toLowerCase(), withinBlock)) : null
           seen.add(key)
           characters += quote.length
           units.push({

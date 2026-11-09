@@ -1,4 +1,4 @@
-const key = unit => `${unit.passage.doc}:${unit.excerpt}`
+import { evidenceUnitKey as key } from './evidence-units.mjs'
 const table = unit => unit.heading?.match(/\bTable\s+\d+(?:\.\d+)*(?:\s*:[^·]+)?/i)?.[0]
 const generic = new Set('table minimum maximum design requirement requirements values value criteria numerical general coefficient coefficients sewer sewers storm water sanitary pipe pipes'.split(' '))
 const methodTerms = text => new Set((text.toLowerCase().replace(/['’]s\b/g, '').match(/[a-z]{5,}/g) || []).filter(word => !generic.has(word)))
