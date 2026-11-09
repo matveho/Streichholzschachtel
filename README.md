@@ -8,10 +8,19 @@ Built for natHacks 2026 by team Streichholzschachtel.
 
 ---
 
+## Try a design review
+
+1. **Ask a live question.** Open **Parkview Exchange Redevelopment -> New query**, enter “How long is sanitary pipe S1?” and select **Search**. Select citation **1** to verify the **43 m** length on PDF page **4** of the model register.
+2. **Check a finding across three documents.** Open **North Ridge Highway Intersection Upgrade**. Under **Potential issues**, expand **Crest sight distance is below the screening value** and select **Inspect evidence**. On a laptop, the pinned drawing shows **165 m** of available sight distance beside the provincial guide's **185 m** level-road value at 100 km/h. Select the **NRH-CR-001** document tab to see where the owner adopts 185 m for the initial check. On a narrow screen, select citations **2**, **1**, and **3** in turn to see the drawing, guide, and owner brief. The **20 m** difference gives the engineer a reason to check the survey and road grade.
+
+The built-in projects pair synthetic design records with published standards. The North Ridge review is prepared and can be reopened immediately. New queries run on the backend workstation and search only the active project’s files. The hosted app requires that workstation and its HTTPS tunnel to be online.
+
+---
+
 ## Contents
 
-- [What *basis* does](#what-basis-does)
 - [Try a design review](#try-a-design-review)
+- [What *basis* does](#what-basis-does)
 - [How it works](#how-it-works)
   - [System overview](#system-overview)
   - [Deployment topology](#deployment-topology)
@@ -48,13 +57,6 @@ Civil engineering decisions rest on a stack of documents: a client brief, drawin
 
 ---
 
-## Try a design review
-
-1. **Ask a live question.** Open **Parkview Exchange Redevelopment -> New query**, enter “How long is sanitary pipe S1?” and select **Search**. Click the citation beside the answer to verify the **43 m** length in the project’s model register.
-2. **Check a finding across three documents.** Open **North Ridge Highway Intersection Upgrade**. Under **Potential issues**, expand **Crest sight distance is below the screening value** and select **Inspect evidence**. In the first paragraph, click citation **2** for the drawing’s **165 m** sight distance, **1** for the provincial guide’s **185 m** level-road value at 100 km/h, and **3** for the owner’s adoption of that value. The **20 m** difference gives the engineer a reason to check the survey and road grade.
-
-The built-in projects pair synthetic design records with published standards. The North Ridge review is prepared and can be reopened immediately. New queries run on the backend workstation and search only the active project’s files. The hosted app requires that workstation and its HTTPS tunnel to be online.
-
 More questions to try in **New query**:
 
 | Project | Question |
@@ -73,7 +75,7 @@ More questions to try in **New query**:
 
 *Each island is a layer of the system and each building is a source module, one floor per 100 lines of code. Bridges ① to ⑥ trace a query from the browser to the documents, with ② branching off to where the server saves project state. To regenerate the figure, run `node docs/architecture/build-code-city.mjs --png`.*
 
-For presentations, open the [live 3D version](https://streichholzschachtel.vercel.app/architecture/) (or [docs/architecture/code-city-3d.html](docs/architecture/code-city-3d.html) locally) in Chrome or Edge and press **F** for full screen. This animated 3D version opens on a blueprint site plan seen from above, tilts down until the plan lies flat and raises the blue ground, islands and buildings out of it in 6 seconds. Then each press of **Space** or **→** (or a presentation clicker) drops the next island, with a short phrase saying what it does and the numbered bridge carrying what it sends on; **←** takes the last island back off. Add `?auto=1` to the address to have the islands drop by themselves, timed to a 35-second spoken walkthrough (the script is in the page's code comments). Once Project state is shown, clicking its pin or the island opens the live product. Once every island is shown, **→** steps into the islands one by one; or add `?tour=1` to the address to play the full 30-second island tour. Every building is numbered; a number that would collide with another label moves aside and keeps a leader line to its building. The card in the corner lists every module of the island by number, with its name, what it does and its line count. A levelling staff beside each island gives the height scale in lines of code. The callout for the bridge leading into the island explains that interface. In the tour, each stop is timed to one sentence of a spoken walkthrough (the script is in the comments at the top of the page's code), and `?tour=1&pace=1.2` makes every stop 20% longer. Press **O** to return to the overview, which replays the opening. The page works offline.
+For presentations, open the [live 3D version](https://streichholzschachtel.vercel.app/architecture/) (or [docs/architecture/code-city-3d.html](docs/architecture/code-city-3d.html) locally) in Chrome or Edge and press **F** for full screen. This animated 3D version opens on a blueprint site plan seen from above, tilts down until the plan lies flat and raises the blue ground, islands and buildings out of it in 6 seconds. Then each press of **Space** or **->** (or a presentation clicker) drops the next island, with a short phrase saying what it does and the numbered bridge carrying what it sends on; the **Left Arrow** key takes the last island back off. Add `?auto=1` to the address to have the islands drop by themselves, timed to a 35-second spoken walkthrough (the script is in the page's code comments). Once Project state is shown, clicking its pin or the island opens the live product. Once every island is shown, **->** steps into the islands one by one; or add `?tour=1` to the address to play the full 30-second island tour. Every building is numbered; a number that would collide with another label moves aside and keeps a leader line to its building. The card in the corner lists every module of the island by number, with its name, what it does and its line count. A levelling staff beside each island gives the height scale in lines of code. The callout for the bridge leading into the island explains that interface. In the tour, each stop is timed to one sentence of a spoken walkthrough (the script is in the comments at the top of the page's code), and `?tour=1&pace=1.2` makes every stop 20% longer. Press **O** to return to the overview, which replays the opening. The page works offline.
 
 ### System overview
 
@@ -87,7 +89,7 @@ flowchart LR
   subgraph Host["Presentation computer (backend/)"]
     GW["demo-gateway.mjs<br/>keyless /local-api · :8789"]
     API["server.mjs + project-api.mjs<br/>authenticated API · :8787"]
-    IDX["indexer.mjs<br/>PDF → passages → evidence units"]
+    IDX["indexer.mjs<br/>PDF -> passages -> evidence units"]
     ENG["answer.mjs<br/>lookup · synthesis · checks"]
     STORE[("state/<br/>projects.json · query history<br/>PDF caches · imports")]
     PY["extract.py · native-table-layout.py<br/>PyMuPDF + optional Tesseract OCR"]
@@ -132,7 +134,7 @@ A query is a pollable job. Each citation in the result carries a document ID, a 
 
 1. The browser posts the question to `/local-api/v1/projects/:id/queries`. The gateway forwards it with the device key.
 2. `project-api.mjs` builds an index from **this project's documents only** and returns a job ID.
-3. `answer.mjs` runs `lookup.mjs`, which applies domain rewrites (for example "manhole" → "maintenance hole") and ranks provisions and table rows. Version questions are answered from the catalog's cover and revision pages.
+3. `answer.mjs` runs `lookup.mjs`, which applies domain rewrites (for example "manhole" -> "maintenance hole") and ranks provisions and table rows. Version questions are answered from the catalog's cover and revision pages.
 4. If evidence is found, it is rendered as verbatim units with their PDF regions. If not, `clarify.mjs` and `query-suggestions.mjs` offer clarifying questions or alternatives that have already been checked to return sourced answers.
 5. If a synthesis provider is configured, it drafts cited sentences. Each sentence must pass the checks (valid citation IDs, every number present in the cited text, applicability and calculation checks, optional contradiction veto). If no sentence passes, *basis* falls back to the verbatim answer.
 6. The browser polls until the result is ready, then requests the original PDF with byte ranges and highlights the passage.
@@ -309,10 +311,10 @@ Destructive reset tests must run against the isolated 8840/8842 runtime with `BA
 
 ```text
 Streichholzschachtel/
-├── Start basis.cmd              # One-click launcher → backend/control.mjs
+├── Start basis.cmd              # One-click launcher -> backend/control.mjs
 ├── index.html · vite.config.ts · vercel.json
 ├── src/                         # Frontend (React 19, TypeScript, Vite, PDF.js)
-│   ├── main.tsx                 # Entry → ProjectApp
+│   ├── main.tsx                 # Entry -> ProjectApp
 │   ├── ProjectApp.tsx           # Projects overview, dashboard, query reader, routing
 │   ├── App.tsx                  # Query workspace (report + PDF side by side)
 │   ├── ProjectEditor.tsx        # Create/edit projects, import PDFs, pick collections
@@ -377,7 +379,7 @@ Known limits: this is a single-device prototype with JSON persistence; the publi
 
 ## Roadmap and open issues
 
-- [ ] Fuzzy/semantic term matching when exact search finds nothing (for example "thermal movement" → "thermal expansion").
+- [ ] Fuzzy/semantic term matching when exact search finds nothing (for example "thermal movement" -> "thermal expansion").
 - [ ] Fix recall gaps (for example "erosion" not returning every passage containing it).
 - [ ] Team features: managers viewing projects and queries across engineers, collaboration and shared citations with architects and trades, possibly as an extension to existing platforms.
 
