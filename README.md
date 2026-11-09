@@ -46,7 +46,7 @@ Civil engineering decisions rest on a stack of documents: a client brief, drawin
 | Capability | What the engineer sees |
 | --- | --- |
 | **Project workspaces** | Each project groups its own drawings, reports and client documents with selected reference collections (for example *Edmonton urban servicing* or *Alberta highway design*). |
-| **Cited answers** | Every sentence in an answer cites a verbatim table row or sentence. Selecting the citation opens the original PDF on the right page with the passage highlighted. |
+| **Cited answers** | Select a citation to see the passage or table row behind a finding, highlighted in the original PDF. |
 | **Potential issues** | Prepared cross-document findings (for example "drawing slope below the standard's minimum") with evidence from both sides, which the engineer can inspect and dismiss. |
 | **IFC comparison** | A bounded checker compares numeric statements in project documents against properties in the project's IFC building/infrastructure model. |
 | **Version awareness** | Reference PDFs are identified by SHA-256 hash, so answers can state which edition of a standard they cite and whether a newer one exists in the collection. |
@@ -216,14 +216,14 @@ Start the gateway with the launcher, then run `npm run dev` in the repository ro
 | `npm run build` | Type-check and build to `dist/` |
 | `npm run lint` | oxlint |
 | `npm run format` / `format:check` | Prettier |
-| `npm run test:ui` | Workspace, history and examples verification scripts |
+| `npm run test:ui` | From the repository root, build the frontend and run Chrome checks for project setup, uploads, queries and PDF citations. |
 
 | Backend script (`backend/`) | Purpose |
 | --- | --- |
 | `npm start` | Run the API directly |
 | `npm run launch` | Run the controller |
 | `npm run index` | Build the index from the CLI |
-| `npm test` | Unit tests |
+| `npm test` | Run the backend unit tests from `backend/`. |
 | `npm run demo` / `demo:api` | Run demo questions in-process / through the job API |
 
 ---
@@ -275,7 +275,7 @@ Persistence is JSON on disk: `state/projects.json` (atomic replace with a backup
 
 | Suffix | Kind | Example |
 | --- | --- | --- |
-| `*.test.mjs` | Unit (`npm test`) | `retrieval`, `applicability`, `calculations`, `ifc-comparison` |
+| `*.test.mjs` | Unit (`npm test` from `backend/`) | `retrieval`, `applicability`, `calculations`, `ifc-comparison` |
 | `*.integration.mjs` | Against a running API | `projects`, `imports`, `ifc`, `https`, `control` |
 | `*.browser.mjs` | Playwright UI checks | `projects`, `ifc`, `query-suggestions`, `workspace-controls` |
 | `*.py` | Python checks | `ifc-models.py`, `entailment-benchmark.py`, `ocr-output.test.py` |
