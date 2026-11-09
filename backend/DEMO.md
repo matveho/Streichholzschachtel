@@ -83,6 +83,11 @@ publication. Delivery-vehicle access alone does not establish that traffic was
 unnecessary. If optional arithmetic planning fails, independently supported
 source findings can still be reviewed; missing calculations are disclosed.
 These are rejection safeguards, not proof that every accepted claim is correct.
+Known connection clauses also expose separate slope extents, burial locations
+and unstated depth datums to drafting and review. A cited side-by-side
+construction condition cannot become a project fact from unit count alone;
+affirmative query inputs or cited project records must establish it. These are
+bounded bindings for recognized clauses, not a general parser of all standards.
 
 Cover reviews also return a **Project inputs to confirm** checklist. Missing
 measurement datums and diameter-dependent inputs are bound to the individual
@@ -138,3 +143,24 @@ LOCAL_SYNTHESIS_POLICY=demo BASIS_PREPARE_DEMO=1 \
 This builds the current frontend and serves that build from its own verification
 directory, then checks submission, calculations, PDF highlights, Saved history,
 reloads, IFC findings and preparation of all three stories.
+
+## HTTPS routing and rollback
+
+Vercel forwards `/local-api/:path*` through the destination in `vercel.json` to
+the authorized HTTPS tunnel, which reaches the localhost gateway on port 8789.
+Do not restart the quick tunnel immediately before presenting: a new tunnel
+process can receive a different hostname.
+
+For a later backend move, restore the private project state on the replacement
+host, verify readiness and the same project API locally, then establish its
+authorized HTTPS gateway endpoint. Change only the rewrite destination and
+deploy the frontend. Verify public health, all four projects, a new query,
+original PDF highlights and Saved history before retiring the previous endpoint.
+Keep the prior rewrite and endpoint available until those checks pass.
+
+To roll back routing, restore the prior destination and redeploy, after verifying
+that backend is still reachable. The former Windows backend is currently down;
+its old URL alone is not a usable rollback. On this workstation, `basis mode
+extractive` preserves the public route and project state while disabling model
+inference. A tunnel outage requires restoring the tunnel or publishing a new
+authorized endpoint; changing model policy cannot repair it.

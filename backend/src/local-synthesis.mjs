@@ -12,10 +12,17 @@ import { permitsLocalSynthesis, localSynthesisWorkflow } from './generation-poli
 import { pipeProjectMeasurements } from './project-measurements.mjs'
 import {conditionalSourceItems} from './evidence-guards.mjs'
 import { replacementInterface } from './replacement-interface.mjs'
+import { sourceAttributes } from './source-attributes.mjs'
 
-export function cleanSourceCallout(text, labels) {
+export function cleanSourceCallout(text, labels, cited = []) {
   if (typeof text !== 'string') return text
-  return text.replace(
+  const clean=text.replace(/\s*\(([A-Z]{1,2}(?:\s*,\s*[A-Z]{1,2})*)\)/g,(whole,names)=>{
+    const ids=names.split(/\s*,\s*/)
+    // Remove internal citation markers only when they name actual cited IDs
+    // and are absent as acronyms/labels in their own source text.
+    return ids.every(id=>cited.includes(id)&&labels.has(id)&&!new RegExp('\\b'+id+'s?\\b').test(labels.get?.(id)?.excerpt||''))?'':whole
+  })
+  return clean.replace(
     /\s*,?\s+(?:as (?:specified|stated|outlined|required|provided|described) (?:in|by)|according to|per)\s+(?:(?:provisions?|sources?)\s+)?([A-Z]{1,2}(?:\s*(?:,|and|&)\s*[A-Z]{1,2})*)(?:,\s*respectively)?\.$/,
     (whole, names) =>
       names.match(/[A-Z]{1,2}/g).every((name) => labels.has(name))
@@ -133,7 +140,9 @@ const label = (id) => {
   }
   return name
 }
-export const sourceContext = (u, id, documents = []) => ({
+export const sourceContext = (u, id, documents = []) => {
+ const attributes=sourceAttributes(u.excerpt)
+ return {
   sourceRole: documents.find(d => d.id === u.passage.doc)?.projectArtifact ? 'project_document' : 'reference_document',
   sourceCategory: documents.find(d => d.id === u.passage.doc)?.category || 'reference',
   sourceTitle: documents.find(d => d.id === u.passage.doc)?.title || '',
@@ -152,6 +161,7 @@ export const sourceContext = (u, id, documents = []) => ({
       }
     : {}),
   quote: u.excerpt,
+  ...(attributes.properties.length||attributes.conditions.length?{attributes}:{}),
   ...(conditionalSourceItems(u.excerpt).length?{conditionalItems:conditionalSourceItems(u.excerpt)}:{}),
   ...(depthCriterion(u) ? {measurement:depthCriterion(u)} : {}),
   ...(u.conditionEvidence ? {sourceCondition:u.conditionEvidence.excerpt} : {}),
@@ -164,7 +174,8 @@ export const sourceContext = (u, id, documents = []) => ({
     : {}),
   ...(u.mixedConditions ? { mixedConditions: true } : {}),
   ...(u.unresolvedConditions?.length ? { unresolvedConditions: u.unresolvedConditions } : {}),
-})
+ }
+}
 
 export function labelEvidenceGroups(groups) {
   const key = evidenceUnitKey
@@ -486,7 +497,7 @@ export async function draftLocal(
     )
     const revised = repairedFindings(drafted, repairTargets).map((finding) => ({
       ...finding,
-      text: cleanSourceCallout(finding.text, byLabel),
+      text: cleanSourceCallout(finding.text, byLabel, finding.evidence),
       check: group.id,
     }))
     const retainedKeys = new Set(repair.retained.map((finding) => finding.text))
@@ -514,7 +525,7 @@ export async function draftLocal(
       ]
     })
   const findings = (conclusion.findings || []).map((finding) => {
-    finding = { ...finding, text: cleanSourceCallout(finding.text, byLabel) }
+    finding = { ...finding, text: cleanSourceCallout(finding.text, byLabel, finding.evidence) }
     const group = plan.groups.find(group => group.id === finding.check)
     const sharedForCheck = group && group.role !== 'replacement-interface' && /\breplace(?:ment)?\b|\bin lieu\b|\bsubstitut|\balternative\b/i.test(group.heading + ' ' + group.query) ? shared : []
     const supportingCalculations=calculationSources(finding.calculations)

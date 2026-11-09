@@ -1,5 +1,6 @@
 // Conservative vetoes for source extraction ambiguity and unsupported exemptions.
 // These checks may withhold a claim; they never approve an engineering conclusion.
+import { sourceAttributeIssue } from './source-attributes.mjs'
 export function namedReferenceEvidenceIssue(claim,evidence,documents){
   const words=text=>String(text||'').toLowerCase().replace(/[^\p{L}\d]+/gu,' ').trim()
   const text=' '+words(claim)+' '
@@ -32,6 +33,8 @@ export function recommendationLanguage(text) {
   return /\b(?:should|preferred|recommend(?:ed|ation)?)\b/i.test(modality)
 }
 export function evidenceInterpretationIssue(claim, source, question = '', {projectEvidence = ''} = {}) {
+  const attributeIssue=sourceAttributeIssue(claim,source,question+'; '+projectEvidence)
+  if(attributeIssue)return attributeIssue
   if (/\b(?:may|can|permitted|allowed)\b[^.!?]{0,120}\b(?:in lieu|replace|instead of)\b/i.test(claim) &&
       !/\b(?:in lieu|replac\w*|instead of|alternativ\w*|substitut\w*)\b/i.test(source))
     return 'The attached evidence does not establish the claimed alternative permission. Cite its actual permission provision separately from the existing-system obligation.'

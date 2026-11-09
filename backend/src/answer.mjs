@@ -9,6 +9,7 @@ import { pipeProjectMeasurementIssue, pipeProjectMeasurements, attachProjectMeas
 import { attachPipeReviewInputs } from './pipe-review-inputs.mjs'
 import { mixedPipeEvidence } from './pipe-evidence.mjs'
 import { replacementInterfaceIssue } from './replacement-interface.mjs'
+import { sourceAttributes } from './source-attributes.mjs'
 import {findDemoReview,capacityReviewDefinition} from '../demo/review-scenarios.mjs'
 import {capacityReviewRequest} from './capacity-review-inputs.mjs'
 import {SearchIndex} from './search.mjs'
@@ -555,6 +556,10 @@ export function evidenceReviewCheck(claim, id, question, contextPassages = []) {
     ...(claim.reviewRole==='replacement-interface'?{reviewPurpose:'An unresolved source-interface question. Check that both embedded source facts are supported and retain their conditions; asking to confirm their joint applicability does not claim that either one prevails or that a particular approval is mandatory.'}:{}),
     quotes:claim.evidence.map(proof=>proof.excerpt),
     quoteSources:claim.evidence.map((proof,quoteIndex)=>({quoteIndex,document:proof.passage.doc,page:proof.passage.page,section:proof.passage.section,quoteStart:proof.quoteStart})),
+    quoteAttributes:claim.evidence.flatMap((proof,quoteIndex)=>{
+      const attributes=sourceAttributes(proof.excerpt)
+      return attributes.properties.length||attributes.conditions.length?[{quoteIndex,...attributes}]:[]
+    }),
     conditionalItems:claim.evidence.flatMap((proof,quoteIndex)=>conditionalSourceItems(proof.excerpt).map(item=>({quoteIndex,...item}))),
     relatedProvisions:related.map(source=>source.excerpt),
     relatedSources:related.map(({excerpt:_excerpt,...source},provisionIndex)=>({...source,provisionIndex})),
