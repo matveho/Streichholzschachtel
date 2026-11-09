@@ -1,6 +1,6 @@
 # *basis*
 
-**Where did this number come from?** Civil engineers often need a drawing, a client brief and a design standard to check a single value. basis brings those documents into one project workspace. Ask a question about the project, then select a citation to see the passage or table row highlighted in the original PDF.
+**Where did this number come from?** Civil engineers often need a drawing, a client brief and a design standard to check a single value. *basis* brings those documents into one project workspace. Ask a question about the project, then select a citation to see the passage or table row highlighted in the original PDF.
 
 [Open *basis*](https://streichholzschachtel.vercel.app/#projects) · [Pitch slides](https://canva.link/qka5al8g2vxy1wv) · [3D system architecture](https://streichholzschachtel.vercel.app/architecture/)
 
@@ -55,7 +55,7 @@ Civil engineering decisions rest on a stack of documents: a client brief, drawin
 
 ## How it works
 
-![basis system architecture drawn as a code city: each island is a layer, each building a source module sized by lines of code, and bridges are the interfaces a query crosses](docs/architecture/code-city.png)
+![*basis* system architecture drawn as a code city: each island is a layer, each building a source module sized by lines of code, and bridges are the interfaces a query crosses](docs/architecture/code-city.png)
 
 Follow a query from the browser to its source documents in the [interactive 3D architecture diagram](https://streichholzschachtel.vercel.app/architecture/).
 
@@ -332,7 +332,7 @@ Streichholzschachtel/
 ## Limitations
 
 - Open the cited PDF to check the value, units and conditions before using an answer in a design.
-- If the project files don’t support an answer, basis flags the gap for review.
+- If the project files don’t support an answer, *basis* flags the gap for review.
 - The IFC scan checks only the properties it can match, so a clean scan doesn’t establish compliance.
 - You can inspect the included IFC models through their registers, but you can’t upload or explore a new model in 3D.
 - The team is still evaluating how reliably the local model answers unfamiliar engineering questions.
