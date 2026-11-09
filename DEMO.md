@@ -1,18 +1,21 @@
-# Two minutes with Parkview Exchange
+# Two-minute walkthrough
 
-Before presenting, open the [completed S1 grade review](https://streichholzschachtel.vercel.app/#project/parkview-exchange/query/ab513c56-eb35-3e15-76d3-8bd34b1a31f3) in a second browser tab. Click citation **2** and check that EPCOR Table 1.1 is legible on the projector. Leave that tab open on the table. Start the presentation in the first tab at [Projects](https://streichholzschachtel.vercel.app/#projects).
+**Start on [Projects](https://streichholzschachtel.vercel.app/#projects).** In a second browser tab, open the [completed North Ridge sight-distance review](https://streichholzschachtel.vercel.app/#project/north-ridge-highway/query/d6b3f241-3bc0-edbe-660d-3b4dfbdd9378). Choose **Single document view** in the PDF toolbar and click citation **2** in the first answer paragraph. Check that drawing **G201** is readable on the projector. Leave that tab open, then return to Projects.
 
-| Time | Action | Presenter cue |
+| Time | On screen | Presenter cue |
 | --- | --- | --- |
-| 0:00–0:15 | Open **Parkview Exchange Redevelopment**. Point to the project drawings and municipal references. Click **New query**. | “We’re reviewing a proposed sewer pipe called S1. Which detail would you like me to look up: its length or its diameter?” |
-| 0:15–0:45 | Type the judge’s choice using the wording below. Click **Search** and start the 15-second clock. When the answer appears, click its citation **1** and point to the value in the PDF. | Read the value aloud and name the document it came from. |
-| 0:45–1:05 | Switch to the second browser tab. Introduce it as a **completed review** of the same pipe. Click citation **3** in the first paragraph to show drawing **C101 / C102**, PDF page **1**. | “Now the engineering question: is this pipe steep enough? The drawing shows a proposed slope of 0.30% and a peak dry-weather flow of 0.34 litres per second.” |
-| 1:05–1:40 | Click citation **2**. Point across the highlighted row in **EPCOR Vol. 3-03, Table 1.1**, PDF page **8**. Pause on the two numbers. | “That flow falls in this 0.25–0.40 band. For a 200 mm upstream pipe in that band, the minimum slope is 1.00%. The drawing shows 0.30%.” |
-| 1:40–2:00 | Return via **Project dashboard** and point to **Sanitary upstream grade needs revision** under **Potential issues**. | “I’d ask the designer to confirm the flow assigned to S1 and revisit the grade. They can open this finding and see the drawing and the exact table row behind my comment.” |
+| 0:00–0:18 | Open **Parkview Exchange Redevelopment → New query**. | “We’re reviewing a proposed sewer pipe called S1. Which detail would you like me to look up: its length or its diameter?” |
+| 0:18–0:35 | Type the chosen question below and click **Search**. Click citation **1** in the live answer and point to the value in the PDF. | Length: “The model register gives its length as 43 metres.” Diameter: “The servicing memo specifies a 200 millimetre pipe.” |
+| 0:35–0:52 | Switch to the preloaded North Ridge tab. Point to the three source tabs above the viewer. Click **2** in the first answer paragraph: **G101 / G102 / G201**, PDF page **3**. | “Here’s a completed review on a different project. How far can a driver see at this highway crest? The drawing gives us 165 metres looking east.” |
+| 0:52–1:10 | Click **1** in that same paragraph: **Highway Guide B**, PDF page **9**, Table B-2-3a. Point from **100** on the left to **185** on the right. | “At the 100 kilometre-per-hour design speed, Alberta’s level-road table gives 185 metres of stopping sight distance.” |
+| 1:10–1:30 | Click **3**: **NRH-CR-001**, owner design brief, PDF page **1**. Pause on the highlighted sentence. | “Does that number apply to this job? The owner adopted 185 metres for its initial check. That’s 20 metres more than the drawing shows.” |
+| 1:30–1:50 | Return via **Project dashboard**. Point to **Crest sight distance is below the screening value** under **Potential issues**. | “I’d confirm the measurement and grade before changing the design. The next engineer can reopen the drawing, the guide, and the client’s requirement from this finding.” |
 
-**Live search wording**
+**Judge’s choice — exact live wording**
 
-- **Length** — Type “How long is sanitary pipe S1?” Expect **43 m**, cited to the **PX-IFC-001** model register, PDF page **4**.
-- **Diameter** — Type “what diameter is sanitary pipe S1?” Expect **200 mm**, cited to the **PX-DM-001** servicing design memo, PDF page **1**.
+- **Length:** “How long is sanitary pipe S1?” → **43 m**, **PX-IFC-001**, PDF page **4**.
+- **Diameter:** “what diameter is sanitary pipe S1?” → **200 mm**, **PX-DM-001**, PDF page **1**.
 
-**15-second fallback:** If a clear cited answer hasn’t appeared within 15 seconds of clicking Search, switch to the preloaded grade review and say, “Let’s open a review we completed earlier on this same pipe.” Continue at the drawing step. If the live search asks for clarification, make that switch immediately.
+**15-second fallback:** Start the clock when you click **Search**. If a clear cited answer hasn’t appeared by 15 seconds, or if the result asks for clarification, switch to the preloaded review: “Let’s look at a review we completed earlier on a highway project.” Continue with citation **2**. The saved review’s citation order is **2 → 1 → 3**: measured distance, published value, owner’s requirement.
+
+**Rehearsal timing:** On the deployed site at 1366 × 768, the length route took 1:38 and the diameter route 1:39 from Projects to the closing line. Timings include typed questions, a three-second judge response, PDF reading pauses, and narration paced at 130 words per minute. Tab setup is outside the clock.
