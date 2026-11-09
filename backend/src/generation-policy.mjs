@@ -1,10 +1,17 @@
 // Policies choose a workflow, never establish regulatory applicability.
+import {findDemoReview} from '../demo/review-scenarios.mjs'
+
+export function localSynthesisWorkflow(question, documents, policy = 'all') {
+  if (policy === 'all') return 'general'
+  if (!['comparisons','demo'].includes(policy)) return null
+  if (policy === 'demo' && findDemoReview(question,documents)) return 'demonstration'
+  if (!/\b(?:compare|comparison|difference|versus|against)\b/i.test(question)) return null
+  if (/\b(?:approve|approval|acceptance|compliant|compliance|safe)\b/i.test(question)) return null
+  return documents.some(d => d.projectArtifact) && documents.some(d => !d.projectArtifact) ? 'comparison' : null
+}
+
 export function permitsLocalSynthesis(question, documents, policy = 'all') {
-  if (policy === 'all') return true
-  if (policy !== 'comparisons') return false
-  if (!/\b(?:compare|comparison|difference|versus|against)\b/i.test(question)) return false
-  if (/\b(?:approve|approval|acceptance|compliant|compliance|safe)\b/i.test(question)) return false
-  return documents.some(d => d.projectArtifact) && documents.some(d => !d.projectArtifact)
+  return localSynthesisWorkflow(question,documents,policy)!==null
 }
 
 export function hasPairedProjectComparison(sections, documents) {

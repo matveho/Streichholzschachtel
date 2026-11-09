@@ -12,6 +12,8 @@ import { draftLocal } from '../src/local-synthesis.mjs'
 import { linkedProcedureEvidence } from '../src/linked-procedures.mjs'
 import { applicableEvidence } from '../src/applicability.mjs'
 import {relatedCriteriaEvidence,depthCriterion} from '../src/related-criteria.mjs'
+import {workedCapacityReview} from '../src/worked-capacity-review.mjs'
+import {demoReviews} from '../demo/review-scenarios.mjs'
 import { UnitIndex, lookup } from '../src/lookup.mjs'
 import {
   replacementRequirementSearch,
@@ -22,9 +24,50 @@ import {
   expandRetrieval,
   constructionControlSearch,
   diversePassages,
+  capacityFocusedSearches,
 } from '../src/retrieval-plan.mjs'
 const corpus = await buildIndex(),
   search = new SearchIndex(corpus)
+
+test('the worked capacity review reads live source rules and computes changed inputs rather than replaying stored answers',async t=>{
+ const example=demoReviews[0], selected=new Set(example.documentIds)
+ const scoped=new SearchIndex({...corpus,documents:corpus.documents.filter(doc=>selected.has(doc.id)),passages:corpus.passages.filter(p=>selected.has(p.doc)),units:corpus.units.filter(unit=>selected.has(unit.doc))})
+ const worked=workedCapacityReview(example.question,scoped,example)
+ assert.ok(worked)
+ assert.deepEqual(worked.calculations.map(step=>step.value),[1.5,.6])
+ assert.deepEqual(workedCapacityReview(example.question.replace('1.20','1.60'),scoped,example).calculations.map(step=>step.value),[2,1.1])
+ assert.equal(workedCapacityReview(example.question.replace('to 42 ha','to 30 ha'),scoped,example),null)
+ for(const proof of worked.sections.flatMap(section=>section.claims.flatMap(claim=>claim.evidence))){
+  assert.ok(selected.has(proof.passage.doc))
+  assert.deepEqual(locateQuote(proof.passage,proof.excerpt,proof.quoteStart).regions,proof.regions)
+ }
+ const previous={...config};t.after(()=>Object.assign(config,previous))
+ Object.assign(config,{provider:'ollama',localSynthesis:true,localSynthesisPolicy:'demo',extractiveOnly:false})
+ t.mock.method(globalThis,'fetch',()=>{throw Error('The source-bound worksheet cannot depend on an unverified generated answer')})
+ const result=await answer(example.question,scoped,{publicBase:'http://localhost',token:'test',signal:new AbortController().signal})
+ assert.equal(result.mode,'verified_review')
+ assert.deepEqual(result.arithmeticReview.calculations.map(step=>step.value),[1.5,.6])
+ assert.equal(result.arithmeticReview.applicabilityConfirmed,false)
+ assert.equal(result.reviewExample.id,example.id)
+ config.provider='extractive';config.extractiveOnly=true
+ const fallback=await answer(example.question,scoped,{publicBase:'http://localhost',token:'test',signal:new AbortController().signal})
+ assert.notEqual(fallback.mode,'verified_review')
+ assert.equal(fallback.reviewExample,undefined)
+})
+
+test('a natural capacity question retrieves the actual conditioned flow multiplier with original PDF evidence',()=>{
+ const question='A subdivision has expanded from 28 ha to 42 ha. The revised five-year runoff is 1.20 m3/s, but existing storm sewer capacity is 0.90 m3/s. Can we retain it?'
+ const [topic]=capacityFocusedSearches(question,[{heading:'Existing sewer capacity',query:'sewer reuse upgrade criteria',sections:[]}])
+ const passages=search.withPageContext(search.searchSingle(topic.query).slice(0,4))
+ const units=applicableEvidence(question,evidenceUnits(passages,30000)).units
+ const criterion=units.find(unit=>unit.passage.doc==='doc-09e07f57e7a3'&&/1\.25 times/.test(unit.excerpt))
+ assert.ok(criterion,'The actual flow-capacity criterion must survive search and applicability filtering')
+ assert.ok(criterion.evaluatedConditions?.some(condition=>/greater than 30 ha/.test(condition.sourceCondition)&&condition.matches))
+ assert.deepEqual(locateQuote(criterion.passage,criterion.excerpt,criterion.quoteStart).regions,criterion.regions)
+ const allowed='doc-eb651c8aa7d3'
+ const scoped=new SearchIndex({...corpus,documents:corpus.documents.filter(doc=>doc.id===allowed),passages:corpus.passages.filter(passage=>passage.doc===allowed)})
+ assert.ok(scoped.searchSingle(topic.query).every(passage=>passage.doc===allowed))
+})
 
 test('the actual testing procedure retains applicable QA and preferred depth without importing deep-soil branches', () => {
  const question='What testing is needed for acceptance of a 500 m² LID facility with 600 mm of soil?'

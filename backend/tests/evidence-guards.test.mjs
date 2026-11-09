@@ -1,6 +1,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {evidenceInterpretationIssue as issue, recommendationLanguage} from '../src/evidence-guards.mjs'
+test('a numerical capacity deficit does not mandate an unsupported construction remedy',()=>{
+ const source='Storm sewers serving areas greater than 30 ha use 1.25 times the five-year runoff.'
+ assert.match(issue('The capacity is insufficient for the 1.50 m3/s design flow, necessitating an upgrade.',source),/construction remedy/)
+ assert.match(issue('The capacity shortfall requires an upgrade.',source),/construction remedy/)
+ assert.equal(issue('The capacity shortfall is 0.60 m3/s; review capacity and flow-control options.',source),null)
+ assert.equal(issue('The capacity shortfall requires an upgrade.','The approved design requires an upgrade when there is a capacity shortfall.'),null)
+})
 test('an inline conditional service cannot become an unconditional installation duty',()=>{
  const source='Lots zoned for semi-detached or multi-family residential land use, where construction of side-by-side units are anticipated, one water, one sanitary and if required, one storm service line shall be provided for each unit directly off EPCOR sewer mains.'
  assert.match(issue('Conventional storm servicing requires one storm service line per unit directly off EPCOR sewer mains.',source),/conditional/)

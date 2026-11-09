@@ -63,6 +63,7 @@ export const engineeringScenarios = [
     ],
     minSources: 2,
     findingTerms: [/1\.5(?:0)?/, /0\.6(?:0)?/, /computer|model|simulat/i],
+    forbidden:[/necessitating an upgrade/i,/capacity shortfall requires an upgrade/i],
   },
   {
     id: 'damaged-lid',

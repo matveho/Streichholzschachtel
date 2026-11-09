@@ -39,6 +39,14 @@ diameters are not inferred from another role. The normal `report` also includes
 a readable input register; these rows do not gain document citation IDs. Empty
 evidence scopes retain empty references/documents.
 
+The rehearsed `demo` runtime preserves model-backed comparisons and adds a
+registered worked capacity/storage review. Its `mode` is `verified_review`,
+with `reviewExample` identifying the scenario/reference scope and
+`arithmeticReview` identifying checked calculations. The worksheet reads source
+quotations and supplied inputs at request time; it is not a stored model answer.
+`applicabilityConfirmed` remains false. Other general queries retain the
+extractive path. See [DEMO.md](DEMO.md) for preparation and presentation.
+
 ## Isolation
 
 Omitted document IDs select project associations. Explicit `[]` selects nothing. Foreign IDs are rejected. Indexes physically contain only selected project documents, passages and layout units. Retrieval, subqueries, expansions, model context and fallback suggestions receive that scoped index. Returned citation/document IDs are checked again. Cache identity includes project, document and engine revisions. Scope changes withhold obsolete cached result bodies. Private artifacts are excluded from legacy global retrieval/files.

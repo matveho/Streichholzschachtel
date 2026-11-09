@@ -21,6 +21,12 @@ export function validateFrontendDirectory(value) {
   return directory
 }
 export function readFrontendLocation() {
+  if (process.env.BASIS_FRONTEND_DIR) {
+    const directory=validateFrontendDirectory(process.env.BASIS_FRONTEND_DIR)
+    if (!existsSync(resolve(directory,'index.html')))
+      throw new Error('The selected frontend bundle is incomplete. Build the current interface before starting this gateway.')
+    return directory
+  }
   try {
     const pointer = JSON.parse(readFileSync(frontendPointer, 'utf8'))
     const directory = validateFrontendDirectory(pointer.directory)

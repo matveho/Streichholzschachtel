@@ -11,23 +11,23 @@ case "${1:-status}" in
  health) node --input-type=module -e 'const h=await (await fetch("http://127.0.0.1:8787/health", {signal:AbortSignal.timeout(5000)})).json(); console.log(JSON.stringify(h,null,2)); process.exit(h.ready && !h.failures ? 0 : 1)' ;;
  mode)
    mode="${2:-}"
-   if [[ "$mode" != extractive && "$mode" != comparisons ]]; then
-     echo 'Usage: basis mode extractive|comparisons' >&2
+   if [[ "$mode" != extractive && "$mode" != comparisons && "$mode" != demo ]]; then
+     echo 'Usage: basis mode extractive|comparisons|demo' >&2
      exit 2
    fi
-   if [[ "$mode" == comparisons ]]; then
+   if [[ "$mode" != extractive ]]; then
      systemctl --user start basis-ollama
      node scripts/linux/prepare-comparison-model.mjs
    fi
    directory="$HOME/.config/systemd/user/basis-backend.service.d"
    mkdir -p "$directory"
-   if [[ "$mode" == comparisons ]]; then
-     cat > "$directory/mode.conf" <<'UNIT'
+   if [[ "$mode" != extractive ]]; then
+     cat > "$directory/mode.conf" <<UNIT
 [Service]
 Environment=GENERATION_PROVIDER=ollama
 Environment=EXTRACTIVE_ONLY=0
 Environment=LOCAL_SYNTHESIS=1
-Environment=LOCAL_SYNTHESIS_POLICY=comparisons
+Environment=LOCAL_SYNTHESIS_POLICY=$mode
 Environment=LOCAL_REASONING=0
 Environment=LOCAL_CONTEXT_TOKENS=16384
 Environment=OLLAMA_URL=http://127.0.0.1:11435
@@ -52,5 +52,7 @@ throw Error('Backend did not become ready; inspect basis logs or restore basis m
 JS
    ;;
  check) BASIS_FRONTEND_URL=http://127.0.0.1:8789/app node backend/tests/presentation.smoke.mjs ;;
- *) echo 'Usage: basis start|stop|restart|reindex|status|logs|health|check|mode extractive|comparisons'; exit 2 ;;
+ prepare-demo) node scripts/linux/prepare-demo.mjs ;;
+ rebuild-interface) npm run build; node scripts/linux/publish-interface.mjs ;;
+ *) echo 'Usage: basis start|stop|restart|reindex|status|logs|health|check|prepare-demo|rebuild-interface|mode extractive|comparisons|demo'; exit 2 ;;
 esac

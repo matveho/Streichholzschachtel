@@ -11,6 +11,10 @@ export function recommendationLanguage(text) {
 export function evidenceInterpretationIssue(claim, source, question = '', {projectEvidence = ''} = {}) {
   if (dropsConditionalItem(claim, source))
     return 'The cited item is conditional on being required or applicable. Preserve that condition for this item; an adjacent mandatory item does not establish an unconditional installation duty.'
+  if (/\b(?:capacity|design flow|shortfall|deficit)\b/i.test(claim) &&
+      /\bnecessitat(?:es|ing|ed)\s+(?:an?\s+)?upgrade\b|\b(?:must|shall|needs? to|required to)\s+(?:be\s+)?upgrad|\b(?:requires?|needs?)\s+(?:an?\s+)?upgrade\b/i.test(claim) &&
+      !/\bupgrad\w*\b/i.test(source))
+    return 'Verified capacity arithmetic does not establish a particular construction remedy. State the numerical difference and review capacity/control options; do not mandate an upgrade without a source establishing that remedy.'
   const precedence = /\b(?:overrides?|supersedes?|waives?|takes? precedence)\b/i
   if (!/\b(?:overrid\w*|supersed\w*|waiv\w*|precedence|notwithstanding)\b/i.test(source)) {
     for (const sentence of claim.split(/[;!?]|\.(?=\s|$)/)) {

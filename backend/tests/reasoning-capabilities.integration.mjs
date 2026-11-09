@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {readFileSync,writeFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 const state=process.env.BASIS_STATE_DIR, base=process.env.BASIS_TEST_URL
+const restricted=['comparisons','demo'].includes(process.env.LOCAL_SYNTHESIS_POLICY)
 assert.ok(state?.includes('/verification/run-gpu-'))
 assert.equal(base,'http://127.0.0.1:8814')
 const headers={'Content-Type':'application/json',Authorization:'Bearer '+readFileSync(resolve(state,'session-token.txt'),'utf8').trim()}
@@ -37,7 +38,7 @@ const cases=[
  {id:'changed-project-size',question:'Can the Rational Method be used for detailed design of a 25 ha minor storm drainage catchment?',check:r=>{
   const text=JSON.stringify(r.report);assert.match(text,/Rational/i);assert.match(text,/65\s*ha/)
   assert.ok(r.references.length>0);assert.ok(!['no_evidence','insufficient_evidence'].includes(r.mode))
-  if(process.env.LOCAL_SYNTHESIS_POLICY==='comparisons') assert.notEqual(r.mode,'local_synthesis')
+  if(restricted) assert.notEqual(r.mode,'local_synthesis')
  }},
  {id:'foreign-jurisdiction',question:'What stormwater design requirements apply to this development in Toronto?',check:r=>{
   assert.ok(['no_evidence','insufficient_evidence'].includes(r.mode));assert.equal(r.references.length,0)
@@ -46,11 +47,11 @@ const cases=[
   assert.equal(r.references.length,0);assert.equal(r.documents.length,0)
  }},
 ]
-if(process.env.LOCAL_SYNTHESIS_POLICY==='comparisons') cases.push({
+if(restricted) cases.push({
  id:'general-review-remains-extractive',question:'Before excavation, review a 450 mm storm main with 1.7 m cover. Can we use it without insulation?',
  check:r=>{assert.notEqual(r.mode,'local_synthesis');assert.ok(r.references.length>0)},
 })
-if(process.env.LOCAL_SYNTHESIS_POLICY==='comparisons') cases.push(
+if(restricted) cases.push(
  {id:'project-cover-comparison',projectId:'parkview-exchange',question:'Compare the proposed cover of storm sewer ST1 (300 mm pipe) against the reference minimum main cover. Identify the shortfall and cite both documents.',check:r=>{
   const text=JSON.stringify(r.report)
   assert.equal(r.mode,'local_synthesis');assert.match(text,/1\.65(?:0)?\s*m/);assert.match(text,/2\.0\s*m|2\s*m/)

@@ -1,4 +1,4 @@
-import { normalizeMeasurements } from './indexer.mjs'
+import { normalizeMeasurements, quantityUnits } from './indexer.mjs'
 
 export const calculationUnits = {
   '': ['scalar', 1],
@@ -266,6 +266,36 @@ export function verifyCalculations(proposals, sources, question) {
     }
   }
   return { calculations, issues }
+}
+
+// A compound calculation can contain an independently useful intermediate
+// without a separate model-selected calculation ID. Only expose actual AST
+// subexpressions of an already checked calculation, never search arbitrary
+// arithmetic for a number asserted in generated prose.
+export function completeCalculationIntermediates(text, previous, sources, question) {
+  const initial=verifyCalculations(previous,sources,question)
+  if(initial.issues.length)return []
+  let verified=initial.calculations
+  if(verified.length>=4)return verified
+  const wanted=quantityUnits(text).map(quantity=>{
+    const [value,unit]=quantity.split(':')
+    return {value:Number(value),unit}
+  }).filter(quantity=>unitTypes[quantity.unit]&&unitTypes[quantity.unit][0]!=='scalar')
+  const expressions=new Set()
+  const print=node=>node.literal!==undefined?String(node.literal):node.reference!==undefined?`r${node.reference+1}`:node.operator==='negate'?`(-${print(node.left)})`:`(${print(node.left)} ${node.operator} ${print(node.right)})`
+  const visit=(node,root=false)=>{
+    if(node.left)visit(node.left)
+    if(node.right)visit(node.right)
+    if(!root&&node.operator)expressions.add(print(node))
+  }
+  for(const calculation of verified)visit(parse(calculation.expression),true)
+  for(const expression of expressions)for(const requested of wanted){
+    if(verified.length>=4)return verified
+    if(verified.some(step=>step.unit===requested.unit&&Math.abs(step.value-requested.value)<1e-9))continue
+    const checked=verifyCalculations([...verified,{expression,unit:requested.unit,value:requested.value}],sources,question)
+    if(!checked.issues.length)verified=checked.calculations
+  }
+  return verified
 }
 
 // Verify stated equivalent quantities from known physical measurements. This

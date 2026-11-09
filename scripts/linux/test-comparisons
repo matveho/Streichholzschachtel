@@ -5,8 +5,12 @@ systemctl --user start basis-ollama
 node scripts/linux/prepare-comparison-model.mjs
 export BASIS_STATE_DIR
 BASIS_STATE_DIR=$(mktemp -d "$PWD/backend/state/verification/run-browser-XXXXXXXX")
+export BASIS_FRONTEND_DIR="$BASIS_STATE_DIR/frontend"
+npm run build > "$BASIS_STATE_DIR/frontend-build.log" 2>&1
+mkdir -p "$BASIS_FRONTEND_DIR"
+cp -a dist/. "$BASIS_FRONTEND_DIR/"
 export PDF_CACHE_DIR="$PWD/backend/state"
-export EXTRACTIVE_ONLY=0 GENERATION_PROVIDER=ollama LOCAL_SYNTHESIS=1 LOCAL_SYNTHESIS_POLICY=comparisons LOCAL_REASONING=0
+export EXTRACTIVE_ONLY=0 GENERATION_PROVIDER=ollama LOCAL_SYNTHESIS=1 LOCAL_SYNTHESIS_POLICY="${LOCAL_SYNTHESIS_POLICY:-comparisons}" LOCAL_REASONING=0
 export OLLAMA_URL=http://127.0.0.1:11435 OLLAMA_MODEL=basis-qwen35-comparisons:72aac7c28be8
 export TESSERACT_PATH="$HOME/.local/share/basis-ocr/usr/bin/tesseract"
 export TESSDATA_PREFIX="$HOME/.local/share/basis-ocr/usr/share/tesseract-ocr/5/tessdata"
@@ -19,14 +23,18 @@ gateway_pid=$!
 trap 'kill "$gateway_pid" "$api_pid" 2>/dev/null || true; wait "$gateway_pid" "$api_pid" 2>/dev/null || true' EXIT
 node --input-type=module - <<'JS'
 for(let i=0;i<600;i++){
- try {const h=await(await fetch('http://127.0.0.1:8842/local-api/health')).json();if(h.ready&&!h.failures&&h.generationPolicy==='comparisons')process.exit(0)}catch{}
+ try {const h=await(await fetch('http://127.0.0.1:8842/local-api/health')).json();if(h.ready&&!h.failures&&h.generationPolicy===process.env.LOCAL_SYNTHESIS_POLICY)process.exit(0)}catch{}
  await new Promise(resolve=>setTimeout(resolve,1000));
 }
 throw Error('Isolated comparison backend not ready')
 JS
 kill -0 "$api_pid" "$gateway_pid"
 for suite in ${BASIS_BROWSER_SUITES:-comparisons}; do
-  case "$suite" in comparisons|pipe-measurements) ;; *) printf 'Unknown browser suite: %s\n' "$suite" >&2; exit 1 ;; esac
+  case "$suite" in comparisons|pipe-measurements|demo-review) ;; *) printf 'Unknown browser suite: %s\n' "$suite" >&2; exit 1 ;; esac
   node "backend/tests/$suite.browser.mjs" > "$BASIS_STATE_DIR/$suite.log" 2>&1
   printf 'PASS %s browser workflow\n' "$suite"
 done
+if [[ "${BASIS_PREPARE_DEMO:-0}" == 1 ]]; then
+  BASIS_DEMO_API=http://127.0.0.1:8842/local-api/v1 BASIS_DEMO_REPORT="$BASIS_STATE_DIR/demo-rehearsal.json" node scripts/linux/prepare-demo.mjs > "$BASIS_STATE_DIR/prepare-demo.log" 2>&1
+  printf 'PASS saved demo preparation\n'
+fi

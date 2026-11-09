@@ -67,6 +67,20 @@ test('a stated capacity gap is verified even when the draft only requested the s
  assert.deepEqual(completeComparisonCalculations('The 1.50 m3/s criterion exceeds 0.90 m3/s by 0.60 m3/s.',[],sources,question),[],'A missing derivation cannot supply a new operand')
 })
 
+test('a checked compound capacity calculation supports its actual intermediate criterion without inventing arithmetic',()=>{
+ const sources='Storm sewers servicing areas greater than 30 ha use 1.25 times the five-year runoff.'
+ const question='The revised runoff is 1.20 m3/s and existing capacity is 0.90 m3/s.'
+ const root=verifyCalculations([{expression:'1.20 * 1.25 - 0.90',unit:'m3/s'}],sources,question).calculations
+ assert.deepEqual(root.map(step=>step.value),[.6])
+ const text='The existing capacity of 0.90 m3/s is below the calculated flow criterion of 1.50 m3/s by 0.60 m3/s.'
+ const completed=completeComparisonCalculations(text,root,sources,question)
+ assert.deepEqual(completed.map(step=>step.value),[.6,1.5])
+ assert.equal(completed[1].displayExpression,'(1.20 m3/s * 1.25)')
+ assert.ok(completed[1].inputOrigins.includes('source'))
+ assert.deepEqual(completeComparisonCalculations(text.replace('1.50','1.80'),root,sources,question).map(step=>step.value),[.6])
+ assert.deepEqual(completeComparisonCalculations(text,[],sources,question),[],'A missing proposed expression cannot authorize the implied calculation')
+})
+
 test('verified mixed-unit gaps preserve the units of both operands',()=>{
  const result=completeComparisonCalculations('The 1.50 m3/s flow exceeds 900 L/s by 600 L/s.',[],'The reference flow is 1.50 m3/s.','The existing capacity is 900 L/s.')
  assert.equal(result.length,1)

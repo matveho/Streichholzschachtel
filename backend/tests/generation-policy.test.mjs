@@ -1,7 +1,19 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {permitsLocalSynthesis as allowed} from '../src/generation-policy.mjs'
+import {localSynthesisWorkflow} from '../src/generation-policy.mjs'
+import {demoReviews} from '../demo/review-scenarios.mjs'
 const docs=[{id:'standard'},{id:'design',projectArtifact:true}]
+test('demo mode adds a curated complex review without enabling arbitrary general synthesis',()=>{
+ const review=demoReviews[0], references=review.documentIds.map(id=>({id}))
+ assert.equal(localSynthesisWorkflow(review.question,references,'demo'),'demonstration')
+ assert.equal(allowed(review.question,references,'comparisons'),false)
+ assert.equal(allowed(review.question,[],'demo'),false)
+ assert.equal(allowed(review.question,references.slice(0,1),'demo'),false)
+ assert.equal(allowed(review.question.replace('42 ha','75 ha'),references,'demo'),false)
+ assert.equal(allowed('Review cover and insulation requirements.',docs,'demo'),false)
+ assert.equal(localSynthesisWorkflow('Compare the proposed pipe slope against the reference.',docs,'demo'),'comparison')
+})
 test('comparison policy requires both source roles in the current project scope',()=>{
  assert.equal(allowed('Compare proposed box planter width against the standard.',docs,'comparisons'),true)
  assert.equal(allowed('Compare the proposed pipe slope with the reference requirement.',docs,'comparisons'),true)

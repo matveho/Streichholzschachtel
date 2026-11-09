@@ -101,5 +101,5 @@ for (const [name, min, max] of [['maxFindingsPerCheck', 2, 8],
     throw new Error(`Invalid ${name}; expected an integer between ${min} and ${max}.`)
 }
 
-if (!['all', 'comparisons'].includes(config.localSynthesisPolicy))
-  throw new Error('LOCAL_SYNTHESIS_POLICY must be all or comparisons.')
+if (!['all', 'comparisons', 'demo'].includes(config.localSynthesisPolicy))
+  throw new Error('LOCAL_SYNTHESIS_POLICY must be all, comparisons or demo.')

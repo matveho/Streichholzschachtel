@@ -6,7 +6,10 @@ import { testingCountGap, capacityDifferenceGap } from './answer-completeness.mj
 import { attachReferenceCriteria, supplementaryReferenceCriteria } from './related-criteria.mjs'
 import { config } from './config.mjs'
 import { pipeProjectMeasurementIssue, pipeProjectMeasurements, attachProjectMeasurements } from './project-measurements.mjs'
-import { permitsLocalSynthesis, hasPairedProjectComparison } from './generation-policy.mjs'
+import {findDemoReview} from '../demo/review-scenarios.mjs'
+import {SearchIndex} from './search.mjs'
+import {workedCapacityReview} from './worked-capacity-review.mjs'
+import { permitsLocalSynthesis, hasPairedProjectComparison, localSynthesisWorkflow } from './generation-policy.mjs'
 import { mergeApprovedSynthesis } from './synthesis-repair.mjs'
 import { tokens, rankProvisions } from './search.mjs'
 import { generate } from './model.mjs'
@@ -893,7 +896,16 @@ async function answerFromUnits(
 }
 
 export async function answer(question, searchIndex, options) {
-  return attachProjectMeasurements(await answerCore(question,searchIndex,options),question)
+  const example=!options.sourceOnly && !config.extractiveOnly && config.localSynthesis && config.provider!=='extractive' && config.localSynthesisPolicy==='demo' ? findDemoReview(question,searchIndex.corpus.documents) : null
+  if (example) {
+    const selected=new Set(example.documentIds)
+    const corpus=searchIndex.corpus
+    searchIndex=new SearchIndex({...corpus,documents:corpus.documents.filter(document=>selected.has(document.id)),passages:corpus.passages.filter(passage=>selected.has(passage.doc)),units:(corpus.units||[]).filter(unit=>selected.has(unit.doc))})
+  }
+  const worked=example?workedCapacityReview(question,searchIndex,example):null
+  const response=worked?renderResult(worked.sections,searchIndex.corpus,options.publicBase,options.token,'verified_review',['Source-verified worked review. Supplied scenario figures are assumptions; source applicability and engineering approval require review.']):example?{...await answerFromUnits(question,searchIndex,{...options,sourceOnly:true}),mode:'insufficient_evidence',requiredInputs:{kind:'worked_review_basis',action:'Confirm the worked review source documents and supplied inputs before completing this calculation.'}}:await answerCore(question,searchIndex,options)
+  const result=attachProjectMeasurements(response,question)
+  return example ? {...result,reviewExample:{id:example.id,title:example.title,documentIds:example.documentIds},notes:[...(result.notes||[]),'Worked scenario: supplied figures are assumptions; this review uses the identified drainage design references.']} : result
 }
 
 async function answerCore(
@@ -1035,7 +1047,7 @@ async function answerCore(
         result.requiredInputs = {kind:countGap.kind,action:countGap.action}
         return attachReviewCoverage(result, retrieval.topics, draft.plan, {...checked,sections:related})
       }
-      if (config.localSynthesisPolicy === 'comparisons' &&
+      if (localSynthesisWorkflow(question,searchIndex.corpus.documents,config.localSynthesisPolicy) === 'comparison' &&
           !hasPairedProjectComparison(checked.sections, searchIndex.corpus.documents)) {
         const evidence = checked.sections.filter(section => section.heading).map(section => ({
           ...section,

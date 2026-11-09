@@ -6,9 +6,9 @@ import { relatedCriteriaEvidence, depthCriterion } from './related-criteria.mjs'
 import { config } from './config.mjs'
 import { generate } from './model.mjs'
 import { tokens, rankProvisions } from './search.mjs'
-import { verifyCalculations, calculationUnits, completeUnitConversions, calculationChain } from './calculations.mjs'
+import { verifyCalculations, calculationUnits, completeUnitConversions, calculationChain, completeCalculationIntermediates } from './calculations.mjs'
 import { scopedRepair, repairFeedback, rejectedFindingTargets, repairResponseFormat, repairedFindings } from './synthesis-repair.mjs'
-import { permitsLocalSynthesis } from './generation-policy.mjs'
+import { permitsLocalSynthesis, localSynthesisWorkflow } from './generation-policy.mjs'
 import { pipeProjectMeasurements } from './project-measurements.mjs'
 
 export function cleanSourceCallout(text, labels) {
@@ -62,7 +62,7 @@ export function verifyCalculationPlan(proposals, byLabel, question) {
 // Complete the arithmetic for explicit quantitative comparisons. Ground both
 // operands independently, and check any stated difference instead of trusting it.
 export function completeComparisonCalculations(text, calculations, sources, question) {
-  let verified = completeUnitConversions(text, calculations, sources, question)
+  let verified = completeCalculationIntermediates(text,completeUnitConversions(text, calculations, sources, question),sources,question)
   for (const {left,right,less,negated,difference} of quantityComparisons(text)) {
     if (negated || verified.length >= 4 || !calculationUnits[left.unit]) continue
     const delta=difference || {unit:left.unit,dimension:left.dimension,value:(less ? right.baseValue-left.baseValue : left.baseValue-right.baseValue)/calculationUnits[left.unit][1]}
@@ -366,7 +366,7 @@ export async function draftLocal(
     .filter((u) => /\b(?:must|shall|required)\b/i.test(u.excerpt))
     .slice(0, 3)
   for (const group of plan.groups) {
-    if (config.localSynthesisPolicy === 'comparisons' && group.role !== 'comparison') continue
+    if (localSynthesisWorkflow(question,index.corpus.documents,config.localSynthesisPolicy) === 'comparison' && group.role !== 'comparison') continue
     const cached = plan.draftFindings[group.id] || []
     const repair = scopedRepair(cached, issues, group.id)
     if (
