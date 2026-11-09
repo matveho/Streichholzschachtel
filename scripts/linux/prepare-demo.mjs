@@ -14,14 +14,8 @@ async function api(path,method='GET',body){
 }
 const health=await(await fetch(base.replace(/\/v1$/,'')+'/health')).json()
 assert.ok(health.ready&&!health.failures&&health.generationPolicy==='demo','Enable the tested demo policy before preparing examples')
-const stories=[]
-for(const story of demoStories){
- const started=Date.now()
- const path='/projects/'+story.projectId+'/queries'
- let job=await api(path,'POST',{question:story.question,...(story.documentIds?{documentIds:story.documentIds}:{})})
- for(let i=0;i<180&&['queued','running'].includes(job.state);i++){
-  await new Promise(resolve=>setTimeout(resolve,1000));job=await api(path+'/'+job.id)
- }
+function validate(story,job){
+ assert.equal(job.stale,false,story.title+' is stale')
  assert.equal(job.state,'completed',story.title)
  assert.equal(job.result?.mode,story.id==='catchment-capacity-and-storage'?'verified_review':'local_synthesis',story.title+' did not produce its verified review')
  const text=JSON.stringify(job.result.report)
@@ -33,8 +27,29 @@ for(const story of demoStories){
   assert.doesNotMatch(text,/necessitating an upgrade/i)
  }
  assert.ok(job.result.references.length&&job.result.references.every(reference=>reference.regions?.length))
+}
+const sameScope=(left,right)=>Array.isArray(left)&&Array.isArray(right)&&JSON.stringify([...left].sort())===JSON.stringify([...right].sort())
+const stories=[]
+for(const story of demoStories){
+ const started=Date.now()
+ const path='/projects/'+story.projectId+'/queries'
+ const project=await api('/projects/'+story.projectId)
+ const scope=story.documentIds||project.documents.map(document=>document.id)
+ const history=(await api(path)).queries
+ const candidate=history.find(job=>job.state==='completed'&&!job.stale&&job.question===story.question&&sameScope(job.documentIds,scope))
+ let job,reused=false
+ if(candidate){
+  const cached=await api(path+'/'+candidate.id)
+  try{validate(story,cached);if(sameScope(cached.documentIds,scope)){job=cached;reused=true}}
+  catch(error){if(error.code!=='ERR_ASSERTION')throw error}
+ }
+ if(!job)job=await api(path,'POST',{question:story.question,...(story.documentIds?{documentIds:story.documentIds}:{})})
+ for(let i=0;i<180&&['queued','running'].includes(job.state);i++){
+  await new Promise(resolve=>setTimeout(resolve,1000));job=await api(path+'/'+job.id)
+ }
+ validate(story,job)
  await api(path+'/'+job.id,'PATCH',{saved:true})
- const prepared={id:story.id,title:story.title,projectId:story.projectId,queryId:job.id,url:frontend+'/#project/'+story.projectId+'/query/'+job.id,seconds:Math.round((Date.now()-started)/1000),sourceCount:job.result.references.length}
+ const prepared={id:story.id,title:story.title,projectId:story.projectId,queryId:job.id,url:frontend+'/#project/'+story.projectId+'/query/'+job.id,seconds:Math.round((Date.now()-started)/1000),sourceCount:job.result.references.length,reused}
  stories.push(prepared);console.log(JSON.stringify(prepared))
 }
 const project=await api('/projects/parkview-exchange')

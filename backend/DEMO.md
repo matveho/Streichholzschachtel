@@ -12,6 +12,9 @@ Preparation runs three real reviews and saves them in project history. It prints
 their public links and writes `backend/state/demo-rehearsal.json`. Open the
 project dashboard and select **Saved**, or use those links. Rerun preparation
 after backend or project-document updates; old results can be marked stale.
+Repeated preparation reuses fresh, validated reviews with the same questions
+and document scopes. Stale results or changed scopes produce new reviews.
+Existing history and bookmarks are preserved.
 
 ## Three-minute presentation
 
@@ -56,12 +59,22 @@ Other unqualified general reviews retain source retrieval.
 ## Reasoning qualification
 
 The pinned Qwen 3.5 model remains enabled for the tested comparisons. The latest
-isolated general-synthesis qualification passed 6 of 8 engineering cases with
-thinking disabled. Infill servicing did not explicitly reconcile the applicable
-service interface. The mixed main/service cover case withheld the synthesis
-after unsupported measurement-datum conclusions were rejected; its retrieved
-sources were available, but the resulting review was incomplete. General
-synthesis (`LOCAL_SYNTHESIS_POLICY=all`) remains experimental.
+isolated general-synthesis qualification passed 7 of 8 automated engineering
+cases with thinking disabled, compared with 6 of 8 before the reconciliation
+step. These scores measure case assertions, not accuracy or safety certification.
+The mixed main/service cover case still omitted a service criterion from its
+synthesized findings. Manual inspection also found overstatements elsewhere in
+the broader infill answer. General synthesis (`LOCAL_SYNTHESIS_POLICY=all`)
+remains experimental and is not enabled by the demo policy.
+
+Experimental replacement reviews now plan one separate reconciliation from
+already selected obligation and alternative-permission clauses. The generated
+confirmation action must cite both actual source anchors, and its evidence
+review distinguishes an unresolved design-basis question from a final project
+decision. The infill case produced a supported action linking the private-system
+obligation to the conditional LID alternative permission. That qualified action
+does not qualify the rest of the general answer. A separate guard rejects claims
+of alternative permission supported only by an existing-system obligation.
 
 The backend now keeps main and service measurements separate during evidence
 review, preserves unknown cover datums, and rejects unsupported insulation or

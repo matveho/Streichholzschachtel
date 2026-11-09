@@ -11,6 +11,7 @@ import { scopedRepair, repairFeedback, rejectedFindingTargets, repairResponseFor
 import { permitsLocalSynthesis, localSynthesisWorkflow } from './generation-policy.mjs'
 import { pipeProjectMeasurements } from './project-measurements.mjs'
 import {conditionalSourceItems} from './evidence-guards.mjs'
+import { replacementInterface } from './replacement-interface.mjs'
 
 export function cleanSourceCallout(text, labels) {
   if (typeof text !== 'string') return text
@@ -83,6 +84,8 @@ export function measurementInstruction(question) {
 }
 
 export function focusedInstruction(role, hasSharedRequirement) {
+  if (role === 'replacement-interface')
+    return 'Write ONE actionable finding starting with Confirm or Reconcile: ask how the independent servicing obligation and the alternative permission apply together before replacing the existing system. Cite BOTH provisions. Preserve their qualifications. Do not decide that either publication controls. Do not mandate a connection arrangement or further authentication when only a particular alternative design requires it. Do not restate all the source requirements. Other checks already handle their individual facts.'
   if (role === 'comparison')
     return 'State the project value and reference criterion, then their actual difference using verified calculations. Cite BOTH source roles for the comparison. Compare only the same property, structural position, process and acceptance stage. An asphalt overlay, remaining material below recycling, and a new pavement layer are different roles. If applicability or either value is missing, state that the comparison is unresolved. Do not grant approval or infer which publication governs.'
   if (role === 'original-system')
@@ -306,6 +309,8 @@ export async function draftLocal(
         id:`check-${groups.length}`,heading:'Project-to-reference comparison',query:question,role:'comparison',units:sides.flat(),
       })
     }
+    const interfaceCheck = replacementInterface(question, groups, [...originalSystemKeys])
+    if (interfaceCheck) groups.push(interfaceCheck)
     const sharedEvidence = Object.fromEntries([...selectedTopics].filter(([heading, keys]) => keys.length && !groups.some(group => group.heading === heading)).map(([heading, keys]) => [heading,
       groups.filter(group => group.units.some(unit => keys.includes(evidenceUnitKey(unit)))).map(group => group.id),
     ]))
@@ -390,7 +395,7 @@ export async function draftLocal(
     const groupIssues = repair.issues
     const repairTargets = rejectedFindingTargets(cached, groupIssues)
     const sharedForCheck =
-      /\breplace(?:ment)?\b|\bin lieu\b|\bsubstitut|\balternative\b/i.test(
+      group.role !== 'replacement-interface' && /\breplace(?:ment)?\b|\bin lieu\b|\bsubstitut|\balternative\b/i.test(
         group.heading + ' ' + group.query,
       )
         ? shared
@@ -398,6 +403,7 @@ export async function draftLocal(
     const focused = group.units.map((unit) =>
       sourceContext(unit, unitLabel(unit), index.corpus.documents),
     )
+    const findingBudget = group.role === 'replacement-interface' ? 1 : config.maxFindingsPerCheck
     const drafted = await generate(
       'Include calculation IDs only when this specific finding relies on their derived values; otherwise use calculations: []. CalculationBasis supplies the exact supporting provisions for those calculations, including dependencies from another check; do not use it for unrelated findings. Keep source IDs and section numbers out of the finding text. ' +
         'Write concise engineering findings using ONLY these selected source provisions and independently verified calculations. Answer the project question directly. Each finding must make ONE factual point in one sentence, with its own supporting source IDs. When comparing a method with an asset-specific requirement, cite BOTH the method scope and asset requirement. A universal requirement has no size cutoff unless that same clause states one. Cover every distinct requirement in this focused check with separate findings, up to the supplied findingBudget. Never combine an absolute prohibition and an exception to a different requirement in one sentence. Project figures are assumptions. Every derived project/reference comparison must cite both the project value and reference criterion. Project-document allocations and constraints are not governing minima; distinguish the proposed value from the reference criterion and cite both when comparing. Preserve conditions and recommendations versus requirements. Do not transfer thresholds between asset types. A permission to use an alternative does not establish that a separately required service or approval can be omitted. If sources differ, identify the unresolved interface rather than granting unconditional permission. Use computed figures only from verifiedCalculations; never invent arithmetic, approval or edition precedence. Only name a publication when its actual sourceTitle matches a cited source ID; otherwise say the cited source. Cite IDs only in the evidence array, never in the text. Details will be displayed separately. Return {findings:[{text:"Direct supported finding",evidence:["A","B"]}]}. ' +
@@ -409,7 +415,7 @@ export async function draftLocal(
         originalQuestion: question,
         focusedCheck: group.heading,
         ...(group.assetScope?{focusedAsset:group.assetScope}:{}),
-        findingBudget: config.maxFindingsPerCheck,
+        findingBudget,
         suppliedProject: projectDescription(question),
         suppliedPipeMeasurements: pipeProjectMeasurements(question),
         searchScope: group.query,
@@ -418,6 +424,7 @@ export async function draftLocal(
         calculationBasis:calculationBasis.map(id=>sourceContext(byLabel.get(id),id,index.corpus.documents)),
         ...(repairTargets.length ? { repairTargets } : {}),
         provisions: focused,
+        ...(group.evidenceRoles?{sourceRoles:Object.fromEntries(Object.entries(group.evidenceRoles).map(([role,units])=>[role,units.map(unitLabel)]))}:{}),
         crossCuttingRequirements: sharedForCheck.map((unit) =>
           sourceContext(unit, unitLabel(unit), index.corpus.documents),
         ),
@@ -442,7 +449,7 @@ export async function draftLocal(
         properties: {
           findings: {
             type: 'array',
-            maxItems: Math.max(0, config.maxFindingsPerCheck - repair.retained.length),
+            maxItems: Math.max(0, findingBudget - repair.retained.length),
             items: {
               type: 'object',
               properties: {
@@ -509,7 +516,7 @@ export async function draftLocal(
   const findings = (conclusion.findings || []).map((finding) => {
     finding = { ...finding, text: cleanSourceCallout(finding.text, byLabel) }
     const group = plan.groups.find(group => group.id === finding.check)
-    const sharedForCheck = group && /\breplace(?:ment)?\b|\bin lieu\b|\bsubstitut|\balternative\b/i.test(group.heading + ' ' + group.query) ? shared : []
+    const sharedForCheck = group && group.role !== 'replacement-interface' && /\breplace(?:ment)?\b|\bin lieu\b|\bsubstitut|\balternative\b/i.test(group.heading + ' ' + group.query) ? shared : []
     const supportingCalculations=calculationSources(finding.calculations)
     const allowed = new Set([...(group?.units || []).map(unitLabel),...sharedForCheck.map(unitLabel),...supportingCalculations])
     let cited = alignEvidence(
@@ -528,6 +535,7 @@ export async function draftLocal(
     return {
       text: finding.text,
       check: finding.check,
+      ...(group?.role === 'replacement-interface'?{reviewRole:group.role}:{}),
       ...(group?.assetScope?{assetScope:group.assetScope}:{}),
       evidence: proof(cited),
       calculationBasisEvidence:proof(supportingCalculations),

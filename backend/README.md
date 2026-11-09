@@ -18,6 +18,49 @@ PDF text on the next index run.
 
 Install Tesseract with English language data to search scanned pages. Launch **Start basis.cmd** from the repository root. Choose **2** to restart and reindex, **4** for status, or **T** to check the presentation. [Launcher controls](CONTROLS.md)
 
+### Ubuntu without sudo
+
+From the repository root, with Node.js 24+, Python 3 with virtual-environment
+support, and a working user systemd session:
+
+```bash
+scripts/linux/install
+scripts/linux/install-ocr
+scripts/linux/basis rebuild-interface
+scripts/linux/basis start
+scripts/linux/basis health
+```
+
+The installer creates user services and starts with model-independent retrieval.
+Backend and gateway listen on localhost ports 8787 and 8789. Native extraction
+uses `backend/.venv`; OCR binaries and language data live under
+`~/.local/share/basis-ocr`. Project metadata, uploads, indexes and history live in
+`backend/state`, which must stay outside version control. Do not rerun the
+installer over an active installation: it rewrites its user service definitions.
+
+Optional GPU setup uses the pinned user-local Ollama runtime and model:
+
+```bash
+scripts/linux/install-gpu
+scripts/linux/basis mode demo
+scripts/linux/basis prepare-demo
+```
+
+Model preparation downloads weights; check home quota and free GPU memory
+first. Port 11435 remains local. `mode extractive` restores model-independent
+retrieval. The public HTTPS tunnel and Vercel destination are configured
+separately. This workstation has no user-service lingering; keep the session
+logged in during the demonstration.
+
+Use `basis status`, `basis logs`, `basis restart`, or `basis reindex` through
+`scripts/linux/basis`. Wait for `basis health` to report ready with zero failures
+before querying. Run `scripts/linux/test-backend` for isolated API, OCR and
+persistence checks. See [demo workflows and recovery](DEMO.md) for browser
+rehearsal and the tested inference policy. For storage recovery, stop the backend
+during a maintenance window, make a private copy of `backend/state`, restore that
+directory to its original location, then start the services and check health.
+Never reset presentation storage to run tests.
+
 ## Files and data
 
 - `src/` contains the API, project store and retrieval code.
@@ -31,7 +74,7 @@ Run `npm test` here for the backend suite. For frontend development, start the g
 ### IFC document comparison
 
 Project Potential Issues now includes a live property comparison in addition to
-prepared demonstration findings. Click **Compare IFC** to rescan. The scan uses
+prepared demonstration findings. Click **Rescan** to recheck the project. The scan uses
 only selected project documents in Reference, Client requirements, Design,
 Technical reports and Supporting materials. It reads the project's associated
 STEP IFC models (or the original IFC for legacy demo projects).

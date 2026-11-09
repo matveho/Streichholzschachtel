@@ -32,6 +32,9 @@ export function recommendationLanguage(text) {
   return /\b(?:should|preferred|recommend(?:ed|ation)?)\b/i.test(modality)
 }
 export function evidenceInterpretationIssue(claim, source, question = '', {projectEvidence = ''} = {}) {
+  if (/\b(?:may|can|permitted|allowed)\b[^.!?]{0,120}\b(?:in lieu|replace|instead of)\b/i.test(claim) &&
+      !/\b(?:in lieu|replac\w*|instead of|alternativ\w*|substitut\w*)\b/i.test(source))
+    return 'The attached evidence does not establish the claimed alternative permission. Cite its actual permission provision separately from the existing-system obligation.'
   if (dropsConditionalItem(claim, source))
     return 'The cited item is conditional on being required or applicable. Preserve that condition for this item; an adjacent mandatory item does not establish an unconditional installation duty.'
   if (/\b(?:capacity|design flow|shortfall|deficit)\b/i.test(claim) &&

@@ -8,6 +8,7 @@ import { config } from './config.mjs'
 import { pipeProjectMeasurementIssue, pipeProjectMeasurements, attachProjectMeasurements } from './project-measurements.mjs'
 import { attachPipeReviewInputs } from './pipe-review-inputs.mjs'
 import { mixedPipeEvidence } from './pipe-evidence.mjs'
+import { replacementInterfaceIssue } from './replacement-interface.mjs'
 import {findDemoReview,capacityReviewDefinition} from '../demo/review-scenarios.mjs'
 import {capacityReviewRequest} from './capacity-review-inputs.mjs'
 import {SearchIndex} from './search.mjs'
@@ -121,7 +122,7 @@ function supportedNumbers(claim, sources, question, calculations = []) {
   )
 }
 
-export function validateSynthesis(output, passages, question, documents = [], {checks} = {}) {
+export function validateSynthesis(output, passages, question, documents = [], {checks,checkGroups=[]} = {}) {
   const byId = new Map(passages.map((p) => [p.id, p]))
   const sections = []
   const issues = []
@@ -206,6 +207,12 @@ export function validateSynthesis(output, passages, question, documents = [], {c
       const verbatim = evidence.some(
         (e) => normalize(claim.text) === normalize(e.excerpt),
       )
+      const interfaceIssue = !section.heading && replacementInterfaceIssue(claim.text,evidence,checkGroups.find(group=>group.id===claim.check))
+      if (interfaceIssue) {
+        rejected++
+        issues.push({check:claim.check,claim:claim.text,reason:interfaceIssue})
+        continue
+      }
       if (
         !verbatim &&
         (!/[.!?]["”']?$/.test(claim.text.trim()) ||
@@ -545,6 +552,7 @@ export function evidenceReviewCheck(claim, id, question, contextPassages = []) {
   const applicability=applicableEvidence(question,claim.evidence.map(proof=>({excerpt:proof.excerpt})),{pipeScope:claim.assetScope})
   return {
     id, claim:claim.text,
+    ...(claim.reviewRole==='replacement-interface'?{reviewPurpose:'An unresolved source-interface question. Check that both embedded source facts are supported and retain their conditions; asking to confirm their joint applicability does not claim that either one prevails or that a particular approval is mandatory.'}:{}),
     quotes:claim.evidence.map(proof=>proof.excerpt),
     quoteSources:claim.evidence.map((proof,quoteIndex)=>({quoteIndex,document:proof.passage.doc,page:proof.passage.page,section:proof.passage.section,quoteStart:proof.quoteStart})),
     conditionalItems:claim.evidence.flatMap((proof,quoteIndex)=>conditionalSourceItems(proof.excerpt).map(item=>({quoteIndex,...item}))),
@@ -1036,7 +1044,7 @@ async function answerCore(
         }
       }
       if (draft.answerable) {
-        checked = validateSynthesis(draft, passages, question, searchIndex.corpus.documents, {checks:draft.plan.groups.map(group=>group.id)})
+        checked = validateSynthesis(draft, passages, question, searchIndex.corpus.documents, {checks:draft.plan.groups.map(group=>group.id),checkGroups:draft.plan.groups})
         if (checked.sections.length) {
           progress('Checking findings against their exact source evidence')
           checked = await auditConclusion(checked)
@@ -1054,7 +1062,7 @@ async function answerCore(
             draft.plan,
           )
           if (repaired.answerable) {
-            let corrected = validateSynthesis(repaired, passages, question, searchIndex.corpus.documents, {checks:repaired.plan.groups.map(group=>group.id)})
+            let corrected = validateSynthesis(repaired, passages, question, searchIndex.corpus.documents, {checks:repaired.plan.groups.map(group=>group.id),checkGroups:repaired.plan.groups})
             if (corrected.sections.length) {
               corrected = await auditConclusion(corrected)
               if (process.env.BASIS_DEBUG_RETRIEVAL === '1')

@@ -103,7 +103,7 @@ export function attachReviewCoverage(result, topics = [], plan, checked) {
         ...topics,
         ...groups.filter(
           (group) =>
-            group.role === 'comparison' &&
+            ['comparison','replacement-interface'].includes(group.role) &&
             !topics.some((topic) => topic.heading === group.heading),
         ),
       ]

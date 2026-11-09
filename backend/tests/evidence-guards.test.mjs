@@ -24,6 +24,14 @@ test('cross-publication requirements need the actual named sources as positive e
  assert.match(namedReferenceEvidenceIssue(claim,[proof('connection')],ambiguous),/without citing/)
  assert.equal(namedReferenceEvidenceIssue(claim,[proof('connection'),proof('design')],ambiguous),null)
 })
+test('an existing-system obligation cannot supply positive evidence for an alternative permission',()=>{
+ const source='Private storm sewer systems are required by all multi-family developments (3-plex and larger).'
+ const claim='The guide requires a private storm sewer system, though alternative LID designs may be permitted in lieu of traditional systems.'
+ assert.match(issue(claim,source),/actual permission provision/)
+ assert.equal(issue(claim,source+' LID may be utilized in lieu of traditional underground storm servicing systems.'),null)
+ assert.equal(issue('The guide requires a private storm sewer system for multi-family developments (3-plex and larger).',source),null)
+})
+
 test('a numerical capacity deficit does not mandate an unsupported construction remedy',()=>{
  const source='Storm sewers serving areas greater than 30 ha use 1.25 times the five-year runoff.'
  assert.match(issue('The capacity is insufficient for the 1.50 m3/s design flow, necessitating an upgrade.',source),/construction remedy/)
