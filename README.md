@@ -34,9 +34,7 @@ The built-in projects pair synthetic design records with published standards. Th
 - [API at a glance](#api-at-a-glance)
 - [Testing and verification](#testing-and-verification)
 - [Repository map](#repository-map)
-- [Design system](#design-system)
-- [Limitations and honesty rules](#limitations-and-honesty-rules)
-- [Roadmap and open issues](#roadmap-and-open-issues)
+- [Limitations](#limitations)
 - [Further reading](#further-reading)
 
 ---
@@ -57,25 +55,11 @@ Civil engineering decisions rest on a stack of documents: a client brief, drawin
 
 ---
 
-More questions to try in **New query**:
-
-| Project | Question |
-| --- | --- |
-| Parkview | `What is the nominal pipe diameter of IFC object S1?` |
-| Parkview | `What is the vertical clearance at IFC crossing X1?` |
-| Parkview | `What is the minimum slope for an upstream sanitary sewer?` |
-| North Ridge | `What is the thickness of IFC object PAV-ACP?` |
-| North Ridge | `What is the design speed of IFC object RD-EB?` |
-
----
-
 ## How it works
 
 ![basis system architecture drawn as a code city: each island is a layer, each building a source module sized by lines of code, and bridges are the interfaces a query crosses](docs/architecture/code-city.png)
 
-*Each island is a layer of the system and each building is a source module, one floor per 100 lines of code. Bridges ① to ⑥ trace a query from the browser to the documents, with ② branching off to where the server saves project state. To regenerate the figure, run `node docs/architecture/build-code-city.mjs --png`.*
-
-For presentations, open the [live 3D version](https://streichholzschachtel.vercel.app/architecture/) (or [docs/architecture/code-city-3d.html](docs/architecture/code-city-3d.html) locally) in Chrome or Edge and press **F** for full screen. This animated 3D version opens on a blueprint site plan seen from above, tilts down until the plan lies flat and raises the blue ground, islands and buildings out of it in 6 seconds. Then each press of **Space** or **->** (or a presentation clicker) drops the next island, with a short phrase saying what it does and the numbered bridge carrying what it sends on; the **Left Arrow** key takes the last island back off. Add `?auto=1` to the address to have the islands drop by themselves, timed to a 35-second spoken walkthrough (the script is in the page's code comments). Once Project state is shown, clicking its pin or the island opens the live product. Once every island is shown, **->** steps into the islands one by one; or add `?tour=1` to the address to play the full 30-second island tour. Every building is numbered; a number that would collide with another label moves aside and keeps a leader line to its building. The card in the corner lists every module of the island by number, with its name, what it does and its line count. A levelling staff beside each island gives the height scale in lines of code. The callout for the bridge leading into the island explains that interface. In the tour, each stop is timed to one sentence of a spoken walkthrough (the script is in the comments at the top of the page's code), and `?tour=1&pace=1.2` makes every stop 20% longer. Press **O** to return to the overview, which replays the opening. The page works offline.
+Follow a query from the browser to its source documents in the [interactive 3D architecture diagram](https://streichholzschachtel.vercel.app/architecture/).
 
 ### System overview
 
@@ -349,39 +333,14 @@ Streichholzschachtel/
 
 ---
 
-## Design system
+## Limitations
 
-| Token | Colour | Use |
-| --- | --- | --- |
-| Background | `#F4FFFD` | Page |
-| Text | `#011936` | Body text |
-| Secondary | `#465362` | Supporting text |
-| Accent | `#F9DC5C` | Highlights |
-| Issues | `#ED254E` | Reserved for potential-issue states |
-
-Fonts: IBM Plex Sans for body text, Roboto Mono Bold for the logo, buttons and project headings, and IBM Plex Mono for code and values. Icons come from lucide-react.
-
----
-
-## Limitations and honesty rules
-
-*basis* is built so that it can't invent an engineering answer:
-
-- **Every displayed excerpt is original text** with its real PDF regions. Models cite unit IDs; they never retype quotes.
-- **Numbers are checked.** A generated sentence is withheld if any number in it doesn't appear in the cited text, the question or the catalog.
-- **Conditional duties stay conditional.** "If an underdrain is present…" isn't turned into "install an underdrain".
-- **Unsupported questions say so**, with no document citations.
-- **"No findings" isn't compliance.** The IFC checker and prepared findings are bounded review aids.
-
-Known limits: this is a single-device prototype with JSON persistence; the public demo depends on the host computer and tunnel staying online; IFC models are shown as registers, not an interactive 3D view; general IFC upload isn't implemented; local synthesis quality is still being evaluated.
-
----
-
-## Roadmap and open issues
-
-- [ ] Fuzzy/semantic term matching when exact search finds nothing (for example "thermal movement" -> "thermal expansion").
-- [ ] Fix recall gaps (for example "erosion" not returning every passage containing it).
-- [ ] Team features: managers viewing projects and queries across engineers, collaboration and shared citations with architects and trades, possibly as an extension to existing platforms.
+- Open the cited PDF to check the value, units and conditions before using an answer in a design.
+- If the project files don’t support an answer, basis flags the gap for review.
+- The IFC scan checks only the properties it can match, so a clean scan doesn’t establish compliance.
+- You can inspect the included IFC models through their registers, but you can’t upload or explore a new model in 3D.
+- The team is still evaluating how reliably the local model answers unfamiliar engineering questions.
+- The public site needs the backend workstation and its tunnel to stay online.
 
 ---
 
