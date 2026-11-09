@@ -1,0 +1,83 @@
+import assert from 'node:assert/strict'
+import {mkdirSync} from 'node:fs'
+import {chromium,expect} from '@playwright/test'
+
+const frontend=process.env.BASIS_FRONTEND_URL
+assert.equal(frontend,'http://127.0.0.1:8842/app')
+assert.ok(process.env.BASIS_STATE_DIR?.includes('/verification/run-browser-'))
+const project='demo-mill-creek',documentId='doc-09e07f57e7a3'
+const api=new URL('/local-api/v1/projects/'+project,frontend).href
+const browser=await chromium.launch({headless:true})
+try{
+ const page=await browser.newPage({viewport:{width:1440,height:1000}})
+ page.setDefaultTimeout(30000)
+ const errors=[];page.on('pageerror',error=>errors.push(error.message))
+ const data=await(await fetch(api)).json()
+ await page.goto(frontend+'/#project/'+project)
+ await page.locator(`a[href="#project/${project}/document/${documentId}"]`).click()
+ await page.locator('.textLayer span').first().waitFor()
+ const form=page.getByRole('form',{name:'Document search'})
+ await expect(form.getByRole('button',{name:'This document',exact:true})).toHaveAttribute('aria-pressed','true')
+ const question='What is the minimum slope for a storm service connection?'
+ await page.locator('#query').fill(question)
+ await form.getByRole('button',{name:/^Project documents/}).click()
+ await expect(page.locator('#query')).toHaveValue(question)
+ await form.getByRole('button',{name:'This document',exact:true}).click()
+ mkdirSync('test-results',{recursive:true})
+ await page.screenshot({path:'test-results/document-search-desktop.png',fullPage:true})
+ async function search(expected){
+  const posted=page.waitForResponse(r=>r.url().endsWith('/projects/'+project+'/queries')&&r.request().method()==='POST')
+  await form.getByRole('button',{name:'Search',exact:true}).click()
+  const response=await posted
+  assert.deepEqual(response.request().postDataJSON().documentIds.sort(),[...expected].sort())
+  const submitted=await response.json()
+  await page.waitForURL('**/#project/'+project+'/query/'+submitted.id)
+  await page.getByRole('article',{name:'Query report'}).waitFor()
+  const job=await(await fetch(api+'/queries/'+submitted.id)).json()
+  assert.equal(job.state,'completed')
+  assert.deepEqual([...job.documentIds].sort(),[...expected].sort())
+  assert.ok(job.result.references.length)
+  assert.ok(job.result.references.every(reference=>expected.includes(reference.doc)))
+  return job
+ }
+ const first=await search([documentId])
+ await page.reload();await page.getByRole('article',{name:'Query report'}).waitFor()
+ await expect(form.getByRole('button',{name:'This document',exact:true})).toHaveAttribute('aria-pressed','true')
+ // A follow-up in the result retains the same explicit single-document scope.
+ await page.locator('#query').fill('What minimum cover is required for a storm sewer main?')
+ await search([documentId])
+ const queryTabsBefore=await page.locator('.query-tab-name').count()
+ await page.goto(frontend+'/#project/'+project+'/document/'+documentId)
+ await form.getByRole('button',{name:/^Project documents/}).click()
+ await page.locator('#query').fill(question)
+ await search(data.documents.map(d=>d.id))
+ assert.ok(await page.locator('.query-tab-name').count()>queryTabsBefore,'Document search must open a new query tab rather than replace an existing query')
+ await page.goto(frontend+'/#project/'+project+'/document/'+documentId)
+ await page.locator('#query').fill(question)
+ await form.getByRole('button',{name:/^Project documents/}).click()
+ await form.getByRole('button',{name:'Choose documents',exact:true}).click()
+ const picker=page.getByRole('region',{name:'Select search documents'})
+ await picker.getByRole('button',{name:'Clear',exact:true}).click()
+ await expect(form.getByRole('button',{name:'Search',exact:true})).toBeDisabled()
+ await expect(page.getByText('Select at least one document.',{exact:true})).toBeVisible()
+ const selected=[documentId,'doc-eb651c8aa7d3']
+ for(const id of selected)await picker.getByRole('checkbox',{name:new RegExp('^'+data.documents.find(d=>d.id===id).title)}).check()
+ await page.keyboard.press('Escape')
+ await expect(form.getByRole('button',{name:'Choose documents',exact:true})).toBeFocused()
+ await search(selected)
+ await page.reload();await page.getByRole('article',{name:'Query report'}).waitFor()
+ await expect(form.getByRole('button',{name:/^Project documents/})).toHaveAttribute('aria-pressed','true')
+ await form.getByRole('button',{name:'Choose documents',exact:true}).click()
+ assert.equal(await picker.getByRole('checkbox',{checked:true}).count(),2)
+ await page.keyboard.press('Escape')
+ assert.ok((await(await fetch(api+'/queries/'+first.id)).json()).documentIds.length===1)
+ await page.setViewportSize({width:390,height:844})
+ await page.goto(frontend+'/#project/'+project+'/document/'+documentId)
+ await page.locator('.textLayer span').first().waitFor()
+ await expect(form.getByRole('button',{name:'This document',exact:true})).toBeVisible()
+ await expect(form.getByRole('button',{name:/^Project documents/})).toBeVisible()
+ await page.screenshot({path:'test-results/document-search-mobile.png',fullPage:true})
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Mobile view must not overflow horizontally')
+ assert.deepEqual(errors,[])
+ console.log('PASS dashboard PDF to scoped search, full-project search, custom multi-document search, empty-selection guard, scope on follow-up/reload, new query tabs and mobile layout')
+}finally{await browser.close()}

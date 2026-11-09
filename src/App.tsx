@@ -9,7 +9,6 @@ import {
   FileText,
   Maximize2,
   Minimize2,
-  CornerDownLeft,
 } from 'lucide-react'
 import { DocumentContext } from './DocumentContext'
 import { useLiveQuery } from './backend'
@@ -22,6 +21,7 @@ import { QueryAssist, QueryThread } from './QueryAssist'
 import { outcomeOf } from './assist'
 import type { ThreadTurn } from './assist'
 import { AppHeader } from './AppHeader'
+import { ScopedQueryBar } from './ScopedQueryBar'
 
 /** Where a new search came from, so the query tab can keep the thread. */
 export type RunContext = {
@@ -29,6 +29,7 @@ export type RunContext = {
   choice?: string
   /** A rephrased question: searched on its own, starting a new thread. */
   fresh?: boolean
+  documentIds?: string[]
 }
 
 const narrowViewer = window.matchMedia('(max-width: 720px)')
@@ -55,6 +56,7 @@ export function QueryWorkspace({
     queryId?: string
     prompt: string
     sourceOnly?: boolean
+    documentIds?: string[]
   }
   onRun: (
     prompt: string,
@@ -77,6 +79,9 @@ export function QueryWorkspace({
 }) {
   const [query, setQuery] = useState(draft ?? entry.prompt)
   const [submitted, setSubmitted] = useState(entry.prompt)
+  const [queryScope, setQueryScope] = useState(
+    () => entry.documentIds ?? Object.keys(projectDocuments ?? {}),
+  )
   const live = useLiveQuery(
     submitted,
     entry.projectId,
@@ -177,11 +182,6 @@ export function QueryWorkspace({
         setPinned([])
         setHover(null)
       }
-      if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
-        event.preventDefault()
-        input.current?.focus()
-        input.current?.select()
-      }
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
@@ -256,15 +256,13 @@ export function QueryWorkspace({
       )
     }
   }
-  function search() {
-    if (!query.trim() || busy) return
-    runInPlace(query.trim(), { from: submitted, fresh: true })
-  }
   /** Runs a project search while this result stays on screen. */
   function runInPlace(question: string, context: RunContext) {
     setBusy(true)
     setPending(question)
-    void Promise.resolve(onRun(question, false, context)).finally(() => {
+    void Promise.resolve(
+      onRun(question, false, { documentIds: queryScope, ...context }),
+    ).finally(() => {
       setBusy(false)
       setPending('')
     })
@@ -336,46 +334,22 @@ export function QueryWorkspace({
           context={projectName}
           showNewQuery={false}
         />
-        <form
-          className="query-bar"
-          onSubmit={(e) => {
-            e.preventDefault()
-            search()
+        <ScopedQueryBar
+          value={query}
+          onChange={(text) => {
+            setQuery(text)
+            onDraftChange?.(text)
           }}
-        >
-          <label className="sr-only" htmlFor="query">
-            Query
-          </label>
-          <div className="query-field">
-            <Search size={19} />
-            <textarea
-              ref={input}
-              id="query"
-              rows={1}
-              value={query}
-              placeholder="Search this project's documents..."
-              onChange={(e) => {
-                setQuery(e.target.value)
-                onDraftChange?.(e.target.value)
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  search()
-                }
-              }}
-            />
-            <kbd>Ctrl K</kbd>
-          </div>
-          <button
-            className="run-query"
-            disabled={!query.trim() || busy}
-            type="submit"
-          >
-            {busy || live.busy ? 'Searching…' : 'Search'}
-            <CornerDownLeft size={15} />
-          </button>
-        </form>
+          documents={projectDocuments ?? documents}
+          documentId={tab || entry.documentIds?.[0]}
+          documentIds={queryScope}
+          onScopeChange={setQueryScope}
+          busy={busy || live.busy}
+          inputRef={input}
+          onSubmit={(question, documentIds) =>
+            runInPlace(question, { from: submitted, fresh: true, documentIds })
+          }
+        />
         <section className="document-workspace" aria-label="Document workspace">
           <div
             className="document-tabs"
@@ -585,7 +559,14 @@ export function QueryWorkspace({
                 <span>{live.error || live.phase}</span>
                 {live.busy && <button onClick={live.cancel}>Cancel</button>}
                 {live.error && (
-                  <button onClick={() => onRun(submitted, entry.sourceOnly)}>
+                  <button
+                    onClick={() =>
+                      onRun(submitted, entry.sourceOnly, {
+                        from: submitted,
+                        documentIds: queryScope,
+                      })
+                    }
+                  >
                     Retry
                   </button>
                 )}
@@ -631,6 +612,7 @@ export function QueryWorkspace({
                       suggestions={live.data.suggestions ?? []}
                       onSelect={(suggestion) =>
                         onRun(suggestion.question, true, {
+                          documentIds: queryScope,
                           from: submitted,
                           choice: suggestion.question,
                         })

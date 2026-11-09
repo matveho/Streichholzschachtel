@@ -16,23 +16,19 @@ import {
   Pencil,
 } from 'lucide-react'
 import { QueryWorkspace } from './App'
+import { ProjectDocumentReader } from './ProjectDocumentReader'
 import type { RunContext } from './App'
 import { ProjectEditor } from './ProjectEditor'
 import { WorkspaceSettings } from './WorkspaceSettings'
 import { api, ApiError } from './backend'
 import { navigate, navigateLink } from './navigation'
-import { AppHeader } from './AppHeader'
-import { DocumentContext } from './DocumentContext'
-import { PdfPane } from './PdfPane'
 import { projectPath, requestProject, projectDocumentMap } from './projects'
 import type { Project, ProjectData, ProjectQuery } from './projects'
-import type { Reference } from './data'
 import { QueryTabBar } from './QueryTabs'
 import type { ThreadTurn } from './assist'
 import { useQueryTabs } from './useQueryTabs'
 import './projects.css'
 
-const emptyReferences: Reference[] = []
 /** Finished jobs fetched while a search ran, so their page opens instantly. */
 const settledJobs = new Map<string, ProjectQuery>()
 const unansweredLabels: Record<string, string> = {
@@ -832,7 +828,13 @@ function QueryReader({
           </p>
           <button
             className="primary-action"
-            onClick={() => onRun(job.question, job.sourceOnly)}
+            onClick={() =>
+              onRun(job.question, job.sourceOnly, {
+                from: job.question,
+                fresh: true,
+                documentIds: job.documentIds,
+              })
+            }
           >
             Run with current documents
           </button>
@@ -850,6 +852,7 @@ function QueryReader({
         projectId: data.project.id,
         prompt: job.question,
         sourceOnly: job.sourceOnly,
+        documentIds: job.documentIds,
       }}
       projectName={data.project.name}
       projectDocuments={projectDocumentMap(data.documents)}
@@ -918,11 +921,15 @@ function ProjectPage({
         question,
         sourceOnly,
         id: crypto.randomUUID(),
+        ...(context?.documentIds === undefined
+          ? {}
+          : { documentIds: context.documentIds }),
       })
       await settle(job)
       // The user moved elsewhere meanwhile; the result waits in history.
       if (location.hash !== startedAt) return
-      tabs.markRun(context && { ...context, to: question })
+      if (section !== 'document')
+        tabs.markRun(context && { ...context, to: question })
       navigate('project/' + id + '/query/' + job.id)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not run the query.')
@@ -994,37 +1001,16 @@ function ProjectPage({
   } else if (section === 'document' && record) {
     const documents = projectDocumentMap(data.documents)
     content = documents[record] ? (
-      <DocumentContext.Provider value={documents}>
-        <main className="workspace">
-          <AppHeader
-            context={data.project.name}
-            homeHref={'#project/' + id}
-            onNew={() => navigate('project/' + id + '/new')}
-            showNewQuery={false}
-          />
-          {documents[record].model && (
-            <div className="model-document-toolbar">
-              <a
-                className="model-download"
-                href={documents[record].model}
-                download
-              >
-                Download IFC
-              </a>
-            </div>
-          )}
-          <div className="project-document-view">
-            <PdfPane
-              key={record}
-              id={record}
-              active={emptyReferences}
-              navigationKey={0}
-              sourceReferences={emptyReferences}
-              onSelectReferences={() => {}}
-            />
-          </div>
-        </main>
-      </DocumentContext.Provider>
+      <ProjectDocumentReader
+        key={record}
+        projectId={id}
+        projectName={data.project.name}
+        documentId={record}
+        documents={documents}
+        onRun={(question, documentIds) =>
+          run(question, false, { from: '', fresh: true, documentIds })
+        }
+      />
     ) : (
       <Shell>
         <Message

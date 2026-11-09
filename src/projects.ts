@@ -38,6 +38,7 @@ export type ProjectQuery = {
   projectId: string
   question: string
   sourceOnly: boolean
+  documentIds?: string[]
   state: string
   createdAt: string
   saved: boolean

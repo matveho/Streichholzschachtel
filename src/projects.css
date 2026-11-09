@@ -437,6 +437,185 @@ button.primary-action:hover {
   min-height: 0;
   display: flex;
 }
+.scoped-query {
+  flex: 0 0 auto;
+  padding: 12px 18px 9px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  position: relative;
+  z-index: 12;
+}
+.scoped-query-input {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+.scoped-query-input .query-field {
+  flex: 1;
+  min-width: 0;
+}
+.scoped-query-input textarea {
+  width: 100%;
+  min-width: 0;
+}
+.scoped-query-input .run-query {
+  flex-shrink: 0;
+}
+.query-scope-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 35px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+.query-scope-caption,
+.query-scope-title {
+  color: var(--color-secondary);
+}
+.query-scope-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.query-scope-options {
+  display: flex;
+  flex-shrink: 0;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.query-scope-options button,
+.query-scope-picker > button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--color-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.query-scope-options button[aria-pressed='true'] {
+  background: var(--line);
+  color: var(--color-text);
+}
+.query-scope-options button:focus-visible,
+.query-scope-picker button:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+.query-scope-count {
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--surface);
+}
+.query-scope-picker {
+  position: relative;
+}
+.query-scope-picker > button:hover {
+  color: var(--color-text);
+  background: var(--line);
+}
+.query-scope-popover {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 7px);
+  width: min(440px, calc(100vw - 38px));
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px #0002;
+  padding: 12px;
+  border-radius: 7px;
+  z-index: 30;
+}
+.query-scope-popover > input {
+  width: 100%;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+}
+.query-scope-selection {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  font-size: 11px;
+}
+.query-scope-selection > span {
+  margin-right: auto;
+  color: var(--color-secondary);
+}
+.query-scope-selection button {
+  border: 0;
+  background: transparent;
+  padding: 3px;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.query-scope-document-list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+.query-scope-document-list label {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 5px;
+  border-top: 1px solid var(--line);
+  cursor: pointer;
+  font-size: 12px;
+}
+.query-scope-document-list input {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+.query-scope-document-list small {
+  display: block;
+  color: var(--color-secondary);
+  font-size: 10px;
+  margin-top: 3px;
+}
+.query-scope-empty {
+  color: #916b24;
+  font-size: 11px;
+}
+@media (max-width: 720px) {
+  .scoped-query {
+    padding: 9px 10px 7px;
+  }
+  .query-scope-caption,
+  .query-scope-title,
+  .scoped-query kbd {
+    display: none;
+  }
+  .query-scope-row {
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+  .query-scope-options button,
+  .query-scope-picker > button {
+    padding: 5px;
+    font-size: 11px;
+  }
+  .query-scope-popover {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    top: 162px;
+    width: auto;
+  }
+}
 .project-document-view > .pdf-pane {
   flex: 1;
   min-width: 0;
