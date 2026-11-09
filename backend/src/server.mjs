@@ -56,6 +56,7 @@ const engineVersion = createHash('sha256')
       'local-synthesis.mjs',
       'linked-tables.mjs',
       'evidence-guards.mjs',
+      'answer-completeness.mjs',
       'generation-policy.mjs',
       'review-coverage.mjs',
       'synthesis-repair.mjs',

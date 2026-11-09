@@ -95,4 +95,12 @@ export const engineeringScenarios = [
       'How many Guelph Permeameter test locations are mandated for a facility with exactly 1000 m² of surface area?',
     noAnswer: true,
   },
+  {
+    id: 'field-test-count',
+    question:
+      'How many Guelph Permeameter field test locations are required before planting a 500 m² LID facility with 600 mm of soil, and what QA/QC check is needed?',
+    terms: [/\b(?:two|2)\s+(?:(?:Guelph|Permeameter|field)\s+)*(?:test\s+)?locations\b/i, /QA\/QC/i, /3\s*m/],
+    findingTerms: [/\b(?:two|2)\s+(?:(?:Guelph|Permeameter|field)\s+)*(?:test\s+)?locations\b/i],
+    minSources: 1,
+  },
 ]

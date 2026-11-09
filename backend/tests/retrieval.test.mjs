@@ -17,6 +17,7 @@ import {
   sectionCatalog,
   passagesForSections,
   expandRetrieval,
+  constructionControlSearch,
 } from '../src/retrieval-plan.mjs'
 const corpus = await buildIndex(),
   search = new SearchIndex(corpus)
@@ -628,4 +629,27 @@ test('comparison policy keeps a general engineering review offline without calli
   assert.notEqual(result.mode,'local_synthesis')
   assert.ok(result.references.length>0)
   assert.ok(result.references.every(r=>r.regions.length>0))
+})
+
+
+test('the site-controls backstop retrieves the actual documented ESC schedule with original anchors',()=>{
+ const topic=constructionControlSearch('What design and construction checks are needed for an infill?')
+ const passages=search.withPageContext(search.searchSingle(topic.query).slice(0,4))
+ const unit=evidenceUnits(passages,30000).find(u=>/Conduct weekly documented ESC inspections/.test(u.excerpt))
+ assert.ok(unit,'The real construction-site inspection clause reaches the source pool')
+ assert.ok(locateQuote(unit.passage,unit.excerpt))
+})
+
+
+test('a source recommendation cannot establish a mandatory runoff-control violation',()=>{
+ const passage=corpus.passages.find(p=>p.doc==='doc-f27309b4bba5'&&p.page===25&&p.text.includes('should be directed around facilities'))
+ assert.ok(passage)
+ const quote='Runoff (e.g. overland, roof drain leaders) should be directed around facilities until stabilized'
+ assert.ok(locateQuote(passage,quote))
+ const draft=text=>({answerable:true,sections:[{heading:'Finding',claims:[{text,evidence:[{passageId:passage.id,quote}]}]}]})
+ const rejected=validateSynthesis(draft('Using the basin as a sediment trap violates the requirement to direct runoff around facilities until stabilized.'),[passage],'Review sediment control during facility construction.')
+ assert.equal(rejected.sections.length,0)
+ assert.ok(rejected.issues.some(issue=>/recommendation|mandatory/.test(issue.reason)))
+ const accepted=validateSynthesis(draft('Runoff should be directed around the facility until it is stabilized.'),[passage],'Review sediment control during facility construction.')
+ assert.equal(accepted.sections.length,1)
 })

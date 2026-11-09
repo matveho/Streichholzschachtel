@@ -61,6 +61,17 @@ const assist = (question) =>
     ),
   )
 
+test('unresolved test counts show their specific missing input instead of generic parameters', () => {
+  const action = 'Specify construction completion or final acceptance, then confirm the count for the stated facility size.'
+  const result = assistQuery('How many Guelph tests are required for exactly 1000 m2?', searchIndex, {
+    mode: 'insufficient_evidence',
+    requiredInputs: {kind: 'testing_count', action},
+  })
+  assert.equal(result.outcome, 'partial')
+  assert.deepEqual(result.details, [action])
+  assert.deepEqual(result.clarifications, [])
+})
+
 test('another municipality is reported as outside the collection', () => {
   const result = assist('What is the minimum storm sewer cover in Calgary?')
   assert.equal(result.outcome, 'jurisdiction')

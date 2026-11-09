@@ -1,10 +1,23 @@
 // Conservative vetoes for source extraction ambiguity and unsupported exemptions.
 // These checks may withhold a claim; they never approve an engineering conclusion.
-const exemption = /\b(?:no\s+(?:mandatory|required)\b|not\s+(?:required|necessary|mandated)|does\s+not\s+require|exempt(?:ed|ion)?\b)/i
+const exemption = /\b(?:no\s+(?:mandatory|required)\b|not\s+(?:required|necessary|mandated)|does\s+not\s+require|exempt(?:ed|ion|s)?\b)/i
+const projectComparison = /\b(?:exceeds?|meets?|complies|greater than|less than|shortfall|falls? short|satisfies|adequate|sufficient|(?:is|are) (?:below|above)|(?:thicker|thinner) than|defici(?:t|ent))\b/i
 export function evidenceInterpretationIssue(claim, source, question = '', {projectEvidence = ''} = {}) {
+  const precedence = /\b(?:overrides?|supersedes?|waives?|takes? precedence)\b/i
+  if (!/\b(?:overrid\w*|supersed\w*|waiv\w*|precedence|notwithstanding)\b/i.test(source)) {
+    for (const sentence of claim.split(/[;!?]|\.(?=\s|$)/)) {
+      if (precedence.test(sentence) && !/\b(?:not|never|cannot|without assuming|unresolved|uncertain|confirm whether|review whether)\b/i.test(sentence))
+        return 'An alternative permission does not establish precedence or waive a separate obligation. Cite an explicit waiver/precedence provision or retain the unresolved interface.'
+    }
+  }
   const projectBasis = question + ' ' + projectEvidence
+  if (/\bnecessary (?:construction )?traffic only\b/i.test(source) &&
+      /\bunnecessary (?:construction )?traffic\b/i.test(claim) &&
+      !/\bunnecessary (?:construction )?traffic\b/i.test(projectBasis) &&
+      !/\b(?:if|whether|confirm|verify|assess|determine|unresolved)\b/i.test(claim))
+    return 'A necessary-traffic restriction does not establish that a reported delivery was unnecessary. Confirm the purpose of the access before classifying it as a project violation.'
   if (/\bESALs?\b/i.test(source) &&
-      /\b(?:governing|exceeds?|meets?|complies|shortfall|satisfies|adequate|sufficient)\b/i.test(claim) &&
+      (projectComparison.test(claim) || /\bgoverning\b/i.test(claim)) &&
       !/\b(?:design|cumulative|project)\s+ESALs?\s*(?:(?:of|is|are|were|estimated at)\s*|[:=]\s*)?\d|\b\d+(?:\.\d+)?\s*(?:million|M)?\s+(?:design\s+)?ESALs?\b|\bESALs?\s*[:=]\s*\d/i.test(projectBasis))
     return 'This pavement criterion depends on design ESALs. AADT and truck percentage do not establish cumulative axle loading; provide the project design ESALs before selecting a minimum or reporting a project comparison.'
   const roleIssue = pavementComparisonRoleIssue(claim, source, projectBasis)
@@ -83,7 +96,7 @@ export function reversedBound(claim, source) {
 }
 
 export function pavementComparisonRoleIssue(claim, source, projectBasis) {
-  if (!/\b(?:exceeds?|meets?|complies|greater than|less than|shortfall|satisfies|adequate|sufficient)\b/i.test(claim)) return null
+  if (!projectComparison.test(claim)) return null
   const belowRecycledLayer = /\b(?:below|beneath|under)\s+(?:the\s+)?(?:CIR|cold[ -]in[ -]place recycling)\s+layer/i
   if (belowRecycledLayer.test(source) && !belowRecycledLayer.test(projectBasis))
     return 'The reference thickness concerns asphalt retained beneath a recycled layer. The project evidence does not establish that structural role for the proposed layer; keep these quantities separate.'

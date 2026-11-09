@@ -1,6 +1,21 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {evidenceInterpretationIssue as issue} from '../src/evidence-guards.mjs'
+test('falling short cannot select an ESAL-dependent minimum without design loading',()=>{
+ const source='Design ESALs (x10 [6]) Minimum Thickness of 1st Stage ACP > 10.0 120 mm'
+ const claim='The project proposes a 110 mm PAV-ACP layer, which falls short of the minimum 120 mm requirement for Design ESALs greater than 10.0.'
+ assert.match(issue(claim,source,'Compare the 110 mm project layer with its governing minimum.'),/design ESALs/)
+ assert.equal(issue(claim,source,'The project design ESALs are 12 million. Compare the 110 mm layer.'),null)
+ assert.match(issue('The project is below the 50 mm minimum.','A minimum of 50 mm remains below the CIR layer.','Compare the proposed new asphalt layer.'),/structural role/)
+})
+test('necessary-traffic restrictions cannot classify an unexplained delivery as a violation',()=>{
+ const source='Limit vehicular access near LID facilities to necessary traffic only during facility construction.'
+ const claim='Crossing the facility with delivery vehicles constitutes unnecessary traffic.'
+ assert.match(issue(claim,source,'Delivery vehicles crossed the facility.'),/purpose of the access/)
+ assert.equal(issue('Confirm whether the delivery was unnecessary traffic before reporting a violation.',source,'Delivery vehicles crossed the facility.'),null)
+ assert.equal(issue('Limit vehicular access to necessary traffic only.',source,'Delivery vehicles crossed the facility.'),null)
+ assert.equal(issue(claim,source,'The reported delivery was unnecessary traffic.'),null)
+})
 test('missing field-test counts do not establish exemptions',()=>{
  assert.match(issue('There is no mandatory field-test count.','A QA/QC test must be completed adjacent to a field test, at the same depth.'),/exemption/)
  assert.match(issue('The project does not require a servicing review.','Alternative layouts require review.'),/exemption/)
@@ -80,4 +95,16 @@ test('AADT and truck percentage cannot select an ESAL-based pavement minimum',()
  assert.match(issue(claim,source,'Compare this project.',{projectEvidence:'Trial asphalt thickness is 110 mm. No ESAL-based adequacy is claimed.'}),/design ESALs/)
  assert.equal(issue(claim,source,'The project is designed for 1 million ESALs.'),null)
  assert.equal(issue('The reference lists a 60 mm criterion for design ESALs below 2 million.',source,'Compare the project.'),null)
+})
+
+test('alternative permissions cannot invent precedence or waive independent obligations',()=>{
+ const source='LID may be used in lieu of traditional underground storm servicing. Private storm sewer systems are required for multi-family developments of 3-plex and larger.'
+ for(const claim of ['The LID permission overrides the private storm sewer requirement.','Using LID waives the private connection obligation.','The LID guide takes precedence over the connection guide.'])
+  assert.match(issue(claim,source),/precedence/)
+ assert.equal(issue('The permission does not waive the separate servicing obligation.',source),null)
+ assert.equal(issue('It cannot be assumed that the LID permission overrides the servicing obligation.',source),null)
+ assert.equal(issue('The arrangement waives the obligation.','An explicit waiver of this obligation is provided.'),null)
+ assert.equal(issue('The provision exempts the stated facility from testing.','Testing is not required for the stated facility.'),null)
+ assert.equal(issue('Confirm whether an accepted alternate arrangement waives the connection obligation.',source),null)
+ assert.equal(issue('An approved alternate arrangement waives the connection obligation.','An approved alternate arrangement waives the connection obligation.'),null)
 })

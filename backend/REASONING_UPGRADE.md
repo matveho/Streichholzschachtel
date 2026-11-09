@@ -187,3 +187,69 @@ review output after 254 seconds. It is not enabled in the release. Broader
 engineering synthesis remains unfinished: the seven-case direct candidates
 previously scored 2/7. Do not present this bounded comparison release as a
 qualified general engineering-design assistant.
+
+## General-review completeness and modality follow-up
+
+Broad construction checks now retain a bounded search for construction-site
+controls if the planner omitted that topic. The search contains technical
+vocabulary, not regulatory schedules or numeric requirements. The actual corpus
+regression verifies that the documented ESC inspection schedule and its original
+page coordinates reach the source pool. Review/repair diagnostics now distinguish
+unsupported claims from irrelevant ones. A replacement proposal does not make
+the existing servicing obligation irrelevant or establish precedence over it.
+
+New interpretation vetoes reject invented waivers/precedence and classification
+of an unexplained delivery as unnecessary traffic. Mandatory-claim checking now
+also recognizes violation/noncompliance wording: a recommendation cannot become
+a mandatory project violation merely by avoiding the word "must".
+
+Test-count completeness is checked separately from source entailment. Approved
+findings must answer the requested field/QC count and preserve the requested
+acceptance stage; source quotations, placement distances and unrelated QC counts
+cannot substitute for that answer. Incomplete results retain verified related
+requirements but return `insufficient_evidence` with a specific required input
+shown through the existing search-parameter interface. The helper participates
+in the engine fingerprint so incompatible cached answers become stale.
+
+The seven-case direct general-review snapshot `run-gpu-UkpsTgWo` passed 4/7
+(minor system, infill servicing, shallow-soil exemption and exact-area boundary).
+Frost cover omitted the default service-depth provision, expanded capacity
+omitted the requested derived flow comparison, and damaged-LID corrective work
+remained incomplete after an incorrectly mandatory sediment-control finding was
+withheld. This snapshot precedes the final joint field/QC-count and delivery
+classification guards. It does not qualify unrestricted synthesis for the demo.
+
+Positive holdout `run-gpu-F6S22BoJ` passed in 20 seconds on the later snapshot:
+two field-test locations for a 500 m² facility, a separate QA/QC check within
+3 m at the same depth, and the preferred half-depth calculation of 300 mm for
+600 mm soil. Findings cite the actual source clauses on PDF page 97. The new
+holdout assertion accepts the complete technical name between the count and
+"test locations"; its first version incorrectly rejected that valid wording.
+The original seven quality gates remain unchanged.
+
+General reviews in production continue to use source retrieval. These changes
+are shared safeguards and experimental general-review improvements, not a
+promotion of unrestricted generation. Next required work is complete cover-rule
+retrieval, applicable capacity calculations, and useful corrective-work findings
+without overstating recommendations or unverified project circumstances.
+
+The comparison regression `run-gpu-Axevmu8g` exposed a further missing-basis
+failure: a generated "falls short" claim chose the >10-million-ESAL pavement
+row without project design ESALs. The existing guard recognized "shortfall" but
+missed that relational wording. A shared comparison predicate now covers both,
+along with below/above and thicker/thinner comparisons. Focused tests include
+the actual failed claim and a positive control with supplied design loading.
+All nine capability cases passed in `run-gpu-vaZoYJ2t`, including that adversarial
+case (8.314 s), width arithmetic (4.399 s), and storm-cover arithmetic (5.596 s).
+This run preceded a diagnostic-order refinement that preserves the existing
+undefined-process error when a claim uses only "governing" wording; the actual
+missing-ESAL condition is unchanged. The later browser check uses the refined
+snapshot.
+
+Final regression `run-Vij9OmQu`: 217/217 unit tests, OCR verification, isolated
+project API/import/isolation checks, and metadata/document/query/citation
+persistence across a backend restart all passed. Browser verification
+`run-browser-sIVS7Odg` passed UI submission, verified comparison arithmetic,
+both original PDF highlights, reload/history, extractive general-review routing,
+and automatic IFC findings. The model remained fully GPU-resident at 16K context
+(21,782,960,536 bytes reported by Ollama).

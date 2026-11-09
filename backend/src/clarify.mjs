@@ -164,7 +164,7 @@ const refine = (question, label) =>
   `${question.trim().replace(/[?.!\s]+$/, '')} for ${label.toLowerCase()}?`
 
 /**
- * Returns the conversational layer for a finished result:
+ * Returns the search parameters and scope status for a finished result:
  * `{ outcome, jurisdiction?, missing?, details, examples?, clarifications }`
  * where outcome is 'answered', 'vague', 'partial', 'not_found',
  * 'jurisdiction' or 'off_topic'.
@@ -179,6 +179,16 @@ export function assistQuery(question, searchIndex, result) {
       outcome: 'jurisdiction',
       jurisdiction,
       details: [],
+      clarifications: [],
+    }
+
+  // Preserve the specific unresolved engineering input. Generic asset/system
+  // prompts would obscure why otherwise relevant evidence did not answer.
+  if (result.requiredInputs?.kind === 'testing_count' &&
+      typeof result.requiredInputs.action === 'string')
+    return {
+      outcome: 'partial',
+      details: [result.requiredInputs.action],
       clarifications: [],
     }
 
