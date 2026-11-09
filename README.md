@@ -2,7 +2,7 @@
 
 **Where did this number come from?** Civil engineers often need a drawing, a client brief and a design standard to check a single value. basis brings those documents into one project workspace. Ask a question about the project, then select a citation to see the passage or table row highlighted in the original PDF.
 
-[Open basis](https://streichholzschachtel.vercel.app/#projects) · [3D system architecture](https://streichholzschachtel.vercel.app/architecture/)
+[Open basis](https://streichholzschachtel.vercel.app/#projects) · [Pitch slides](https://canva.link/qka5al8g2vxy1wv) · [3D system architecture](https://streichholzschachtel.vercel.app/architecture/)
 
 Built for natHacks 2026 by team Streichholzschachtel.
 
