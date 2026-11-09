@@ -77,3 +77,8 @@ records when the same passage identifies them as an option study rather than a
 selected redesign. Issued/adopted values still compare. The supplemental
 records preserve Parkview's existing 13 IFC findings and all eight prepared
 findings across the two projects.
+
+The saved Parkview storm-cover demonstration explicitly retains its original
+17-document review baseline. The new verification and option-study records
+remain available for browsing and exploratory searches, but are not silently
+added to that saved comparison's scope. The UI displays its selected documents.

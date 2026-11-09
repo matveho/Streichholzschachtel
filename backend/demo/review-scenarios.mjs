@@ -20,7 +20,8 @@ export const demoReviews = [{
 
 export const demoStories = [
   {id:'box-planter-width',projectId:'demo-mill-creek',title:'Cross-document width discrepancy',question:'Compare the minimum box planter width required by the standards with the width proposed in this project. Identify any difference and cite both documents.'},
-  {id:'storm-main-cover',projectId:'parkview-exchange',title:'IFC-linked storm main cover discrepancy',question:'Compare the proposed cover of storm sewer ST1 (300 mm pipe) against the reference minimum main cover. Identify the shortfall and cite both documents.'},
+  // Retain the issued-record review baseline; supplemental option studies are separate exploratory sources.
+  {id:'storm-main-cover',projectId:'parkview-exchange',documentIds:["doc-ad1aa8236ea0","doc-9f6b74f9dcc6","doc-e2a14079bf7c","doc-379438043053","doc-09e07f57e7a3","doc-34f8f723c71f","doc-eb651c8aa7d3","doc-851846770fd9","doc-787b1218443e","doc-da424a924abd","doc-7ae9666e2e45","doc-ede1832e22f5","doc-78c8e4d3cbb4","doc-fd479745e2a5","doc-0ee53acf3b25","doc-7f328f329ffd","doc-f961fe8a4049"],title:'IFC-linked storm main cover discrepancy',question:'Compare the proposed cover of storm sewer ST1 (300 mm pipe) against the reference minimum main cover. Identify the shortfall and cite both documents.'},
   ...demoReviews,
 ]
 
