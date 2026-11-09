@@ -6,7 +6,7 @@ export const categoryLabels: Record<string, string> = {
   supporting: 'Supporting materials',
 }
 
-// Older API versions derive the category from the filename.
+// Import choices saved by the browser-only editor when the user saves Manage project.
 const key = (projectId: string) => 'basis.fileCategories.v1:' + projectId
 
 export function readFileCategories(projectId: string): Record<string, string> {
@@ -24,14 +24,6 @@ export function readFileCategories(projectId: string): Record<string, string> {
   }
 }
 
-export function saveFileCategories(
-  projectId: string,
-  changes: Record<string, string>,
-) {
-  if (Object.keys(changes).length) {
-    localStorage.setItem(
-      key(projectId),
-      JSON.stringify({ ...readFileCategories(projectId), ...changes }),
-    )
-  }
+export function clearLegacyCategories(projectId: string) {
+  localStorage.removeItem(key(projectId))
 }

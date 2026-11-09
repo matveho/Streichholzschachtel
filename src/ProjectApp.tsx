@@ -1,4 +1,4 @@
-import { categoryLabels as labels, readFileCategories } from './fileCategories'
+import { categoryLabels as labels } from './fileCategories'
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import {
   FolderOpen,
@@ -259,11 +259,7 @@ function ProjectDashboard({
   uploading?: boolean
   onUploadDone?: () => void
 }) {
-  const { project, queries, issues } = data
-  const overrides = readFileCategories(project.id)
-  const documents = data.documents.map((doc) =>
-    overrides[doc.id] ? { ...doc, category: overrides[doc.id] } : doc,
-  )
+  const { project, documents, queries, issues } = data
   const [filter, setFilter] = useState(''),
     [category, setCategory] = useState('all'),
     [issueTab, setIssueTab] = useState('open'),

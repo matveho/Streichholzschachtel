@@ -1,4 +1,8 @@
-import { categoryLabels, saveFileCategories } from './fileCategories'
+import {
+  categoryLabels,
+  readFileCategories,
+  clearLegacyCategories,
+} from './fileCategories'
 import { useEffect, useRef, useState } from 'react'
 import { Search, X, Plus, FolderOpen, FilePlus, RotateCcw } from 'lucide-react'
 import { api, readSettings } from './backend'
@@ -35,16 +39,18 @@ export function ProjectEditor({
     [open, setOpen] = useState(false),
     [files, setFiles] = useState<File[]>([]),
     [fileTypes, setFileTypes] = useState(new Map<File, string>()),
-    [existingTypes, setExistingTypes] = useState<Record<string, string>>({}),
+    [existingTypes, setExistingTypes] = useState<Record<string, string>>(() =>
+      project && !uploadOnly ? readFileCategories(project.id) : {},
+    ),
     [error, setError] = useState(''),
     [progress, setProgress] = useState('')
+  const [imported, setImported] = useState(new Set<File>())
   const [savedId, setSavedId] = useState(project?.id)
   const nameInput = useRef<HTMLInputElement>(null),
     collectionPicker = useRef<HTMLDivElement>(null),
     fileInput = useRef<HTMLInputElement>(null),
     folderInput = useRef<HTMLInputElement>(null),
-    createdId = useRef(project?.id),
-    imported = useRef(new Map<File, ProjectDocument[]>())
+    createdId = useRef(project?.id)
   useEffect(() => {
     nameInput.current?.focus()
     const controller = new AbortController()
@@ -130,7 +136,7 @@ export function ProjectEditor({
       setSavedId(response.project.id)
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
-        if (imported.current.has(file)) continue
+        if (imported.has(file)) continue
         setProgress(`Indexing ${i + 1}/${files.length}: ${file.name}`)
         const content = await new Promise<string>((done, reject) => {
           const reader = new FileReader()
@@ -142,7 +148,11 @@ export function ProjectEditor({
         const importedDocument = await requestProject(
           projectPath(createdId.current!) + '/documents/import',
           'POST',
-          { name: file.name, content, category: fileTypes.get(file) },
+          {
+            name: file.name,
+            content,
+            category: fileTypes.get(file) || undefined,
+          },
         )
         setDocuments((ids) => [
           ...new Set([
@@ -150,14 +160,27 @@ export function ProjectEditor({
             ...importedDocument.documents.map((d: ProjectDocument) => d.id),
           ]),
         ])
-        imported.current.set(file, importedDocument.documents)
+        setImported((done) => new Set(done).add(file))
       }
-      const changes = { ...existingTypes }
-      for (const [file, added] of imported.current) {
-        const category = fileTypes.get(file)
-        if (category) for (const doc of added) changes[doc.id] = category
+      for (const doc of existingDocuments) {
+        const category = existingTypes[doc.id]
+        if (
+          !doc.originalFilename ||
+          doc.ownerProjectId !== createdId.current ||
+          !documents.includes(doc.id) ||
+          !category ||
+          category === doc.category
+        )
+          continue
+        setProgress('Updating category: ' + doc.title)
+        await requestProject(
+          projectPath(createdId.current!) + '/documents/' + doc.id,
+          'PATCH',
+          { category },
+        )
       }
-      saveFileCategories(createdId.current!, changes)
+      if (!uploadOnly && project && Object.keys(existingTypes).length)
+        clearLegacyCategories(project.id)
       onSaved(createdId.current!)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save project.')
@@ -317,25 +340,27 @@ export function ProjectEditor({
                         <small>{d.edition}</small>
                       </span>
                     </label>
-                    {d.projectArtifact && documents.includes(d.id) && (
-                      <select
-                        aria-label={'Type for ' + d.title}
-                        value={existingTypes[d.id] ?? d.category}
-                        disabled={!!progress}
-                        onChange={(event) =>
-                          setExistingTypes((prev) => ({
-                            ...prev,
-                            [d.id]: event.target.value,
-                          }))
-                        }
-                      >
-                        {Object.entries(categoryLabels).map(([id, label]) => (
-                          <option key={id} value={id}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    )}
+                    {d.originalFilename &&
+                      d.ownerProjectId === project?.id &&
+                      documents.includes(d.id) && (
+                        <select
+                          aria-label={'Type for ' + d.title}
+                          value={existingTypes[d.id] ?? d.category}
+                          disabled={!!progress}
+                          onChange={(event) =>
+                            setExistingTypes((prev) => ({
+                              ...prev,
+                              [d.id]: event.target.value,
+                            }))
+                          }
+                        >
+                          {Object.entries(categoryLabels).map(([id, label]) => (
+                            <option key={id} value={id}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                   </div>
                 ))}
             </div>
@@ -390,7 +415,7 @@ export function ProjectEditor({
                   <select
                     aria-label={'Type for ' + file.name}
                     value={fileTypes.get(file) ?? ''}
-                    disabled={!!progress}
+                    disabled={!!progress || imported.has(file)}
                     onChange={(event) =>
                       setFileTypes((prev) =>
                         new Map(prev).set(file, event.target.value),
@@ -407,7 +432,7 @@ export function ProjectEditor({
                   <button
                     type="button"
                     aria-label={'Remove file ' + file.name}
-                    disabled={!!progress}
+                    disabled={!!progress || imported.has(file)}
                     onClick={() =>
                       setFiles((rows) => rows.filter((_, index) => index !== i))
                     }
@@ -417,13 +442,6 @@ export function ProjectEditor({
                 </li>
               ))}
             </ul>
-          )}
-          {(files.length > 0 ||
-            (!uploadOnly &&
-              existingDocuments.some((d) => d.projectArtifact))) && (
-            <small className="file-type-note">
-              File type choices are saved in this browser.
-            </small>
           )}
           <details className="project-details-fields" hidden={uploadOnly}>
             <summary>Project details</summary>

@@ -19,6 +19,8 @@ export type ProjectDocument = DocumentRecord & {
   id: string
   category: string
   projectArtifact?: boolean
+  originalFilename?: string
+  ownerProjectId?: string
   filename?: string
 }
 export type Collection = {

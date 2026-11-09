@@ -16,7 +16,9 @@ test('create from references and a categorized upload, then rename and reload', 
       pages: 2,
     }
     const uploaded = {
-      id: 'upload',
+      id: 'doc-abcd',
+      originalFilename: 'field.pdf',
+      ownerProjectId: 'ordinary',
       title: 'Field notes',
       label: 'Field notes',
       category: 'supporting',
@@ -33,7 +35,7 @@ test('create from references and a categorized upload, then rename and reload', 
     let project
     const docs = [ref]
     let submittedCategory
-    await page.route('**/*', async (route) => {
+    const serve = async (route) => {
       const url = new URL(route.request().url())
       assert.equal(url.hostname, 'localhost')
       const path = url.pathname
@@ -47,9 +49,16 @@ test('create from references and a categorized upload, then rename and reload', 
         json = { documents: [ref], collections: [collection] }
       else if (path.endsWith('/documents/import')) {
         submittedCategory = route.request().postDataJSON().category
+        uploaded.category = submittedCategory
         docs.push(uploaded)
         project.documentIds.push(uploaded.id)
         json = { project, documents: [uploaded] }
+      } else if (
+        path.endsWith('/projects/ordinary/documents/doc-abcd') &&
+        method === 'PATCH'
+      ) {
+        uploaded.category = route.request().postDataJSON().category
+        json = { document: uploaded, project }
       } else if (path.endsWith('/projects') && method === 'POST') {
         project = { ...route.request().postDataJSON(), id: 'ordinary' }
         json = { project }
@@ -72,7 +81,8 @@ test('create from references and a categorized upload, then rename and reload', 
           json: { error: 'Unknown endpoint' },
         })
       return route.fulfill({ json })
-    })
+    }
+    await page.route('**/*', serve)
     await page.goto('http://localhost/#projects')
     const button = (name) => page.getByRole('button', { name, exact: true })
     await button('New project').click()
@@ -81,13 +91,11 @@ test('create from references and a categorized upload, then rename and reload', 
       .getByRole('combobox', { name: 'Reference Collections' })
       .fill('municipal')
     await page.getByRole('option').first().click()
-    await page
-      .getByLabel('Add PDF files')
-      .setInputFiles({
-        name: 'field.pdf',
-        mimeType: 'application/pdf',
-        buffer: Buffer.from('%PDF-1.4'),
-      })
+    await page.getByLabel('Add PDF files').setInputFiles({
+      name: 'field.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.from('%PDF-1.4'),
+    })
     await page.getByLabel('Type for field.pdf').selectOption('report')
     await button('Create project').click()
     await page
@@ -115,6 +123,14 @@ test('create from references and a categorized upload, then rename and reload', 
     await page
       .locator('details.project-document-group')
       .filter({ has: page.getByRole('heading', { name: /Design documents/ }) })
+      .getByText('Field notes', { exact: true })
+      .waitFor()
+    const fresh = await browser.newPage()
+    await fresh.route('**/*', serve)
+    await fresh.goto('http://localhost/#project/ordinary')
+    await fresh
+      .locator('details.project-document-group')
+      .filter({ has: fresh.getByRole('heading', { name: /Design documents/ }) })
       .getByText('Field notes', { exact: true })
       .waitFor()
   } finally {

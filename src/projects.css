@@ -1304,8 +1304,3 @@ button.query-files:hover {
   font: inherit;
   padding: 3px;
 }
-.file-type-note {
-  display: block;
-  margin-top: 6px;
-  color: var(--color-secondary);
-}
