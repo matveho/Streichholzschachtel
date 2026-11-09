@@ -1,31 +1,25 @@
 # basis
 
-**Where did this number come from?** basis helps civil engineers trace a design decision back to the drawing, report or standard behind it. Open a project, query its drawings, reports and standards, then select a citation to see the highlighted passage in the original PDF.
+**Where did this number come from?** Civil engineers often need a drawing, a client brief and a design standard to check a single value. basis brings those documents into one project workspace. Ask a question about the project, then select a citation to see the passage or table row highlighted in the original PDF.
 
-[Open basis](https://streichholzschachtel.vercel.app/#projects) · Built for natHacks 2026 by team Streichholzschachtel.
+[Open basis](https://streichholzschachtel.vercel.app/#projects) · [Two-minute walkthrough](https://github.com/matveho/Streichholzschachtel/blob/main/DEMO.md) · [Source code](https://github.com/matveho/Streichholzschachtel)
+
+Built for natHacks 2026 by team Streichholzschachtel.
 
 ## Try a design review
 
-1. Open **Parkview Exchange Redevelopment**. Under **Potential issues**, inspect the sanitary upstream grade finding.
-2. Compare the proposed **0.30%** slope on drawing C101 with the EPCOR table in the adjacent viewer. The applicable row depends on the reach being upstream and its peak dry-weather flow. Select the table citation to inspect those conditions yourself.
-3. Open **North Ridge Highway Intersection Upgrade** and inspect the traffic and pavement inputs. Here the question is whether two project reports used the same traffic counts. Use **Query Files** to ask a follow-up within this project's documents.
+1. **Ask a live question.** Open **Parkview Exchange Redevelopment → New query**, enter “How long is sanitary pipe S1?” and select **Search**. Click the citation beside the answer to verify the **43 m** length in the project’s model register.
+2. **Check a finding across three documents.** Open **North Ridge Highway Intersection Upgrade**. Under **Potential issues**, expand **Crest sight distance is below the screening value** and select **Inspect evidence**. In the first paragraph, click citation **2** for the drawing’s **165 m** sight distance, **1** for the provincial guide’s **185 m** level-road value at 100 km/h, and **3** for the owner’s adoption of that value. The **20 m** difference gives the engineer a reason to check the survey and road grade.
 
-The demonstration projects pair fictional design packages with published engineering guidance. The comparison findings are prepared and linked to their evidence. Fresh queries search the active project's files locally. Engineers can inspect and dismiss a finding after review.
+The built-in projects pair synthetic design records with published standards. The North Ridge review is prepared and can be reopened immediately. New queries run on the backend workstation and search only the active project’s files. The hosted app requires that workstation and its HTTPS tunnel to be online.
 
 ## Run locally
 
-On Windows with **Node.js 24 or newer**, install the dependencies from the repository root:
+On Windows, download the repository, install **Node.js 24 or newer**, and run these commands from the repository root:
 
 ```powershell
 npm ci
 npm ci --prefix backend
 ```
 
-Double-click **Start basis.cmd** and choose **5** to open the workspace. For the full PDF extraction and table-reading setup, see the [backend guide](backend/README.md). The hosted frontend connects to the presentation computer over HTTPS, so that computer and its tunnel must be online for the public demo.
-
-## Inside the repository
-
-- [Frontend](src/) — React and TypeScript workspace with a PDF.js viewer.
-- [Backend](backend/) — project storage, local search, indexing and citation coordinates.
-- [Project packages](backend/demo/PROJECT-PACKAGES.md) — source provenance, engineering assumptions and the basis for each prepared comparison.
-- [API contract](backend/PROJECT_API.md) — project, document, query and finding endpoints.
+Double-click **Start basis.cmd** and choose **5** to open the workspace. The [backend guide](https://github.com/matveho/Streichholzschachtel/blob/main/backend/README.md) covers PDF extraction and table reading. The [project source notes](https://github.com/matveho/Streichholzschachtel/blob/main/backend/demo/PROJECT-PACKAGES.md) document the engineering assumptions and the evidence behind the prepared findings.
