@@ -16,12 +16,12 @@ for (const spec of projectPackages) {
   const detail = await request('/projects/' + spec.id)
   assert.equal(
     detail.documents.length,
-    spec.id === 'parkview-exchange' ? 17 : 18,
+    spec.id === 'parkview-exchange' ? 19 : 20,
   )
-  assert.equal(detail.issues.length, 4)
+  assert.equal(detail.issues.filter(issue=>issue.prepared).length,4)
   assert.ok(
     detail.issues.every(
-      (i) => i.verified && i.queryId && i.citations.length >= 2,
+      (i) => i.verified && i.queryId && i.citations.length >= (i.prepared ? 2 : 1),
     ),
   )
   const allowed = new Set(detail.documents.map((d) => d.id))
@@ -48,6 +48,8 @@ for (const spec of projectPackages) {
       'finished-floor': '672.250',
       'available-sight-distance': '165 m',
       'traffic-basis': '7,800',
+      's1-profile-options':'668.050',
+      'peak-movement-count':'420',
     }[q.id]
     assert.ok(text.includes(expected), text)
   }
@@ -79,6 +81,6 @@ for (const spec of projectPackages) {
     status: 'open',
   })
   console.log(
-    `PASS ${spec.id}: documents, four anchored findings, six query fixtures, fresh factual queries, isolation and dismissal`,
+    `PASS ${spec.id}: documents, four prepared findings plus IFC findings, all query fixtures, fresh factual queries, isolation and dismissal`,
   )
 }

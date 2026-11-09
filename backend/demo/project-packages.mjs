@@ -1,3 +1,4 @@
+import { supplementalRecords } from './supplemental-records.mjs'
 // Fictional project artifacts; governing publications remain unmodified originals.
 // All people, owners and consultant identities in these packages are invented.
 const doc = (file, title, code, category, date, pages, drawing) => ({
@@ -478,6 +479,7 @@ export const projectPackages = [
   },
 ]
 for (const p of projectPackages) {
+  p.documents.push(...supplementalRecords[p.id])
   p.queries = p.issues.map((i) => ({
     id: i.id,
     issueId: i.id,
@@ -529,3 +531,5 @@ projectPackages[1].queries.push(
     sourceOnly: true,
   },
 )
+projectPackages[0].queries.push({id:'s1-profile-options',question:'What is the downstream invert for S1 option A?',sourceOnly:true})
+projectPackages[1].queries.push({id:'peak-movement-count',question:'What are the traffic count worksheet approach totals?',sourceOnly:true})

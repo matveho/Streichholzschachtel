@@ -1,6 +1,6 @@
 # Project packages
 
-The first two workspaces are Parkview Exchange Redevelopment (`parkview-exchange`, PX-26017) and North Ridge Highway Intersection Upgrade (`north-ridge-highway`, NRH-26104). Each contains six fictional consultant/client artifacts, four manually prepared source-verified review findings plus a searchable IFC model register, and seven completed query fixtures. Three fixtures per project are produced by the actual offline extractive query engine; the other four are checked cross-document comparisons. Each IFC model is downloadable from its register; see [IFC models](IFC-MODELS.md). Existing Mill Creek and Willow Creek workspaces remain available.
+The first two workspaces are Parkview Exchange Redevelopment (`parkview-exchange`, PX-26017) and North Ridge Highway Intersection Upgrade (`north-ridge-highway`, NRH-26104). Each contains eight fictional consultant/client artifacts, four manually prepared source-verified review findings plus a searchable IFC model register, and eight completed query fixtures. Four fixtures per project are produced by the actual offline extractive query engine; the other four are checked cross-document comparisons. Each IFC model is downloadable from its register; see [IFC models](IFC-MODELS.md). Existing Mill Creek and Willow Creek workspaces remain available.
 
 ## Source and identity policy
 
@@ -40,3 +40,40 @@ Official discovery sources:
 Open Parkview, inspect the sanitary upstream-grade finding, click its original EPCOR table citation, then its C101 evidence. Return to the dashboard and inspect the shallow-cover finding to show the insulation qualification. Open North Ridge and inspect the traffic/pavement coordination finding; three different documents establish the design-basis mismatch. Completed history is immediately available; a fresh pipe-diameter or available-sight-distance question runs locally without hosted inference.
 
 Automated checks: full backend unit suite; `tests/project-packages.integration.mjs` for fresh factual queries and all new fixtures; `tests/presentation.smoke.mjs` for all protected workspaces, every PDF and browser source highlighting. `tests/demo-reset.integration.mjs` exercises restart/reset retention **only** on isolated ports 8840/8842. Never run destructive reset checks against the presenter's live state.
+
+## Supporting records added for project exploration
+
+Each first project now has two additional four-page records, with searchable
+numeric tables and original-PDF evidence. They are conspicuously marked
+**fictional training record**; no actual site observation or authority approval
+is claimed. Existing official publications, drawing PDFs and IFC files are unchanged.
+
+- **Parkview PX-UV-001:** datum and outside-surface level register, 1.650 m cover,
+  0.220 m crossing separation, verification work order and named release roles.
+- **Parkview PX-RFI-004:** open coordination request, S1 slope sensitivities
+  (0.129 m versus 0.430 m fall), fixed-endpoint alternatives, response matrix and
+  affected drawing revisions. These are alternatives, not an accepted redesign.
+- **North Ridge NRH-TC-001:** six simulated turning movements, 900 vehicles/hour
+  total, 100-trip development allocation, provenance and missing count QA.
+  Peak-hour counts are explicitly distinguished from adopted annual daily traffic.
+- **North Ridge NRH-IC-002:** traffic/pavement input comparison, 372 vehicles/day
+  difference, class-definition limitations, 2047 traffic horizon versus the
+  2027–2046 pavement accumulation period, and outstanding closeout evidence.
+
+Rebuild only the new records with:
+
+```sh
+backend/.venv/bin/python -m pip install 'reportlab>=4.4,<5'
+backend/.venv/bin/python backend/demo/build-project-packages.py --supplemental-only
+```
+
+After deployment, project document totals are Parkview 19 and North Ridge 20
+(including their standards and IFC registers). New saved factual lookups cover
+S1 fixed-endpoint geometry and base PM approach totals. Verify source citations
+and project isolation using the supplemental-records browser suite.
+
+The IFC comparison excludes explicitly unselected option sentences in project
+records when the same passage identifies them as an option study rather than a
+selected redesign. Issued/adopted values still compare. The supplemental
+records preserve Parkview's existing 13 IFC findings and all eight prepared
+findings across the two projects.

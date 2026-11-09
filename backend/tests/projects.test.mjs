@@ -235,7 +235,7 @@ test('researched packages have exact collection memberships and independent arti
     const scoped = store.scope(id)
     assert.equal(
       scoped.corpus.documents.filter((d) => d.projectArtifact).length,
-      7,
+      9,
     )
     assert.ok(
       scoped.corpus.documents.every(
@@ -446,7 +446,7 @@ test('prepared findings and histories are project-bound and anchored to original
     for (const query of history) {
       const job = api.raw(spec.id, query.id)
       assert.equal(api.serialize(job).stale, false)
-      assert.ok(job.result.references.length >= (query.sourceOnly ? 1 : 2))
+      assert.ok(job.result.references.length >= (query.sourceOnly ? 1 : 2), query.question)
       assert.ok(
         job.result.references.every(
           (r) =>

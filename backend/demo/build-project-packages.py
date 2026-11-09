@@ -1,7 +1,7 @@
 """Reproducible fictional project artifacts. Run with the bundled ReportLab Python.
 Official reference PDFs are never generated or modified by this script.
 """
-import json, math, subprocess
+import json, math, subprocess, sys
 from pathlib import Path
 from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor, Color, white
@@ -35,7 +35,7 @@ def frame(c,p,d,page,count,w,h):
     c.drawRightString(w-40,h-58,d['date'])
     c.setStrokeColor(LINE);c.line(40,52,w-40,52)
     c.setFillColor(GRAY);c.setFont('Helvetica',7.5)
-    c.drawString(40,39,'ISSUED FOR REVIEW | NOT FOR CONSTRUCTION')
+    c.drawString(40,39,'FICTIONAL TRAINING RECORD | NOT FOR CONSTRUCTION' if d.get('supplemental') else 'ISSUED FOR REVIEW | NOT FOR CONSTRUCTION')
     c.drawRightString(w-40,39,f"{d['code']} | Rev {'1' if 'rev1' in d['file'] else '0'} | {page} / {count}")
 
 def title(c,p,d,heading,w,h):
@@ -158,19 +158,22 @@ def drawing(c,p,d,idx,w,h):
 
 for p in DATA:
     for d in p['documents']:
+        if '--supplemental-only' in sys.argv and not d.get('supplemental'): continue
         path=ROOT/'output/pdf'/d['file'];path.parent.mkdir(parents=True,exist_ok=True)
         w,h=(1224,792) if d.get('drawing') else (612,792)
         c=canvas.Canvas(str(path),pagesize=(w,h),invariant=1,pageCompression=1)
         c.setAuthor('Cairnfield Civil Studio Ltd.');c.setTitle(p['name']+' - '+d['title'])
-        pages=d['pages'] if d.get('drawing') else [d['pages'][i:i+2] for i in range(0,len(d['pages']),2)]
+        pages=d['pages'] if d.get('drawing') else [[section] for section in d['pages']] if d.get('supplemental') else [d['pages'][i:i+2] for i in range(0,len(d['pages']),2)]
         for i,page in enumerate(pages):
             frame(c,p,d,i+1,len(pages),w,h)
             if d.get('drawing'):drawing(c,p,d,i,w,h)
             else:
                 yy=title(c,p,d,d['title'],w,h)
                 for j,section in enumerate(page):
-                    yy=text(c,f'{i*2+j+1}. {section[0]}',40,yy,w-80,ParagraphStyle('sub',parent=STYLE,fontName='Helvetica-Bold',fontSize=12,leading=17))
-                    for paragraph in section[1:]: yy=text(c,paragraph,40,yy,w-80)
+                    yy=text(c,f'{i+j+1 if d.get("supplemental") else i*2+j+1}. {section[0]}',40,yy,w-80,ParagraphStyle('sub',parent=STYLE,fontName='Helvetica-Bold',fontSize=12,leading=17))
+                    for paragraph in section[1:]:
+                        if isinstance(paragraph,dict): yy=table(c,paragraph['table'],40,yy,w-80)
+                        else: yy=text(c,paragraph,40,yy,w-80)
                 if i==0:
                     yy=table(c,[['Project','Issue information'],[p['projectNumber'],d['date']],[p['client'],'Issued for review'],['Prepared / checked','JL / AK']],40,yy-10,w-80,[260,272])
                 assert yy>70,(d['file'],i,yy)

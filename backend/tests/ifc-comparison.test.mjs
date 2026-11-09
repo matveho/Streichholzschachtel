@@ -308,3 +308,10 @@ test('generic width does not match another named width property', () => {
   assert.equal(result.issues.length, 0)
   assert.equal(result.coverage[0].checks, 2)
 })
+
+test('unselected option studies do not become IFC discrepancies, while adopted values still compare',()=>{
+ const report=docs.filter(doc=>doc.category==='report')
+ assert.equal(compare('These are geometric sensitivities, not a selected redesign. IND-LOCAL-02 option A design speed: 40 km/h.',report).issues.length,0)
+ assert.equal(compare('The adopted design is IND-LOCAL-02 option A design speed: 40 km/h.',report).issues.length,1)
+ assert.equal(compare('These are geometric sensitivities, not a selected redesign. IND-LOCAL-02 option A design speed: 40 km/h. IND-LOCAL-02 issued design speed: 45 km/h.',report).issues.length,1)
+})

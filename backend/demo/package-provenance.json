@@ -1,5 +1,5 @@
 {
-  "verifiedOn": "2026-11-08",
+  "verifiedOn": "2026-11-09",
   "projects": [
     {
       "projectId": "parkview-exchange",
@@ -183,6 +183,26 @@
           "sha256": "7ae9666e2e4500220cceb68565cfe22d7467f1c8bb8944218ddc33fa225e949f",
           "source": "",
           "origin": "synthetic-project-artifact"
+        },
+        {
+          "id": "doc-1c2f9d0bf45b",
+          "filename": "pxr_utility-verification-register_rev0_2026-10-06.pdf",
+          "title": "Utility verification and level reconciliation",
+          "edition": "Review copy · 2026-10-06",
+          "pageCount": 4,
+          "sha256": "1c2f9d0bf45b880653d051b2a13eae05380aac0c26b6051a73ff45ad8b32d231",
+          "source": "",
+          "origin": "synthetic-project-artifact"
+        },
+        {
+          "id": "doc-06a52677c279",
+          "filename": "pxr_rfi-004-east-corridor_rev0_2026-10-08.pdf",
+          "title": "RFI 004 — East corridor geometry and release decisions",
+          "edition": "Review copy · 2026-10-08",
+          "pageCount": 4,
+          "sha256": "06a52677c279fa80a3898711bced3b5a96b95dcd8dd7801e308647dd4f3f7383",
+          "source": "",
+          "origin": "synthetic-project-artifact"
         }
       ],
       "findings": [
@@ -198,7 +218,11 @@
               "design-guidelines.pdf",
               "For the upstream reaches of the sanitary system, where peak dry weather flow (DWF) is equal to or less than 1.5 L/s, the designer is to follow slopes per Table 1.1."
             ],
-            ["design-guidelines.pdf", "0.25â€“0.40 | 1.00", 8]
+            [
+              "design-guidelines.pdf",
+              "0.25â€“0.40 | 1.00",
+              8
+            ]
           ]
         },
         {
@@ -291,6 +315,11 @@
           "id": "ifc-object-query",
           "sourceOnly": true,
           "question": "What is the nominal pipe diameter of IFC object S1?"
+        },
+        {
+          "id": "s1-profile-options",
+          "question": "What is the downstream invert for S1 option A?",
+          "sourceOnly": true
         }
       ],
       "models": [
@@ -623,6 +652,26 @@
           "sha256": "2fb80129b93a3d15465d18b6e4e4e4357d2bd487c361474efe7e1bebb29d91bf",
           "source": "",
           "origin": "synthetic-project-artifact"
+        },
+        {
+          "id": "doc-c6ae89e99a0c",
+          "filename": "nrh_traffic-count-worksheet_rev0_2026-09-10.pdf",
+          "title": "Traffic count worksheet and dataset provenance",
+          "edition": "Review copy · 2026-09-10",
+          "pageCount": 4,
+          "sha256": "c6ae89e99a0c373033934da7e1367f2b79a955305e93697ec60ce29b1e188631",
+          "source": "",
+          "origin": "synthetic-project-artifact"
+        },
+        {
+          "id": "doc-4aaa68d0129b",
+          "filename": "nrh_traffic-pavement-interface_rev0_2026-09-23.pdf",
+          "title": "Traffic–pavement design-basis reconciliation",
+          "edition": "Review copy · 2026-09-23",
+          "pageCount": 4,
+          "sha256": "4aaa68d0129bc4551b6a80430d155bb8d52a2725160321762bd301a26d36a373",
+          "source": "",
+          "origin": "synthetic-project-artifact"
         }
       ],
       "findings": [
@@ -727,6 +776,11 @@
           "id": "ifc-object-query",
           "sourceOnly": true,
           "question": "What is the thickness of IFC object PAV-ACP?"
+        },
+        {
+          "id": "peak-movement-count",
+          "question": "What are the traffic count worksheet approach totals?",
+          "sourceOnly": true
         }
       ],
       "models": [

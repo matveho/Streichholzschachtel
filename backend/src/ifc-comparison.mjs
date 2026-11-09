@@ -270,6 +270,8 @@ export function compareIfcDocuments(models, documents, passages) {
       ]
       for (const source of chunks) {
         const chunk = source.text
+        // Unselected alternatives are review scenarios, not the issued model basis.
+        if (doc.projectArtifact && /\b(?:not a selected redesign|option study only|no option (?:is|has been) selected)\b/i.test(passage.text) && /\boption [a-z]\b/i.test(chunk)) continue
         for (const model of models) {
           const mentioned = new Set(
             model.elements
