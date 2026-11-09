@@ -59,8 +59,7 @@ and checks GPU residency before changing the backend mode. Weights require about
 22 GB storage. Verified inference used 21.78 GB VRAM at 16K context. The pinned
 Ollama runtime is 0.40.15, private on 127.0.0.1:11435 with cloud disabled, one
 loaded model and one concurrent inference request. No system CUDA toolkit or
-driver changes are needed. Model provenance and evaluation details are in
-[REASONING_UPGRADE.md](REASONING_UPGRADE.md).
+driver changes are needed.
 
 Immediate rollback, independent of model availability:
 
@@ -151,10 +150,13 @@ extraction, generation policy, model alias or engine fingerprints change.
 
 ## Public access and workstation limits
 
-The authorized demo already uses Ubuntu through the existing outbound HTTPS
-Quick Tunnel and Vercel project rewrite. See [VERCEL_UBUNTU.md](VERCEL_UBUNTU.md)
-for the current origin, routing and public rollback procedure. Backend-only mode
-changes do not need a frontend deployment. Never reset state during a cutover.
+The public frontend forwards `/local-api` through a Vercel project-level route
+to the Ubuntu gateway's outbound HTTPS Quick Tunnel. Check the active route in
+Vercel when diagnosing connectivity. If the tunnel hostname changes, validate
+the new origin before promoting the updated route. For rollback, preserve any
+new project writes, verify the replacement backend and its data, and route
+traffic to its reachable origin. The former Windows destination is offline.
+Verify project loading and a cited PDF through the public site after switching.
 
 Verified workstation: Ubuntu 24.04, Node 24.22.2, Python 3.12.3, RTX PRO 5000
 Blackwell with NVIDIA 580.95.05. User services work, but Linger=no: keep the login

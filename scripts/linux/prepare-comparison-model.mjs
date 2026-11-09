@@ -22,7 +22,7 @@ for (let i = 0; i < 40; i++) {
   }
 }
 if (!tags.models.some(m => m.name === source && m.digest === digest))
-  throw Error('Install the evaluated Qwen3.5 model and verify its digest; see backend/REASONING_UPGRADE.md. Backend mode was not changed.')
+  throw Error(`Expected ${source} with digest ${digest} on the local model service. See backend/UBUNTU.md.`)
 const existing = tags.models.find(m => m.name === model)
 if (existing && existing.digest !== digest) throw Error('The pinned comparison alias has an unexpected digest. Backend mode was not changed.')
 if (!existing) await api('/api/copy', { source, destination: model })
