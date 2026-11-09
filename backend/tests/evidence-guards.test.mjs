@@ -1,6 +1,17 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {evidenceInterpretationIssue as issue, recommendationLanguage} from '../src/evidence-guards.mjs'
+test('an inline conditional service cannot become an unconditional installation duty',()=>{
+ const source='Lots zoned for semi-detached or multi-family residential land use, where construction of side-by-side units are anticipated, one water, one sanitary and if required, one storm service line shall be provided for each unit directly off EPCOR sewer mains.'
+ assert.match(issue('Conventional storm servicing requires one storm service line per unit directly off EPCOR sewer mains.',source),/conditional/)
+ assert.match(issue('Storm service lines must be provided for each unit.',source),/conditional/)
+ assert.equal(issue('If required, one storm service line shall be provided for each unit directly off EPCOR sewer mains.',source),null)
+ assert.equal(issue('One storm service line shall be provided for each unit, where required.',source),null)
+ assert.equal(issue('Confirm whether the storm service line is required for this project.',source),null)
+ assert.equal(issue('One water service line shall be provided for each unit.',source),null)
+ assert.match(issue('A water service line is provided if required and a storm service line must be installed for every unit.',source),/conditional/)
+ assert.match(issue('If required, one storm service line shall be provided; every storm service line must be installed for each unit.',source),/conditional/)
+})
 test('matching numbers cannot equate pipe cover with invert-to-curb depth',()=>{
  const source='The depth of a storm service pipe at the property line shall be 2.0 m from invert elevation to finished curb top grade.'
  const claim='The project storm service cover of 2.0 m meets the requirement for 2.0 m from invert to curb grade.'

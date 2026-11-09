@@ -147,7 +147,7 @@ export function attachReviewCoverage(result, topics = [], plan, checked) {
       id: group?.id || `unresolved-${index}`,
       title: topic.heading,
       status: findings.length
-        ? coverage && coverage.citedSourceCount < coverage.selectedSourceCount
+        ? open.length || (coverage && coverage.citedSourceCount < coverage.selectedSourceCount)
           ? 'partial_findings'
           : 'findings_available'
         : evidence.length
@@ -188,7 +188,7 @@ export function attachReviewCoverage(result, topics = [], plan, checked) {
             {
               heading: 'Review coverage',
               sentences: checks.map((c) => ({
-                text: `${c.title}: ${c.sharedWith?.length ? 'Source evidence shared with ' + c.sharedWith.join('; ') : labels[c.status]}.${c.evidenceCoverage ? ` ${c.evidenceCoverage.citedSourceCount} of ${c.evidenceCoverage.selectedSourceCount} selected source provisions cited in findings; ${c.evidenceCoverage.sourceOnlyCount} source-only; ${c.evidenceCoverage.unreportedSourceCount} not reported.` : ''}`,
+                text: `${c.title}: ${c.sharedWith?.length ? 'Source evidence shared with ' + c.sharedWith.join('; ') : c.limitations?.length && c.status === 'partial_findings' ? 'Partial findings; this check remains unresolved' : labels[c.status]}.${c.evidenceCoverage ? ` ${c.evidenceCoverage.citedSourceCount} of ${c.evidenceCoverage.selectedSourceCount} selected source provisions cited in findings; ${c.evidenceCoverage.sourceOnlyCount} source-only; ${c.evidenceCoverage.unreportedSourceCount} not reported.` : ''}`,
               })),
             },
           ]

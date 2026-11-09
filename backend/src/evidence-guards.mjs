@@ -9,6 +9,8 @@ export function recommendationLanguage(text) {
   return /\b(?:should|preferred|recommend(?:ed|ation)?)\b/i.test(modality)
 }
 export function evidenceInterpretationIssue(claim, source, question = '', {projectEvidence = ''} = {}) {
+  if (dropsConditionalItem(claim, source))
+    return 'The cited item is conditional on being required or applicable. Preserve that condition for this item; an adjacent mandatory item does not establish an unconditional installation duty.'
   const precedence = /\b(?:overrides?|supersedes?|waives?|takes? precedence)\b/i
   if (!/\b(?:overrid\w*|supersed\w*|waiv\w*|precedence|notwithstanding)\b/i.test(source)) {
     for (const sentence of claim.split(/[;!?]|\.(?=\s|$)/)) {
@@ -75,6 +77,27 @@ export function evidenceInterpretationIssue(claim, source, question = '', {proje
   if (/\b(?:unless|except)\b/i.test(claim) && absoluteLimits.some(match => claim.includes(match[1]) && claim.includes(match[2])))
     return 'The finding combines an absolute limit with an exception. Separate the design target from the absolute prohibition and preserve each condition.'
   return null
+}
+
+// A shared "shall" must not erase an inline condition on one item in a list.
+export function dropsConditionalItem(claim, source) {
+  const items = [...source.matchAll(/\b(?:if|where|when)\s+(?:required|necessary|applicable)\s*,?\s+(?:(?:a|an|one|the|each|any)\s+)?([a-z]+(?:[ -][a-z]+){0,5}?)\s+(?:shall|must)\s+(?:be\s+)?(?:provided|installed|included|constructed)\b/gi)]
+  for (const item of items) {
+    const words = item[1].trim().split(/[ -]+/)
+    if (words.length < 2) continue
+    const noun = words.map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + 's?').join('[ -]+')
+    const object = new RegExp('\\b' + noun + '\\b', 'i')
+    const gap = '(?:(?!\\b(?:and|but)\\b)[^;!?]){0,70}'
+    const qualified = new RegExp(
+      '\\b(?:if|where|when)\\s+(?:required|necessary|applicable|needed)\\b' + gap + '\\b' + noun + '\\b|' +
+      '\\b' + noun + '\\b' + gap + '\\b(?:if|where|when)\\s+(?:required|necessary|applicable|needed)\\b|' +
+      '\\b(?:if|where|when|confirm whether|determine whether|verify whether)\\b' + gap + '\\b' + noun + '\\b' + gap + '\\b(?:required|necessary|applicable|needed)\\b', 'i')
+    for (const clause of claim.split(/[;!?]|\.(?=\s|$)/)) {
+      if (!object.test(clause) || !/\b(?:must|shall|requires?|required|needs?|provid(?:e|ed)|install(?:ed)?|construct(?:ed)?)\b/i.test(clause)) continue
+      if (!qualified.test(clause)) return true
+    }
+  }
+  return false
 }
 
 const countWords = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve']

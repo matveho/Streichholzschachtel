@@ -257,15 +257,22 @@ export async function draftLocal(
         // calculations, findings and their independent evidence review.
         { ...options, reasoning: false },
       )
-      unresolved.push(...(selected.unresolved || []))
+      // Selection explanations are unverified model prose, not findings or
+      // actionable engineering instructions. Bind open work to its planned
+      // check so the review register and public notes use the same identity.
+      if (selected.answerable !== true || selected.unresolved?.length)
+        unresolved.push(topic.heading)
       if (selected.answerable !== true) {
-        if (!selected.unresolved?.length) unresolved.push(topic.heading)
         continue
       }
       const selectedUnits = [...new Set(selected.evidence || [])]
         .filter((id) => byLabel.has(id))
         .slice(0, 12)
         .map((id) => byLabel.get(id))
+      if (!selectedUnits.length) {
+        if (!unresolved.includes(topic.heading)) unresolved.push(topic.heading)
+        continue
+      }
       selectedTopics.set(topic.heading, selectedUnits.map(evidenceUnitKey))
       const chosen = [...selectedUnits, ...linkedTableEvidence(selectedUnits, ranked), ...relatedCriteriaEvidence(selectedUnits, ranked, topic.scope || topic.query), ...linkedProcedureEvidence(selectedUnits, ranked, topic.scope || topic.query)]
         .filter((u) => {

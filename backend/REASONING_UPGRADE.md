@@ -527,3 +527,73 @@ The isolated quantitative examples use `all` explicitly; these results do not
 qualify unrestricted synthesis or enable general calculation requests in the
 public deployment. Broader applicability and complex interpretation remain
 unqualified as recorded above.
+
+## Dense-model follow-up and inline conditional duties
+
+After the arithmetic release, the original eight-case engineering suite
+`run-gpu-bgQAN3zF` passed 5/8 in 190 seconds. The minor-system, damaged-LID,
+shallow-soil exemption, exact-area boundary and field-test-count cases passed.
+Infill replacement, frost-cover interpretation and expanded-capacity review
+remained incomplete. These are unchanged interpretation gates, not the separate
+explicit-basis arithmetic checks. This is not unrestricted synthesis qualification.
+
+Manual review found an additional infill defect: a finding made a per-unit storm
+service unconditional even though its source said “if required.” The adjacent
+water and sanitary items share a “shall” but do not establish that condition.
+A new veto preserves inline conditions on their own noun phrase, including
+plural forms. A condition on a different item or in a separate clause cannot
+qualify the unconditional assertion. It retains the original conditional wording
+and practical confirmation requests. Regression `run-YoKBflzl` passed 282/282
+unit tests plus OCR, isolated project APIs, imports, isolation and restart
+persistence after this guard.
+
+One additional candidate was downloaded from Ollama for evaluation:
+`qwen3.5:27b-q4_K_M`, digest
+`64ae5b1d651fb2709d5928ccb8dcfb4bb2cc9c2c8001ac34497e36a6cf905b59`.
+The runtime identifies it as dense `qwen35`, 26.9B, Q4_K_M. It is fully
+GPU-resident at 16,384 context tokens using 17,643,423,661 bytes. The isolated
+engineering evaluation uses the same application, non-thinking setting and
+test gates, with the inline-condition veto above added after the preceding
+35B run. Production configuration has not changed.
+
+Candidate `run-gpu-2fBvK9jy` was stopped after four completed cases: minor-system
+passed (84 seconds); infill, frost cover and expanded capacity failed (121, 82
+and 70 seconds). Four cases were not completed; this is **1/4 completed**, not
+a full-suite result. Its best possible eight-case score could only match the
+preceding 5/8, while these four cases alone took 357 seconds versus 190 seconds
+for that entire 35B run. No correctness gain justified continuing or switching
+the live model. The partial assessment and original job reports remain in the
+isolated verification directory. The pinned comparison model was restored and
+confirmed fully GPU-resident after stopping the candidate.
+
+The candidate also exposed unverified source-selection explanations in public
+limitations, including internal document IDs and incomplete prose. Open work
+now binds to its planned engineering check. Selector explanations cannot become
+uncited instructions or public findings; invalid/empty selections remain open.
+The review register retains `partial_findings` when a check has a known open
+limitation, even if every selected provision has a citation. Citation coverage
+does not close that limitation. Regression tests cover the public register,
+fabricated selector instructions, invalid source IDs and conditional wording.
+
+Final regression `run-KoyooJH5` passed 284/284 unit tests, OCR, isolated project
+APIs, imports, isolation and restart persistence. The production comparison
+profile passed all nine capability checks in `run-gpu-XjfPRZo3` and rejected
+foreign-project selection before inference. Browser `run-browser-FJ9L5jCn`
+passed query submission, partial-check coverage, source-use invariants, an
+original PDF highlight and persisted report reload. These checks qualify the
+reporting/condition fixes; they do not qualify unrestricted engineering synthesis.
+
+Reproduce the candidate application evaluation without changing the live
+backend configuration:
+
+```bash
+LOCAL_REASONING=0 LOCAL_SYNTHESIS_POLICY=all BASIS_QUALITY_SUITE=engineering \
+  scripts/linux/test-gpu-quality qwen3.5:27b-q4_K_M
+```
+
+The local Ollama service allows one loaded model. Benchmarking a different
+candidate can evict the comparison model and require it to reload on the next
+public query. Run benchmarks sequentially during an idle interval, and restore
+the pinned model with `node scripts/linux/prepare-comparison-model.mjs` when
+evaluation finishes. The inference runtime and all test servers remain on
+loopback; candidate downloads do not change the production model selection.

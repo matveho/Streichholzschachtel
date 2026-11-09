@@ -2,6 +2,22 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { attachReviewCoverage } from '../src/review-coverage.mjs'
 
+test('citing every selected provision cannot close a check with a known unresolved limitation', () => {
+  const source = { passage: { doc: 'guide', page: 1 }, excerpt: 'The Engineer shall inspect the storm service.', quoteStart: 0 }
+  const finding = { check: 'inspection', text: source.excerpt, evidence: [source] }
+  const result = attachReviewCoverage(
+    { report: [], references: [{ id: '1', doc: 'guide', page: 1, quoteStart: 0, excerpt: source.excerpt }] },
+    [{ heading: 'Inspection' }],
+    { groups: [{ id: 'inspection', heading: 'Inspection', units: [source] }], unresolved: ['Inspection'] },
+    { sections: [{ claims: [finding] }] },
+  )
+  assert.equal(result.review.checks[0].evidenceCoverage.citedSourceCount, 1)
+  assert.equal(result.review.checks[0].evidenceCoverage.selectedSourceCount, 1)
+  assert.equal(result.review.checks[0].status, 'partial_findings')
+  assert.deepEqual(result.review.checks[0].limitations, ['Inspection'])
+  assert.match(result.report[0].sentences[0].text, /this check remains unresolved/)
+})
+
 test('review coverage preserves requested checks without claiming full compliance', () => {
   const result = { report: [], references: [] }
   const topics = [
