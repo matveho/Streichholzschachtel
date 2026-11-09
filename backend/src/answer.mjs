@@ -6,7 +6,8 @@ import { testingCountGap, capacityDifferenceGap } from './answer-completeness.mj
 import { attachReferenceCriteria, supplementaryReferenceCriteria } from './related-criteria.mjs'
 import { config } from './config.mjs'
 import { pipeProjectMeasurementIssue, pipeProjectMeasurements, attachProjectMeasurements } from './project-measurements.mjs'
-import {findDemoReview} from '../demo/review-scenarios.mjs'
+import {findDemoReview,capacityReviewDefinition} from '../demo/review-scenarios.mjs'
+import {capacityReviewRequest} from './capacity-review-inputs.mjs'
 import {SearchIndex} from './search.mjs'
 import {workedCapacityReview} from './worked-capacity-review.mjs'
 import { permitsLocalSynthesis, hasPairedProjectComparison, localSynthesisWorkflow } from './generation-policy.mjs'
@@ -896,14 +897,22 @@ async function answerFromUnits(
 }
 
 export async function answer(question, searchIndex, options) {
-  const example=!options.sourceOnly && !config.extractiveOnly && config.localSynthesis && config.provider!=='extractive' && config.localSynthesisPolicy==='demo' ? findDemoReview(question,searchIndex.corpus.documents) : null
+  const canReview=!options.sourceOnly && !config.extractiveOnly && config.localSynthesis && config.provider!=='extractive' && config.localSynthesisPolicy==='demo' && !foreignJurisdiction(question,searchIndex.corpus.documents)
+  const example=canReview?findDemoReview(question,searchIndex.corpus.documents):null
+  if(canReview&&!example&&capacityReviewDefinition(searchIndex.corpus.documents)){
+    const request=capacityReviewRequest(question)
+    if(request.matched&&request.fields.length){
+      const result=renderResult([{heading:'Review inputs required',claims:request.fields.map(field=>({text:`${field.label} (${field.unit}): ${field.reason}`,evidence:[]}))}],searchIndex.corpus,options.publicBase,options.token,'insufficient_evidence',['Capacity calculations are withheld until the supplied review inputs are complete and unambiguous.'])
+      return {...result,requiredInputs:{kind:'capacity_review_inputs',fields:request.fields,action:'Complete the named review inputs and run the revised search.'}}
+    }
+  }
   if (example) {
     const selected=new Set(example.documentIds)
     const corpus=searchIndex.corpus
     searchIndex=new SearchIndex({...corpus,documents:corpus.documents.filter(document=>selected.has(document.id)),passages:corpus.passages.filter(passage=>selected.has(passage.doc)),units:(corpus.units||[]).filter(unit=>selected.has(unit.doc))})
   }
   const worked=example?workedCapacityReview(question,searchIndex,example):null
-  const response=worked?renderResult(worked.sections,searchIndex.corpus,options.publicBase,options.token,'verified_review',['Source-verified worked review. Supplied scenario figures are assumptions; source applicability and engineering approval require review.']):example?{...await answerFromUnits(question,searchIndex,{...options,sourceOnly:true}),mode:'insufficient_evidence',requiredInputs:{kind:'worked_review_basis',action:'Confirm the worked review source documents and supplied inputs before completing this calculation.'}}:await answerCore(question,searchIndex,options)
+  const response=worked?{...renderResult(worked.sections,searchIndex.corpus,options.publicBase,options.token,'verified_review',['Source-verified worked review. Supplied scenario figures are assumptions; source applicability and engineering approval require review.']),reviewInputs:worked.inputs}:example?{...await answerFromUnits(question,searchIndex,{...options,sourceOnly:true}),mode:'insufficient_evidence',requiredInputs:{kind:'worked_review_basis',action:'Confirm the worked review source documents and supplied inputs before completing this calculation.'}}:await answerCore(question,searchIndex,options)
   const result=attachProjectMeasurements(response,question)
   return example ? {...result,reviewExample:{id:example.id,title:example.title,documentIds:example.documentIds},notes:[...(result.notes||[]),'Worked scenario: supplied figures are assumptions; this review uses the identified drainage design references.']} : result
 }

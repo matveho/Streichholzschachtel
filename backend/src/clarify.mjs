@@ -170,6 +170,9 @@ const refine = (question, label) =>
  * 'jurisdiction' or 'off_topic'.
  */
 export function assistQuery(question, searchIndex, result) {
+  if(result.requiredInputs?.kind==='capacity_review_inputs')return {
+    outcome:'vague',details:result.requiredInputs.fields.map(field=>`${field.label} (${field.unit}): ${field.reason}`),clarifications:[],
+  }
   const index = (searchIndex.unitIndex ??= new UnitIndex(searchIndex.corpus))
   const documents = index.corpus.documents
   const asked = stems(question)

@@ -38,9 +38,19 @@ For a live what-if, submit the same capacity question with `42 ha` changed to
 `55 ha` and `1.20 m³/s` changed to `1600 L/s`. The worksheet reads the source
 again and recalculates `2.00 m³/s` and a `1.10 m³/s` capacity difference. Areas
 and positive flow values are editable; both `m³/s` and `L/s` are supported.
-This remains a bounded worksheet with the same question structure and named
-references. Changed engineering conditions or additional tasks use ordinary
-retrieval, and an unsupported source condition withholds the worksheet.
+The question can also be phrased as a practical review request:
+
+> Review storm sewer capacity and detention pond sizing for a 55 ha catchment.
+> Five-year runoff: 1600 L/s. Existing sewer capacity: 900 L/s.
+> Is the Rational Method suitable?
+
+The worksheet binds values to those named inputs; changing sentence order does
+not change their roles. Omitting the runoff asks specifically for the five-year
+runoff and its unit. Conflicting inputs withhold calculations. Converted flows
+are shown explicitly, and supplied values remain assumptions. This is a bounded
+capacity-and-pond-method review against the named references. Unsupported
+conditions or approval requests use ordinary retrieval, and an unsupported
+source condition withholds the worksheet.
 Other unqualified general reviews retain source retrieval.
 
 IFC findings compare model properties with project/reference records; they are

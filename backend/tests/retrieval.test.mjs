@@ -54,11 +54,23 @@ test('the worked capacity review reads live source rules and computes changed in
   [example.question.replace('1.20 m³/s','1200 L/s').replace('0.90 m³/s','900 L/s'),[1.5,.6]],
   [example.question.replace('1.20 m³/s','1200 L/s').replace('0.90','1.70'),[1.5,-.2]],
   [example.question.replace('0.90','1.50'),[1.5,0]],
+  [example.question.replace('1.20 m³/s','1.20 L/s').replace('0.90','1.20'),[.0015,-1.1985]],
+  ['Review storm sewer capacity and detention pond sizing for a 55 ha catchment. Five-year runoff: 1600 L/s. Existing sewer capacity: 900 L/s. Is the Rational Method suitable?',[2,1.1]],
+  ['Existing sewer capacity: 2 m3/s. Check storm sewer capacity and detention pond sizing. Catchment area: 75 ha. Five-year runoff: 2.5 m3/s. Is the Rational Method suitable?',[3.125,1.125]],
  ]){
   const changed=await answer(question,scoped,{publicBase:'http://localhost',token:'test',signal:new AbortController().signal})
   assert.equal(changed.mode,'verified_review',question)
   assert.deepEqual(changed.arithmeticReview.calculations.map(step=>step.value),expected)
+  assert.equal(changed.reviewInputs.origin,'question')
+  assert.equal(changed.reviewInputs.verifiedAgainstDocuments,false)
  }
+ const missing=await answer('Review storm sewer capacity and detention pond sizing for a 55 ha catchment. Existing sewer capacity: 900 L/s. Is the Rational Method suitable?',scoped,{publicBase:'http://localhost',token:'test'})
+ assert.equal(missing.mode,'insufficient_evidence')
+ assert.deepEqual(missing.requiredInputs.fields.map(field=>field.key),['fiveYearRunoff'])
+ assert.equal(missing.references.length,0)
+ assert.doesNotMatch(JSON.stringify(missing.report),/1\.25|2\.00|1\.10/)
+ const foreign=await answer('Review storm sewer capacity and detention pond sizing for a 55 ha catchment in Toronto. Five-year runoff: 1600 L/s. Existing sewer capacity: 900 L/s. Is the Rational Method suitable?',scoped,{publicBase:'http://localhost',token:'test'})
+ assert.notEqual(foreign.mode,'verified_review')
  const boundary=await answer(example.question.replace('28 ha to 42 ha','20 ha to 30 ha'),scoped,{publicBase:'http://localhost',token:'test',signal:new AbortController().signal})
  assert.equal(boundary.mode,'insufficient_evidence')
  assert.equal(boundary.requiredInputs.kind,'worked_review_basis')

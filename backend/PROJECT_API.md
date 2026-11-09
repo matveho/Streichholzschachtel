@@ -47,6 +47,13 @@ quotations and supplied inputs at request time; it is not a stored model answer.
 `applicabilityConfirmed` remains false. Other general queries retain the
 extractive path. See [DEMO.md](DEMO.md) for preparation and presentation.
 
+Capacity reviews also accept role-labelled natural wording. `reviewInputs`
+identifies the supplied area, five-year runoff and existing sewer capacity,
+including normalized flow values; `verifiedAgainstDocuments` remains false.
+Missing or conflicting values return `requiredInputs.kind:
+"capacity_review_inputs"` with named `fields` and no calculated answer. The
+clarification layer presents those fields instead of generic pipe parameters.
+
 ## Isolation
 
 IFC comparisons resolve supported explicit SI property units and project-default

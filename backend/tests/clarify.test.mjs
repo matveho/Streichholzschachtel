@@ -4,6 +4,14 @@ import { SearchIndex } from '../src/search.mjs'
 import { lookup, UnitIndex } from '../src/lookup.mjs'
 import { assistQuery } from '../src/clarify.mjs'
 
+test('capacity review clarification requests the exact missing engineering input, without generic pipe parameters',()=>{
+ const fields=[{key:'fiveYearRunoff',label:'Five-year runoff estimate',unit:'m³/s or L/s',reason:'State the flow with its unit.'}]
+ const assist=assistQuery('Check sewer capacity and pond method.',{}, {requiredInputs:{kind:'capacity_review_inputs',fields}})
+ assert.equal(assist.outcome,'vague')
+ assert.deepEqual(assist.details,['Five-year runoff estimate (m³/s or L/s): State the flow with its unit.'])
+ assert.deepEqual(assist.clarifications,[])
+})
+
 const doc = (id, label, title) => ({
   id,
   label,

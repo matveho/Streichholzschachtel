@@ -25,6 +25,10 @@ export const demoStories = [
 ]
 
 export function findDemoReview(question, documents) {
+  return capacityReviewInputs(question)?capacityReviewDefinition(documents):undefined
+}
+
+export function capacityReviewDefinition(documents) {
   const available = new Set(documents.map(document=>document.id))
-  return demoReviews.find(review=>review.id==='catchment-capacity-and-storage' && capacityReviewInputs(question) && (review.documentIds||review.requiredDocumentIds).every(id=>available.has(id)))
+  return demoReviews.find(review=>review.id==='catchment-capacity-and-storage' && (review.documentIds||review.requiredDocumentIds).every(id=>available.has(id)))
 }
