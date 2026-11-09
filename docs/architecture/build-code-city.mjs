@@ -135,7 +135,6 @@ const districts = [
       be('clarify'),
       be('calculations'),
       be('local-evidence'),
-      be('claude'),
       be('model'),
       be('entailment'),
       be('query-suggestions'),

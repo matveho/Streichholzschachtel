@@ -13,39 +13,35 @@ window.CITY = {
    "items": [
     {
      "name": "ProjectApp",
-     "loc": 1099
+     "loc": 1117
     },
     {
      "name": "App",
-     "loc": 716
+     "loc": 652
     },
     {
      "name": "ProjectEditor",
-     "loc": 467
+     "loc": 526
     },
     {
      "name": "QueryAssist",
      "loc": 380
     },
     {
-     "name": "backend",
-     "loc": 351
-    },
-    {
-     "name": "data",
-     "loc": 342
-    },
-    {
      "name": "PdfPane",
-     "loc": 312
+     "loc": 367
+    },
+    {
+     "name": "ScopedQueryBar",
+     "loc": 267
     },
     {
      "name": "DocumentMinimap",
      "loc": 264
     },
     {
-     "name": "additionalExamples",
-     "loc": 244
+     "name": "backend",
+     "loc": 251
     },
     {
      "name": "useQueryTabs",
@@ -53,7 +49,11 @@ window.CITY = {
     },
     {
      "name": "WorkspaceSettings",
-     "loc": 153
+     "loc": 160
+    },
+    {
+     "name": "ProjectDocumentReader",
+     "loc": 118
     },
     {
      "name": "projects",
@@ -64,19 +64,23 @@ window.CITY = {
      "loc": 97
     },
     {
-     "name": "QueryReport",
-     "loc": 84
+     "name": "ScanDetails",
+     "loc": 92
     },
     {
-     "name": "QueryHome",
-     "loc": 70
+     "name": "QueryReport",
+     "loc": 83
+    },
+    {
+     "name": "SearchDiagnostics",
+     "loc": 59
     },
     {
      "name": "AppHeader",
      "loc": 54
     }
    ],
-   "total": 4968,
+   "total": 4822,
    "tanks": null
   },
   {
@@ -90,20 +94,20 @@ window.CITY = {
    ],
    "items": [
     {
+     "name": "project-api",
+     "loc": 828
+    },
+    {
      "name": "control",
      "loc": 737
     },
     {
-     "name": "project-api",
-     "loc": 717
-    },
-    {
      "name": "server",
-     "loc": 598
+     "loc": 608
     },
     {
      "name": "project-store",
-     "loc": 462
+     "loc": 483
     },
     {
      "name": "demo-gateway",
@@ -115,18 +119,18 @@ window.CITY = {
     },
     {
      "name": "project-imports",
-     "loc": 100
-    },
-    {
-     "name": "config",
-     "loc": 93
+     "loc": 131
     },
     {
      "name": "project-evidence",
-     "loc": 87
+     "loc": 122
+    },
+    {
+     "name": "config",
+     "loc": 105
     }
    ],
-   "total": 3127,
+   "total": 3347,
    "tanks": null
   },
   {
@@ -171,39 +175,35 @@ window.CITY = {
    "items": [
     {
      "name": "answer",
-     "loc": 1191
+     "loc": 1414
     },
     {
      "name": "local-synthesis",
-     "loc": 435
-    },
-    {
-     "name": "applicability",
-     "loc": 322
+     "loc": 579
     },
     {
      "name": "ifc-comparison",
-     "loc": 300
+     "loc": 415
     },
     {
-     "name": "clarify",
-     "loc": 234
+     "name": "applicability",
+     "loc": 407
     },
     {
      "name": "calculations",
-     "loc": 232
+     "loc": 320
+    },
+    {
+     "name": "clarify",
+     "loc": 250
     },
     {
      "name": "local-evidence",
      "loc": 207
     },
     {
-     "name": "claude",
-     "loc": 190
-    },
-    {
      "name": "model",
-     "loc": 166
+     "loc": 173
     },
     {
      "name": "entailment",
@@ -214,7 +214,7 @@ window.CITY = {
      "loc": 78
     }
    ],
-   "total": 3444,
+   "total": 3932,
    "tanks": null
   },
   {
@@ -233,22 +233,22 @@ window.CITY = {
     },
     {
      "name": "search",
-     "loc": 360
+     "loc": 361
+    },
+    {
+     "name": "retrieval-plan",
+     "loc": 329
     },
     {
      "name": "catalog",
      "loc": 303
     },
     {
-     "name": "retrieval-plan",
-     "loc": 254
-    },
-    {
      "name": "source-lookup",
      "loc": 81
     }
    ],
-   "total": 1809,
+   "total": 1885,
    "tanks": null
   },
   {
@@ -263,7 +263,7 @@ window.CITY = {
    "items": [
     {
      "name": "indexer",
-     "loc": 701
+     "loc": 705
     },
     {
      "name": "units",
@@ -271,7 +271,7 @@ window.CITY = {
     },
     {
      "name": "evidence-units",
-     "loc": 241
+     "loc": 279
     },
     {
      "name": "extract",
@@ -282,7 +282,7 @@ window.CITY = {
      "loc": 40
     }
    ],
-   "total": 1389,
+   "total": 1431,
    "tanks": null
   },
   {
@@ -303,7 +303,7 @@ window.CITY = {
     ],
     [
      "Project PDFs",
-     "20 PDFs"
+     "24 PDFs"
     ],
     [
      "IFC models",
