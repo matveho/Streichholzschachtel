@@ -38,3 +38,23 @@ test('model revisions and missing source evidence cannot refresh an obsolete IFC
   assert.equal(writes.length,0)
  }
 })
+test('serialized IFC revision metadata survives persistence and legacy reports still revalidate',()=>{
+ const {api,old}=fixture()
+ const stored=JSON.parse(JSON.stringify(api.serialize(old,false)))
+ assert.equal(stored.ifcFinding.signature,'model-v1')
+ delete stored.ifcFinding
+ api.jobs.set('p/'+id,stored)
+ const fresh=api.readQuery('p',id)
+ assert.equal(fresh.engineVersion,'new')
+ assert.equal(api.serialize(fresh).stale,false)
+ assert.equal(fresh.result.report[0].heading,'Freshly anchored evidence')
+})
+test('a legacy report without revision metadata is withheld after its model changes',()=>{
+ const {api,old}=fixture()
+ delete old.ifcFinding
+ old.engineVersion='new'
+ api.comparison=()=>({issues:[{id:'ifc-test',queryId:'new-model-query',verified:true}]})
+ api.comparisonCache.set('p',{signature:'model-v2'})
+ assert.equal(api.serialize(api.readQuery('p',id)).stale,true)
+ assert.equal(api.serialize(old).result,undefined)
+})

@@ -102,9 +102,12 @@ export class ProjectApi {
   }
   stale(job) {
     try {
-      if(job.ifcFinding){
-        this.comparison(job.projectId)
-        if(this.comparisonCache.get(job.projectId)?.signature!==job.ifcFinding.signature)return true
+      if(job.ifcFinding||job.result?.mode==='ifc_comparison'){
+        const current=this.comparison(job.projectId)
+        // Legacy persisted reports lack the root marker. Their deterministic
+        // query ID still binds the original finding and model/source signature.
+        if(!current.issues.some(issue=>issue.queryId===job.id&&issue.verified))return true
+        if(job.ifcFinding&&this.comparisonCache.get(job.projectId)?.signature!==job.ifcFinding.signature)return true
       }
       return (
         job.engineVersion !== this.engineVersion ||
@@ -128,6 +131,7 @@ export class ProjectApi {
       engineVersion: job.engineVersion,
       sourceOnly: job.sourceOnly,
       prepared: job.prepared || false,
+      ...(job.ifcFinding?{ifcFinding:job.ifcFinding}:{}),
       createdAt: job.createdAt,
       completedAt: job.completedAt,
       stale,
@@ -296,7 +300,7 @@ export class ProjectApi {
     // An engine update may invalidate the cached rendering while the current
     // model finding and source signature are unchanged. Rebuild from freshly
     // anchored evidence; never release the stale cached body itself.
-    if(job.ifcFinding&&this.stale(job)&&this.comparison(projectId).issues.some(issue=>issue.queryId===id&&issue.verified))return this.openIfcFinding(projectId,id)
+    if((job.ifcFinding||job.result?.mode==='ifc_comparison')&&this.stale(job)&&this.comparison(projectId).issues.some(issue=>issue.queryId===id&&issue.verified))return this.openIfcFinding(projectId,id)
     return job
   }
   issues(projectId) {

@@ -88,6 +88,16 @@ if (process.argv[2] === 'prepare') {
   assert.equal(evidence.result.ifcFinding.id,c.ifcIssue)
   assert.ok(evidence.result.references.every(reference=>reference.regions.length))
   assert.equal((await api('/projects/parkview-exchange')).issues.find(issue=>issue.id===c.ifcIssue).queryId,c.ifcQuery)
+  const modelFile=(await api('/projects/parkview-exchange')).documents.find(document=>document.modelFile).modelFile
+  assert.ok(/^[a-z0-9-]+\.ifc$/.test(modelFile))
+  const modelPath=resolve(state,'demo-documents',modelFile)
+  const original=readFileSync(modelPath)
+  try{
+    writeFileSync(modelPath,Buffer.concat([original,Buffer.from('\n')]))
+    const obsolete=await api(`/projects/parkview-exchange/queries/${c.ifcQuery}`)
+    assert.equal(obsolete.stale,true)
+    assert.equal(obsolete.result,undefined)
+  }finally{writeFileSync(modelPath,original)}
   await api(`/projects/${c.a}`, 'DELETE')
   await api(`/projects/${c.b}`, 'DELETE')
   console.log('PASS categories, duplicate PDFs, metadata, history, PDF citations and IFC finding evidence survive restart/reindex; disposable projects deleted')
