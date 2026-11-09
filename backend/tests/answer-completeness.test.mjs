@@ -1,7 +1,22 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { testingCountGap as gap } from '../src/answer-completeness.mjs'
+import { testingCountGap as gap, capacityDifferenceGap } from '../src/answer-completeness.mjs'
 const sections = (...text) => [{ claims: text.map((text) => ({ text })) }]
+
+test('an exact capacity difference needs approved flow subtraction rather than a related criterion',()=>{
+ const question='Existing sewer capacity has not been provided. What is the exact numerical capacity shortfall?'
+ const scaled=[{claims:[{text:'A scaled flow is 1.5 m3/s.',calculations:[{operation:'*',dimension:'flow',value:1.5}]}]}]
+ assert.match(capacityDifferenceGap(question,scaled).action,/Provide the existing conveyance capacity/)
+ assert.ok(capacityDifferenceGap(question,[{heading:'Source evidence',claims:[{calculations:[{operation:'-',dimension:'flow'}]}]}]))
+ assert.ok(capacityDifferenceGap(question,[{claims:[{calculations:[{operation:'-',dimension:'length'}]}]}]))
+ assert.equal(capacityDifferenceGap('Calculate the capacity difference.',[{claims:[{calculations:[{operation:'-',dimension:'flow'}]}]}]),null)
+ assert.equal(capacityDifferenceGap('What is the minimum pipe diameter?',[]),null)
+ const difference=[{claims:[{calculations:[{operation:'-',dimension:'flow'}],evidence:[{passage:{doc:'project'},excerpt:'Existing sewer capacity is 0.90 m3/s.'}]}]}]
+ assert.ok(capacityDifferenceGap(question,difference),'A mathematically valid subtraction cannot replace a missing capacity input')
+ assert.equal(capacityDifferenceGap(question,difference,[{id:'project',projectArtifact:true}]),null,'A real project record may supply the missing user input')
+ const unrelated=[{claims:[{calculations:[{operation:'-',dimension:'flow'}],evidence:[{passage:{doc:'project'},excerpt:'Existing capacity is unknown. Revised runoff is 1.20 m3/s.'}]}]}]
+ assert.ok(capacityDifferenceGap(question,unrelated,[{id:'project',projectArtifact:true}]),'A runoff record is not an existing-capacity measurement')
+})
 
 test('an exemption with an unknown soil depth cannot answer an area-specific count', () => {
  const exemption='For facilities with a soil depth of 300 mm or less, Guelph Permeameter testing is not required.'

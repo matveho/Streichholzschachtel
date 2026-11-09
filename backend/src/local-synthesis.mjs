@@ -1,12 +1,12 @@
 import { evidenceUnits, isProvision, evidenceUnitKey } from './evidence-units.mjs'
-import { applicableEvidence } from './applicability.mjs'
+import { applicableEvidence, quantityComparisons } from './applicability.mjs'
 import { linkedTableEvidence } from './linked-tables.mjs'
 import { linkedProcedureEvidence } from './linked-procedures.mjs'
 import { relatedCriteriaEvidence, depthCriterion } from './related-criteria.mjs'
 import { config } from './config.mjs'
 import { generate } from './model.mjs'
 import { tokens, rankProvisions } from './search.mjs'
-import { verifyCalculations } from './calculations.mjs'
+import { verifyCalculations, calculationUnits, completeUnitConversions, calculationChain } from './calculations.mjs'
 import { scopedRepair, repairFeedback, rejectedFindingTargets, repairResponseFormat, repairedFindings } from './synthesis-repair.mjs'
 import { permitsLocalSynthesis } from './generation-policy.mjs'
 
@@ -22,28 +22,56 @@ export function cleanSourceCallout(text, labels) {
 }
 
 export function projectDescription(question) {
+  const request = '(?:can|could|may|should|would|are|is|does|do|what|which|how|whether|compare|review|assess|determine|calculate|confirm|check|identify|evaluate|find|explain|verify)'
   const split = question.search(
-    /,\s*(?=(?:can|could|what|how|whether)\b)|[.?]\s*(?=(?:can|could|should|are|is|what|how)\b)/i,
+    new RegExp('(?:,\\s*|[.?]\\s*)(?='+request+'\\b)','i'),
   )
   return split >= 20 ? question.slice(0, split).trim() : question
 }
 
 export function boundFindingCalculations(ids, calculations, sources, question) {
-  const selected = [...new Set(ids || [])]
-  if (
-    !selected.length ||
-    selected.some(
-      (id) => !/^c[1-4]$/.test(id) || Number(id.slice(1)) > calculations.length,
-    )
-  )
-    return []
-  const end = Math.max(...selected.map((id) => Number(id.slice(1))))
+  const chain=calculationChain(ids,calculations)
+  if(!chain)return []
   const checked = verifyCalculations(
-    calculations.slice(0, end),
+    chain.calculations,
     sources,
     question,
   )
   return checked.issues.length ? [] : checked.calculations
+}
+
+export function verifyCalculationPlan(proposals, byLabel, question) {
+ const calculations=[],evidence=[]
+ for(const proposal of (proposals || []).slice(0,4)) {
+  if(!proposal || typeof proposal.expression!=='string' || !Array.isArray(proposal.evidence)||proposal.evidence.length>4||proposal.evidence.some(id=>!byLabel.has(id)))break
+  const direct=[...new Set(proposal.evidence)].slice(0,4)
+  const candidate=[...calculations,{expression:proposal.expression,unit:proposal.unit}]
+  const chain=calculationChain([`c${candidate.length}`],candidate)
+  if(!chain)break
+  const sources=[...new Set(chain.indices.flatMap(index=>index===calculations.length?direct:evidence[index]))]
+  const checked=verifyCalculations(chain.calculations,sources.map(id=>byLabel.get(id).excerpt).join(' '),question)
+  if(checked.issues.length)break
+  const result=checked.calculations.at(-1)
+  calculations.push({...result,expression:proposal.expression,dependencies:result.dependencies.map(index=>chain.indices[index])})
+  evidence.push(direct)
+ }
+ return {calculations,evidence}
+}
+
+// Complete the arithmetic for explicit quantitative comparisons. Ground both
+// operands independently, and check any stated difference instead of trusting it.
+export function completeComparisonCalculations(text, calculations, sources, question) {
+  let verified = completeUnitConversions(text, calculations, sources, question)
+  for (const {left,right,less,negated,difference} of quantityComparisons(text)) {
+    if (negated || verified.length >= 4 || !calculationUnits[left.unit]) continue
+    const delta=difference || {unit:left.unit,dimension:left.dimension,value:(less ? right.baseValue-left.baseValue : left.baseValue-right.baseValue)/calculationUnits[left.unit][1]}
+    if(delta.dimension !== left.dimension || delta.value < 0) continue
+    if (verified.some(step=>step.operation==='-' && step.unit===delta.unit && Math.abs(step.value-delta.value)<1e-9)) continue
+    const expression=less ? `${right.value} - ${left.value}` : `${left.value} - ${right.value}`
+    const checked=verifyCalculations([...verified,{expression,unit:delta.unit,value:delta.value}],sources,question)
+    if (!checked.issues.length) verified=checked.calculations
+  }
+  return verified
 }
 
 export function measurementInstruction(question) {
@@ -282,7 +310,7 @@ export async function draftLocal(
       (/\d/.test(question) && all.some((u) => /\bhalfway\b/i.test(u.excerpt)))
     ) {
       const proposed = await generate(
-        'Propose only arithmetic needed to check the supplied engineering figures against the selected rules. Every expression must contain an arithmetic operator; copying a stated test count is not a calculation. Use numbers from the question and source; do not invent design inputs. Expressions may contain numbers, + - * / parentheses and r1/r2 for earlier results. A source increase of 25% may be represented as a factor of 1.25. For a stated halfway-depth rule, divide the supplied soil depth by 2. Keep each result unit explicit using mm, m, m2, ha or m3/s. Do not calculate a final pipe size, hydraulic capacity or storage volume from missing design information. Return {calculations:[{expression:"numeric arithmetic",unit:"m3/s"}]}, or an empty array when no supported calculation is available.',
+        'Propose only arithmetic needed to check supplied project figures against selected rules. Include both the derived criterion and requested capacity difference, not just the criterion. Cite the source IDs supplying each rule or source operand in evidence; use [] only for question-only calculations. Reuse earlier results with r1/r2. The evaluator attaches physical units and converts compatible units automatically: do not add conversion factors or manually convert a measured input. A literal expression is allowed for unit conversion. Use only numbers from the question and cited sources. Expressions may contain numbers, + - * / parentheses and r1/r2. A source increase of 25% may be represented as 1.25. For halfway depth divide supplied depth by 2. Declare result units using mm, m, m2, ha, L/s or m3/s. Do not calculate a difference when a comparison quantity is missing. Do not invent design inputs, pipe sizes, hydraulic capacity or storage volume. Return {calculations:[{expression:"numeric arithmetic",unit:"m3/s",evidence:["A"]}]}, or an empty array when unsupported.',
         { question, provisions: context },
         {
           type: 'object',
@@ -295,8 +323,9 @@ export async function draftLocal(
                 properties: {
                   expression: { type: 'string', maxLength: 120 },
                   unit: { type: 'string', maxLength: 8 },
+                  evidence: {type:'array',maxItems:4,items:{type:'string',enum:[...byLabel.keys()]}},
                 },
-                required: ['expression', 'unit'],
+                required: ['expression', 'unit', 'evidence'],
               },
             },
           },
@@ -306,13 +335,16 @@ export async function draftLocal(
         700,
         { ...options, reasoning: true },
       )
-      plan.calculations = verifyCalculations(
-        proposed.calculations,
-        all.map((u) => u.excerpt).join(' '),
-        question,
-      ).calculations
+      const checked=verifyCalculationPlan(proposed.calculations,byLabel,question)
+      plan.calculations=checked.calculations
+      plan.calculationEvidence=checked.evidence
     }
   }
+  const calculationSources=ids=>{
+    const chain=calculationChain(ids,plan.calculations)
+    return chain?[...new Set(chain.indices.flatMap(index=>plan.calculationEvidence?.[index] || []))]:[]
+  }
+  const calculationBasis=[...new Set(plan.calculations.flatMap((_,i)=>calculationSources([`c${i+1}`])))].filter(id=>byLabel.has(id))
   const conclusion = { findings: [] }
   plan.draftFindings ||= {}
   const shared = all
@@ -345,7 +377,7 @@ export async function draftLocal(
       sourceContext(unit, unitLabel(unit), index.corpus.documents),
     )
     const drafted = await generate(
-      'Include calculation IDs only when this specific finding relies on their derived values; otherwise use calculations: []. Keep source IDs and section numbers out of the finding text. ' +
+      'Include calculation IDs only when this specific finding relies on their derived values; otherwise use calculations: []. CalculationBasis supplies the exact supporting provisions for those calculations, including dependencies from another check; do not use it for unrelated findings. Keep source IDs and section numbers out of the finding text. ' +
         'Write concise engineering findings using ONLY these selected source provisions and independently verified calculations. Answer the project question directly. Each finding must make ONE factual point in one sentence, with its own supporting source IDs. When comparing a method with an asset-specific requirement, cite BOTH the method scope and asset requirement. A universal requirement has no size cutoff unless that same clause states one. Cover every distinct requirement in this focused check with separate findings, up to the supplied findingBudget. Never combine an absolute prohibition and an exception to a different requirement in one sentence. Project figures are assumptions. Every derived project/reference comparison must cite both the project value and reference criterion. Project-document allocations and constraints are not governing minima; distinguish the proposed value from the reference criterion and cite both when comparing. Preserve conditions and recommendations versus requirements. Do not transfer thresholds between asset types. A permission to use an alternative does not establish that a separately required service or approval can be omitted. If sources differ, identify the unresolved interface rather than granting unconditional permission. Use computed figures only from verifiedCalculations; never invent arithmetic, approval or edition precedence. Cite IDs only in the evidence array, never in the text. Details will be displayed separately. Return {findings:[{text:"Direct supported finding",evidence:["A","B"]}]}. ' +
         (groupIssues.length
           ? 'Return repairs ONLY for the rejected findings identified in repairTargets and validationIssues. When repairTargets are supplied, return repairs keyed by each target ID, with one corrected finding or an empty array if unsupported. Do not repeat or paraphrase alreadyRetainedFindings; they are preserved automatically. Address each rejected point in its own slot. If a quantity cannot be supported, remove that quantity rather than dropping an independently supported duty. Preserve recommendations as recommendations. A linked mandatory duty does not make a recommended numerical criterion mandatory. Omit unsupported acceptance judgments and state the actual cited testing duty instead.'
@@ -359,6 +391,7 @@ export async function draftLocal(
         searchScope: group.query,
         instruction: [focusedInstruction(group.role, sharedForCheck.length > 0), measurementInstruction(group.query || group.heading)].filter(Boolean).join(' '),
         alreadyRetainedFindings: repair.retained.map((finding) => finding.text),
+        calculationBasis:calculationBasis.map(id=>sourceContext(byLabel.get(id),id,index.corpus.documents)),
         ...(repairTargets.length ? { repairTargets } : {}),
         provisions: focused,
         crossCuttingRequirements: sharedForCheck.map((unit) =>
@@ -367,11 +400,14 @@ export async function draftLocal(
         obligation:
           'Respect the cross-cutting requirements. Permission for an alternative does not waive a separate requirement. State an unresolved interface instead of granting permission to omit it.',
         verifiedCalculations: plan.calculations.map(
-          ({ expression, value, unit }, i) => ({
+          ({ expression, value, unit, displayExpression, inputOrigins }, i) => ({
             id: `c${i + 1}`,
             expression,
             value,
             unit,
+            displayExpression,
+            inputOrigins,
+            evidence:calculationSources([`c${i+1}`]),
           }),
         ),
         unresolved: plan.unresolved,
@@ -396,14 +432,15 @@ export async function draftLocal(
                       ...new Set([
                         ...focused.map((u) => u.id),
                         ...sharedForCheck.map((u) => unitLabel(u)),
+                        ...calculationBasis,
                       ]),
                     ],
                   },
                 },
                 calculations: {
                   type: 'array',
-                  maxItems: 4,
-                  items: { type: 'string', enum: ['c1', 'c2', 'c3', 'c4'] },
+                  maxItems: Math.min(4,plan.calculations.length),
+                  items: { type: 'string', enum: plan.calculations.length ? plan.calculations.map((_,i)=>`c${i+1}`) : ['c1'] },
                 },
               },
               required: ['text', 'evidence', 'calculations'],
@@ -449,23 +486,26 @@ export async function draftLocal(
     finding = { ...finding, text: cleanSourceCallout(finding.text, byLabel) }
     const group = plan.groups.find(group => group.id === finding.check)
     const sharedForCheck = group && /\breplace(?:ment)?\b|\bin lieu\b|\bsubstitut|\balternative\b/i.test(group.heading + ' ' + group.query) ? shared : []
-    const allowed = new Set([...(group?.units || []), ...sharedForCheck].map(unitLabel))
+    const supportingCalculations=calculationSources(finding.calculations)
+    const allowed = new Set([...(group?.units || []).map(unitLabel),...sharedForCheck.map(unitLabel),...supportingCalculations])
     let cited = alignEvidence(
       finding.text,
       [...allowed],
       byLabel,
       (finding.evidence || []).filter((id) => allowed.has(id)),
     )
-    const calculations = boundFindingCalculations(
+    cited=[...new Set([...cited,...supportingCalculations])]
+    const calculations = completeComparisonCalculations(finding.text, boundFindingCalculations(
       finding.calculations,
       plan.calculations,
       cited.map((id) => byLabel.get(id).excerpt).join(' '),
       question,
-    )
+    ), cited.map((id) => byLabel.get(id).excerpt).join(' '), question)
     return {
       text: finding.text,
       check: finding.check,
       evidence: proof(cited),
+      calculationBasisEvidence:proof(supportingCalculations),
       ...(calculations.length ? { calculations } : {}),
     }
   })

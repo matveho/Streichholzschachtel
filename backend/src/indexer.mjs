@@ -114,6 +114,7 @@ const compactText = (text) =>
     .replace(/[^\p{L}\d.%/+*<>=≤≥-]/gu, '')
 export function normalizeMeasurements(text) {
   return normalize(text)
+    .replace(/\bl\/s\b/gi, 'L/s')
     .replace(/\/hr\b/g, '/h')
     .replace(/\bm\s*\^\s*([23])\b/g, 'm$1')
     .replace(/\bsquare\s+met(?:re|er)s?\b/gi, 'm2')

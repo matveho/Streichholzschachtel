@@ -1,6 +1,6 @@
 import { normalizeMeasurements } from './indexer.mjs'
 
-const unitTypes = {
+export const calculationUnits = {
   '': ['scalar', 1],
   mm: ['length', 0.001],
   cm: ['length', 0.01],
@@ -14,6 +14,7 @@ const unitTypes = {
   'm/s': ['velocity', 1],
   'mm/h': ['rainfall-rate', 0.001 / 3600],
 }
+const unitTypes = calculationUnits
 const numeric = '(?:\\d+(?:\\.\\d+)?|\\.\\d+)'
 const physical = new RegExp(
   '(' +
@@ -25,16 +26,15 @@ const rounded = (n) => Number(n.toPrecision(12))
 
 function inputs(sources, question) {
   const choices = new Map()
-  const add = (literal, value, dimension) => {
+  const add = (literal, value, dimension, unit = '', origin = 'constant') => {
     const key = Number(literal)
     if (!choices.has(key)) choices.set(key, [])
     const list = choices.get(key)
-    if (
-      !list.some(
+    const existing = list.find(
         (v) => v.dimension === dimension && Math.abs(v.value - value) < 1e-12,
       )
-    )
-      list.push({ value, dimension })
+    if (existing) existing.origins = [...new Set([...existing.origins,origin])]
+    else list.push({ value, dimension, display: `${literal}${unit ? ' ' + unit : ''}`, origins:[origin],dependencies:[] })
   }
   add(0, 0, 'scalar')
   add(1, 1, 'scalar')
@@ -42,6 +42,7 @@ function inputs(sources, question) {
     [sources, false],
     [question, true],
   ]) {
+    const origin=isQuestion?'question':'source'
     const normalized = normalizeMeasurements(text).replace(
       /(?<=\d),(?=\d{3}\b)/g,
       '',
@@ -49,7 +50,7 @@ function inputs(sources, question) {
     const measured = []
     for (const m of normalized.matchAll(physical)) {
       const [dimension, factor] = unitTypes[m[2]]
-      add(m[1], Number(m[1]) * factor, dimension)
+      add(m[1], Number(m[1]) * factor, dimension, m[2], origin)
       measured.push([m.index, m.index + m[0].length])
     }
     if (isQuestion)
@@ -57,24 +58,24 @@ function inputs(sources, question) {
         new RegExp('\\b' + numeric + '\\b', 'g'),
       )) {
         if (!measured.some(([a, b]) => m.index >= a && m.index < b))
-          add(m[0], Number(m[0]), 'scalar')
+          add(m[0], Number(m[0]), 'scalar', '', origin)
       }
     for (const m of normalized.matchAll(
       new RegExp('(' + numeric + ')\\s*%', 'g'),
     )) {
       const p = Number(m[1])
-      add(p, p, 'scalar')
-      add(p / 100, p / 100, 'scalar')
-      add(1 + p / 100, 1 + p / 100, 'scalar')
-      add(100, 100, 'scalar')
+      add(p, p, 'scalar', '', origin)
+      add(p / 100, p / 100, 'scalar', '', origin)
+      add(1 + p / 100, 1 + p / 100, 'scalar', '', origin)
+      add(100, 100, 'scalar', '', origin)
     }
     for (const m of normalized.matchAll(
       new RegExp('(' + numeric + ')\\s+times\\b', 'gi'),
     ))
-      add(m[1], Number(m[1]), 'scalar')
+      add(m[1], Number(m[1]), 'scalar', '', origin)
     if (/\bhalf(?:way)?\b/i.test(normalized)) {
-      add(2, 2, 'scalar')
-      add(0.5, 0.5, 'scalar')
+      add(2, 2, 'scalar', '', origin)
+      add(0.5, 0.5, 'scalar', '', origin)
     }
   }
   return choices
@@ -141,9 +142,7 @@ function evaluate(node, values, previous) {
   if ('literal' in node) {
     const choices = [
       ...(values.get(node.literal) || []),
-      ...previous
-        .filter((p) => p.value === node.literal)
-        .map((p) => ({ value: p.baseValue, dimension: p.dimension })),
+      ...previous.flatMap((p,index)=>p.value===node.literal ? [{ value:p.baseValue,dimension:p.dimension,display:`${p.value}${p.unit?' '+p.unit:''}`,origins:p.inputOrigins || [],dependencies:[index] }] : []),
     ]
     if (!choices?.length)
       throw Error(
@@ -154,11 +153,11 @@ function evaluate(node, values, previous) {
   if ('reference' in node) {
     const prior = previous[node.reference]
     if (!prior) throw Error('A prior result is unavailable')
-    return [{ value: prior.baseValue, dimension: prior.dimension }]
+    return [{ value: prior.baseValue, dimension: prior.dimension, display: `${prior.value}${prior.unit ? ' '+prior.unit : ''}`, origins:prior.inputOrigins || [],dependencies:[node.reference] }]
   }
   const left = evaluate(node.left, values, previous)
   if (node.operator === 'negate')
-    return left.map((v) => ({ ...v, value: -v.value }))
+    return left.map((v) => ({ ...v, value: -v.value, display: `(-${v.display})` }))
   const right = evaluate(node.right, values, previous),
     result = []
   for (const a of left)
@@ -183,10 +182,43 @@ function evaluate(node, values, previous) {
         } else continue
       }
       if (Number.isFinite(value) && Math.abs(value) <= 1e12)
-        result.push({ value, dimension })
+        result.push({ value, dimension, display: `(${a.display} ${node.operator} ${b.display})`, origins:[...new Set([...a.origins,...b.origins])],dependencies:[...new Set([...a.dependencies,...b.dependencies])] })
       if (result.length > 128) throw Error('Operand units are ambiguous')
     }
   return result
+}
+
+export function calculationChain(ids, calculations) {
+ const selected=[...new Set(ids || [])]
+ if(!selected.length || selected.some(id=>!/^c[1-4]$/.test(id)||Number(id.slice(1))>calculations.length)) return null
+ const required=new Set()
+ const visit=index=>{
+  if(required.has(index))return
+  required.add(index)
+  if(Array.isArray(calculations[index].dependencies)) {
+   for(const dependency of calculations[index].dependencies) {
+    if(!Number.isInteger(dependency)||dependency<0||dependency>=index)throw Error('Invalid verified dependency')
+    visit(dependency)
+   }
+   return
+  }
+  const expression=calculations[index].expression
+  for(const match of expression.matchAll(/\br([1-4])\b/g)) {
+   const dependency=Number(match[1])-1
+   if(dependency>=index) throw Error('Calculation dependency must precede its use')
+   visit(dependency)
+  }
+  // The evaluator also supports a prior result written as a numeric literal.
+  for(const match of expression.replace(/\br[1-4]\b/g,'').matchAll(new RegExp(numeric,'g'))) {
+   const value=Number(match[0])
+   if(value===0||value===1)continue
+   for(let prior=0;prior<index;prior++)if(calculations[prior].value===value)visit(prior)
+  }
+ }
+ try{for(const id of selected)visit(Number(id.slice(1))-1)}catch{return null}
+ const indices=[...required].sort((a,b)=>a-b)
+ const positions=new Map(indices.map((original,local)=>[original,local]))
+ return {indices,calculations:indices.map(index=>({...calculations[index],expression:calculations[index].expression.replace(/\br([1-4])\b/g,(_,id)=>`r${positions.get(Number(id)-1)+1}`)}))}
 }
 
 export function verifyCalculations(proposals, sources, question) {
@@ -198,8 +230,9 @@ export function verifyCalculations(proposals, sources, question) {
       const unit = normalizeMeasurements(proposal.unit || '').trim(),
         declared = unitTypes[unit]
       if (!declared) throw Error('Unsupported result unit')
+      const expressionTree=parse(proposal.expression)
       const results = evaluate(
-        parse(proposal.expression),
+        expressionTree,
         available,
         calculations,
       ).filter((v) => v.dimension === declared[0])
@@ -222,6 +255,10 @@ export function verifyCalculations(proposals, sources, question) {
         unit,
         baseValue: value * declared[1],
         dimension: declared[0],
+        displayExpression: results.find(result=>rounded(result.value/declared[1])===value).display,
+        inputOrigins: results.find(result=>rounded(result.value/declared[1])===value).origins,
+        operation: expressionTree.operator || 'literal',
+        dependencies:results.find(result=>rounded(result.value/declared[1])===value).dependencies,
       })
     } catch (error) {
       issues.push({ expression: proposal.expression, reason: error.message })
@@ -229,4 +266,25 @@ export function verifyCalculations(proposals, sources, question) {
     }
   }
   return { calculations, issues }
+}
+
+// Verify stated equivalent quantities from known physical measurements. This
+// converts units, not engineering roles, and cannot supply a missing magnitude.
+export function completeUnitConversions(text, previous, sources, question) {
+ const measures=value=>[...normalizeMeasurements(value).matchAll(physical)].map(match=>({value:Number(match[1]),unit:match[2]}))
+ const known=[...measures(sources),...measures(question),...previous.map(step=>({value:step.value,unit:step.unit}))]
+ const same=(a,b)=>Math.abs(a-b)<=1e-12*Math.max(Math.abs(a),Math.abs(b),Number.MIN_VALUE)
+ let verified=previous
+ for(const stated of measures(text)) {
+  if(verified.length>=4) break
+  if(known.some(input=>input.unit===stated.unit&&same(input.value,stated.value))) continue
+  const [dimension,factor]=unitTypes[stated.unit]
+  const input=known.find(input=>unitTypes[input.unit]?.[0]===dimension&&same(input.value*unitTypes[input.unit][1],stated.value*factor))
+  if(!input) continue
+  const checked=verifyCalculations([...verified,{expression:String(input.value),unit:stated.unit,value:stated.value}],sources,question)
+  if(checked.issues.length) continue
+  verified=checked.calculations
+  known.push(stated)
+ }
+ return verified
 }

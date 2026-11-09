@@ -472,3 +472,58 @@ Comparison capability run `run-gpu-qcUej7ds` passed all nine checks and rejected
 foreign-project document selection before inference. GPU browser
 `run-browser-OUQruygd` passed comparison submission, verified arithmetic, both
 original PDF highlights, reload/history, offline general review and IFC findings.
+
+## Source-bound arithmetic and mixed units
+
+Physical comparisons now use the calculator's shared dimensional unit registry.
+Flow rates such as `900 L/s` and `0.90 m3/s` compare in compatible units;
+volume cannot substitute for flow. Explicit relational claims and stated gaps
+are checked independently, including phrases such as “falls short of the
+required minimum.” Incorrect ordering, dimensional substitutions and incorrect
+gap values are withheld.
+
+Calculation plans must declare their source evidence. Each step is checked
+against those exact source excerpts, supplied project inputs and its actual
+dependencies. A finding can use its own calculation basis but cannot borrow
+unrelated evidence from another check. The server regenerates operand units,
+input provenance and dependencies; model-provided metadata is not trusted.
+Grounded equivalent-unit conversions and explicit comparison differences can
+be completed without accepting the model's proposed numerical result.
+
+Explicit calculation requests can produce a separate **Verified arithmetic ·
+applicability requires review** worksheet. Its equations are independently
+reverified against original source quotes and supplied inputs. It copies no
+model interpretation. API `arithmeticReview` identifies the checked quantities,
+dimensions, operations, operand units, input origins and source reference IDs;
+`applicabilityConfirmed` remains false. The report preserves original PDF
+regions and distinguishes arithmetic from engineering approval. Missing
+existing capacity yields a practical `capacity_difference` input requirement;
+an unrelated flow calculation cannot manufacture the requested shortfall.
+
+The explicit-basis quantitative suite supplements the original eight engineering
+cases; it does not replace their broader interpretation gates. Reproduce with:
+
+```bash
+OLLAMA_URL=http://127.0.0.1:11435 LOCAL_REASONING=0 \
+  LOCAL_SYNTHESIS_POLICY=all BASIS_QUALITY_SUITE=quantitative \
+  scripts/linux/test-gpu-quality
+BASIS_BROWSER_SUITES=arithmetic scripts/linux/test-review-coverage
+```
+
+Final regression `run-gxQR95CX` passed 281/281 unit tests plus OCR, isolated
+project APIs, imports, scope isolation and restart persistence. Quantitative
+run `run-gpu-rbVVil7v` passed 3/3: explicit-basis calculation (14 seconds),
+mixed-unit calculation (13 seconds), and missing-input withholding (12 seconds).
+All retained citations stayed within the selected project document and had valid
+PDF regions. Browser `run-browser-NN8Jg3c9` passed mixed-unit worksheet rendering,
+original PDF highlights and persisted report reload with no page errors.
+Comparison capability run `run-gpu-E0gvF4TV` passed all nine checks and rejected
+foreign-project selection before inference. Comparison browser
+`run-browser-2bZqYYc8` passed submission, verified differences, both original PDF
+highlights, reload/history, extractive general review and automatic IFC findings.
+
+Production retains the pinned comparison model and `comparisons` policy.
+The isolated quantitative examples use `all` explicitly; these results do not
+qualify unrestricted synthesis or enable general calculation requests in the
+public deployment. Broader applicability and complex interpretation remain
+unqualified as recorded above.

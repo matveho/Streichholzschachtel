@@ -1,4 +1,5 @@
 import { normalizeMeasurements } from './indexer.mjs'
+import { calculationUnits } from './calculations.mjs'
 
 // A duty conditional on a component's existence does not require that component.
 export function requiresOptionalComponent(claim, quotes, question = '') {
@@ -67,41 +68,55 @@ function quantities(text) {
     .replace(/\bhectares?\b/gi, 'ha')
 }
 
-export function falseComparisons(text) {
+export function quantityComparisons(text) {
   const normalized = quantities(text)
   const dimensions = {
-    mm: ['length', 0.001],
-    cm: ['length', 0.01],
-    m: ['length', 1],
-    km: ['length', 1000],
-    m2: ['area', 1],
-    ha: ['area', 10000],
-    m3: ['volume', 1],
+    ...Object.fromEntries(Object.entries(calculationUnits).filter(([unit])=>unit).map(([unit, dimension])=>[unit.toLowerCase(), dimension])),
     '%': ['percent', 1],
   }
-  const issues = []
-  const comparisons =
-    /\b(exceeds?|is greater than|is larger than|is deeper than|is less than|is smaller than|is shallower than|is below|is above)\s+(\d+(?:\.\d+)?)\s*(mm|cm|km|ha|m2|m3|m|%)(?![\p{L}\d])/giu
+  const physicalUnits = Object.keys(dimensions).sort((a,b)=>b.length-a.length).map(unit=>unit.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')
+  const result = []
+  const canonicalUnit = unit => Object.keys(calculationUnits).find(name=>name.toLowerCase()===unit.toLowerCase()) || unit
+  const basis = '(?:the\\s+)?(?:(?:cited|required|recommended|proposed|existing|specified|reference|minimum|maximum|design)\\s+){0,3}(?:(?:capacity|flow|runoff|rate|cover|depth|width|area|volume|criterion|value|threshold|limit)(?:\\s+(?:requirement|criterion|limit))?\\s+)?(?:of\\s+)?'
+  const minimum = '(?=\\s+(?:the\\s+)?(?:(?:required|recommended)\\s+)?minimum\\b)'
+  const comparisons = new RegExp('\\b(exceeds?|is greater than|is larger than|is deeper than|is less than|is smaller than|is shallower than|is below|is above|falls? short of|fails? to meet'+minimum+'|is insufficient to meet'+minimum+')\\s+'+basis+number+'\\s*('+physicalUnits+')(?![\\p{L}\\d/])','giu')
   for (const m of normalized.matchAll(comparisons)) {
-    const rightDimension = dimensions[m[3]]
+    const rightDimension = dimensions[m[3].toLowerCase()]
     if (!rightDimension) continue
     const before = normalized.slice(Math.max(0, m.index - 150), m.index)
     const earlier = [
-      ...before.matchAll(new RegExp(number + '\\s*' + units, 'giu')),
-    ].filter((q) => dimensions[q[2]]?.[0] === rightDimension[0])
+      ...before.matchAll(new RegExp(number + '\\s*(' + physicalUnits + ')(?![\\p{L}\\d/])', 'giu')),
+    ].filter((q) => dimensions[q[2].toLowerCase()]?.[0] === rightDimension[0])
     if (!earlier.length) continue
     const left = earlier.at(-1)
     const bridge = before.slice(left.index + left[0].length)
-    if (/[,;.!?]|\b(?:with|that|which|and|or)\b/i.test(bridge)) continue
-    const a = Number(left[1]) * dimensions[left[2]][1],
+    if (!/^\s*,?\s*which\s*$/i.test(bridge) && /[,;.!?]|\b(?:with|that|which|and|or)\b/i.test(bridge)) continue
+    const a = Number(left[1]) * dimensions[left[2].toLowerCase()][1],
       b = Number(m[2]) * rightDimension[1]
-    const less = /less|smaller|shallower|below/i.test(m[1])
-    let valid = less ? a < b : a > b
-    if (/\bnot\s*$/i.test(before)) valid = !valid
+    const less = /less|smaller|shallower|below|short|fails?|insufficient/i.test(m[1])
+    const difference = normalized.slice(m.index + m[0].length).match(new RegExp('^\\s+by\\s+'+number+'\\s*('+physicalUnits+')(?![\\p{L}\\d/])','iu'))
+    result.push({
+      left:{value:Number(left[1]),unit:canonicalUnit(left[2]),baseValue:a,dimension:rightDimension[0]},
+      right:{value:Number(m[2]),unit:canonicalUnit(m[3]),baseValue:b,dimension:rightDimension[0]},
+      operator:m[1],less,negated:/\bnot\s*$/i.test(before),
+      ...(difference ? {difference:{value:Number(difference[1]),unit:canonicalUnit(difference[2]),baseValue:Number(difference[1])*dimensions[difference[2].toLowerCase()][1],dimension:dimensions[difference[2].toLowerCase()][0]}} : {}),
+    })
+  }
+  return result
+}
+
+export function falseComparisons(text) {
+  const issues = []
+  for (const comparison of quantityComparisons(text)) {
+    const {left,right,less,negated,difference,operator}=comparison
+    let valid=less ? left.baseValue < right.baseValue : left.baseValue > right.baseValue
+    if(negated) valid=!valid
     if (!valid)
       issues.push(
-        `The comparison ${left[0]} ${m[1]} ${m[2]} ${m[3]} is numerically false`,
+        `The comparison ${left.value} ${left.unit} ${operator} ${right.value} ${right.unit} is numerically false`,
       )
+    if (difference && !negated && (difference.dimension !== left.dimension || (left.dimension!=='percent' && Math.abs(difference.baseValue-Math.abs(left.baseValue-right.baseValue))>1e-9)))
+      issues.push('The stated comparison difference does not match the operands and compatible physical units')
   }
   return issues
 }

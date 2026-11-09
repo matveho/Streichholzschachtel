@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { verifyCalculations } from '../src/calculations.mjs'
+import { verifyCalculations, completeUnitConversions } from '../src/calculations.mjs'
 import { quantityUnits } from '../src/indexer.mjs'
 
 test('source percentage and supplied flow produce the required flow and capacity gap', () => {
@@ -31,6 +31,20 @@ test('cover differences use physical units without floating-point noise', () => 
     r.calculations.map((c) => c.value),
     [0.3, 0.4],
   )
+})
+
+test('verified expressions retain operand units through conversions and prior results',()=>{
+ const checked=verifyCalculations([
+  {expression:'600 / 2',unit:'m'},
+  {expression:'r1 + 100',unit:'m'},
+ ],'Testing at halfway depth is preferred; the allowance is 100 mm.','The soil is 600 mm deep.')
+ assert.deepEqual(checked.issues,[])
+ assert.equal(checked.calculations[0].displayExpression,'(600 mm / 2)')
+ assert.equal(checked.calculations[1].displayExpression,'(0.3 m + 100 mm)')
+ assert.equal(checked.calculations[1].value,0.4)
+ const injected=verifyCalculations([{expression:'600 / 2',unit:'mm',displayExpression:'Approved design',inputOrigins:['source']}],'No numeric source rule.','The supplied depth is 600 mm and the divisor is 2.')
+ assert.equal(injected.calculations[0].displayExpression,'(600 mm / 2)')
+ assert.ok(!injected.calculations[0].inputOrigins.includes('source'))
 })
 
 test('a previously verified result can be reused as a literal without inventing a new operand', () => {
@@ -107,4 +121,16 @@ test('flow, volume and velocity quantities retain distinct unit identities', () 
   assert.deepEqual(quantityUnits('1.5 m³/s'), ['1.5:m3/s'])
   assert.deepEqual(quantityUnits('1.5 m³'), ['1.5:m3'])
   assert.deepEqual(quantityUnits('0.6 m/s'), ['0.6:m/s'])
+  const lower=verifyCalculations([{expression:'1200 - 900',unit:'l/s'}],'The reference flow is 1200 l/s.','The existing capacity is 900 l/s.')
+  assert.equal(lower.calculations[0].value,300)
+  assert.equal(lower.calculations[0].unit,'L/s')
+})
+
+test('unit conversion completes only equivalent known quantities with matching dimensions',()=>{
+ const valid=completeUnitConversions('Capacity is 0.90 m3/s.',[],'','The supplied capacity is 900 L/s.')
+ assert.equal(valid[0].value,0.9)
+ assert.equal(valid[0].displayExpression,'900 L/s')
+ assert.deepEqual(completeUnitConversions('Capacity is 0.90 m3/s.',[],'','The supplied storage is 900 m3.'),[])
+ assert.deepEqual(completeUnitConversions('Capacity is 0.90 m3/s.',[],'','The supplied capacity is 800 L/s.'),[])
+ assert.deepEqual(completeUnitConversions('Capacity is 0 L/s.',[],'','The supplied capacity is 0.000000000001 m3/s.'),[])
 })

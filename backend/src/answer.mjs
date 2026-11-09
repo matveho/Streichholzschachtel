@@ -2,7 +2,7 @@ import { normalize, locateQuote, quantityUnits } from './indexer.mjs'
 import { evidenceInterpretationIssue, recommendationLanguage } from './evidence-guards.mjs'
 import { foreignJurisdiction } from './catalog.mjs'
 import { attachReviewCoverage } from './review-coverage.mjs'
-import { testingCountGap } from './answer-completeness.mjs'
+import { testingCountGap, capacityDifferenceGap } from './answer-completeness.mjs'
 import { attachReferenceCriteria, supplementaryReferenceCriteria } from './related-criteria.mjs'
 import { config } from './config.mjs'
 import { permitsLocalSynthesis, hasPairedProjectComparison } from './generation-policy.mjs'
@@ -12,6 +12,7 @@ import { generate } from './model.mjs'
 import { selectEvidence } from './local-evidence.mjs'
 import {
   falseComparisons,
+  quantityComparisons,
   incompatibleLidAsset,
   incompatibleConveyanceEvidence,
   incompatiblePipeRole,
@@ -19,9 +20,9 @@ import {
   requiresOptionalComponent,
 } from './applicability.mjs'
 import { evidenceUnits, isProvision } from './evidence-units.mjs'
-import { draftLocal } from './local-synthesis.mjs'
+import { draftLocal, projectDescription, labelEvidenceGroups } from './local-synthesis.mjs'
 import { expandRetrieval } from './retrieval-plan.mjs'
-import { verifyCalculations } from './calculations.mjs'
+import { verifyCalculations, calculationChain } from './calculations.mjs'
 import { sourceLookup } from './source-lookup.mjs'
 import { checkContradictions } from './entailment.mjs'
 import { UnitIndex, lookup } from './lookup.mjs'
@@ -419,7 +420,9 @@ export function validateSynthesis(output, passages, question, documents = [], {c
           ...(claim.check ? { check: claim.check } : {}),
           claim: claim.text,
           reason:
-            'The cited source does not establish this as a mandatory or exclusive rule; preserve its recommendation or permission wording',
+            recommendationLanguage(sourceText)
+              ? 'The cited source does not establish this as a mandatory or exclusive rule; preserve its recommendation or permission wording'
+              : 'The cited source does not establish this as a mandatory or exclusive rule. State its numeric criterion without inventing a mandate or recommendation, or cite the governing requirement.',
         })
         continue
       }
@@ -428,10 +431,25 @@ export function validateSynthesis(output, passages, question, documents = [], {c
           evidence.map((e) => e.excerpt + ' ' + e.passage.section).join(' '),
         ),
       )
+      let assessedWords=claimWords
+      const comparison=quantityComparisons(claim.text).find(pair=>!pair.negated && computed.calculations.some(step=>
+        step.inputOrigins.includes('source') && step.dimension===pair.left.dimension &&
+        Math.abs(step.baseValue-Math.abs(pair.left.baseValue-pair.right.baseValue))<1e-9))
+      const statedQuantities=new Set(quantityUnits(claim.text))
+      const sourcedResult=computed.calculations.some(step=>step.inputOrigins.includes('source')&&statedQuantities.has(`${step.value}:${step.unit}`))
+      if((comparison || sourcedResult) && claimWords.filter(word=>sourceWords.has(word)).length>=2) {
+        // Project assumptions and verified arithmetic are not regulatory facts.
+        // Keep the specificity threshold for the remaining source-derived text.
+        const declaration=projectDescription(question)
+        const suppliedWords=new Set(/^\s*(?:can|could|may|should|would|is|are|do|does|what|which|how|whether|compare|review|assess|determine|calculate|confirm|check|identify|evaluate|find|explain|verify)\b|\b(?:if|unless|whether)\b/i.test(declaration) ? [] : tokens(declaration))
+        const arithmeticWords=new Set(tokens((comparison?.operator || '')+' cited criterion value difference calculated applying assumed supplied basis yields resulting derived '+computed.calculations.map(step=>step.dimension).join(' ')))
+        assessedWords=claimWords.filter(word=>!suppliedWords.has(word)&&!arithmeticWords.has(word))
+      }
       if (
         claimWords.length > 5 &&
-        claimWords.filter((w) => sourceWords.has(w)).length /
-          claimWords.length <
+        assessedWords.length > 0 &&
+        assessedWords.filter((w) => sourceWords.has(w)).length /
+          assessedWords.length <
           0.35
       ) {
         rejected++
@@ -439,7 +457,9 @@ export function validateSynthesis(output, passages, question, documents = [], {c
           ...(claim.check ? { check: claim.check } : {}),
           claim: claim.text,
           reason:
-            'The attached quote does not mention enough of the actual claimed facts; choose specific supporting quotes',
+            sourcedResult
+              ? 'The arithmetic is verified, but the sentence adds unsupported interpretation. State only the calculated value or both numerical comparison quantities and their difference, cite the actual calculation basis, and omit unproven engineering decisions.'
+              : 'The attached quote does not mention enough of the actual claimed facts; choose specific supporting quotes',
         })
         continue
       }
@@ -568,7 +588,7 @@ async function review(
     ...(c.calculations
       ? {
           verifiedCalculations: c.calculations.map(
-            ({ expression, value, unit }) => ({ expression, value, unit }),
+            ({ expression, value, unit, displayExpression, inputOrigins }) => ({ expression, value, unit, displayExpression, inputOrigins }),
           ),
         }
       : {}),
@@ -659,8 +679,10 @@ export function renderResult(
 ) {
   const references = [],
     report = [],
+    arithmetic = [],
     used = new Map(),
     renderedCalculations = new Set()
+  const hasWorksheet=sections.some(section=>section.arithmetic)
   for (const section of sections) {
     const sentences = []
     for (const claim of section.claims) {
@@ -690,18 +712,23 @@ export function renderResult(
         }
         if (!refs.includes(id)) refs.push(id)
       }
-      sentences.push({ text: claim.text, refs })
+      if(claim.text)sentences.push({ text: claim.text, refs })
       for (const c of claim.calculations || []) {
+        if(hasWorksheet&&!section.arithmetic)continue
         const calculationKey = JSON.stringify([c.expression, c.value, c.unit])
         if (renderedCalculations.has(calculationKey)) continue
         renderedCalculations.add(calculationKey)
-        const expression = c.expression
+        if(section.arithmetic) arithmetic.push({value:c.value,unit:c.unit,dimension:c.dimension,operation:c.operation,displayExpression:c.displayExpression,inputOrigins:c.inputOrigins,sourceReferenceIds:refs})
+        const expression = (c.displayExpression
+          ? c.displayExpression.replaceAll(' * ', ' × ').replaceAll(' / ', ' ÷ ').replaceAll(' - ', ' − ')
+          : c.expression
           .replace(/\br([1-4])\b/g, (_, n) =>
             String(claim.calculations[Number(n) - 1]?.value),
           )
           .replaceAll('*', ' × ')
           .replaceAll('/', ' ÷ ')
-          .replaceAll('-', ' − ')
+          .replaceAll('-', ' − '))
+          .replace(/\bm([23])\b/g,(_,power)=>power==='3'?'m³':'m²')
         const unit = c.unit.replace('m3', 'm³').replace('m2', 'm²')
         sentences.push({
           text: `${expression} = ${c.value}${unit ? ' ' + unit : ''}.`,
@@ -736,7 +763,44 @@ export function renderResult(
     mode,
     notes,
     rejectedClaims: rejected,
+    ...(arithmetic.length?{arithmeticReview:{status:'arithmetic_only',calculations:arithmetic,applicabilityConfirmed:false}}:{}),
   })
+}
+
+export function verifiedArithmeticSection(question, draft, passages, {withholdFlowDifference=false}={}) {
+ if(!/\b(?:calculate|compute|numerical|quantify)\b/i.test(question)) return null
+ const byId=new Map(passages.map(passage=>[passage.id,passage]))
+ const {byLabel}=labelEvidenceGroups(draft.plan?.groups || [])
+ const candidates=(draft.sections || []).filter(section=>!section.heading).flatMap(section=>section.claims).map(claim=>({...claim,evidence:claim.calculationBasisEvidence?.length?claim.calculationBasisEvidence:claim.evidence}))
+ for(let index=0;index<(draft.plan?.calculations?.length || 0);index++) {
+  const chain=calculationChain([`c${index+1}`],draft.plan.calculations)
+  if(!chain)continue
+  const ids=[...new Set(chain.indices.flatMap(i=>draft.plan.calculationEvidence?.[i] || []))]
+  const evidence=ids.flatMap(id=>{
+   const unit=byLabel.get(id)
+   return unit?[{passageId:unit.passage.id,quote:unit.excerpt,quoteStart:unit.quoteStart},...(unit.contextEvidence?[{passageId:unit.passage.id,quote:unit.contextEvidence.excerpt,quoteStart:unit.contextEvidence.quoteStart}]:[])]:[]
+  })
+  candidates.push({calculations:chain.calculations,evidence})
+ }
+ const claims=[],seen=new Set()
+ for(const candidate of candidates) {
+  const evidence=(candidate.evidence || []).flatMap(proof=>{
+   const passage=byId.get(proof.passageId)
+   const anchor=passage&&locateQuote(passage,proof.quote,proof.quoteStart)
+   return anchor?[{passage,...anchor}]:[]
+  })
+  const checked=verifyCalculations(candidate.calculations || [],evidence.map(proof=>proof.excerpt).join(' '),question)
+  if(checked.issues.length)continue
+  for(const step of checked.calculations) {
+   if(step.dimension==='scalar'||(withholdFlowDifference&&step.dimension==='flow'&&step.operation==='-'))continue
+   const key=JSON.stringify([step.displayExpression,step.value,step.unit])
+   if(seen.has(key))continue
+   seen.add(key)
+   claims.push({text:'',evidence:step.inputOrigins.includes('source')?evidence:[],calculations:[step]})
+  }
+ }
+ if(!claims.some(claim=>claim.calculations[0].inputOrigins.includes('source')))return null
+ return {heading:'Verified arithmetic · applicability requires review',arithmetic:true,claims:[{text:'Arithmetic is independently checked. Supplied project quantities remain assumptions; source applicability and design approval require review.',evidence:[],calculations:[]},...claims]}
 }
 
 // Unit sections ({heading, sentences: [{text, units}]}) in the renderer's shape.
@@ -925,11 +989,14 @@ export async function answer(
           }
         }
       }
-      const countGap = testingCountGap(question, checked.sections)
+      const priorGap=capacityDifferenceGap(question,checked.sections,searchIndex.corpus.documents)
+      const arithmetic=verifiedArithmeticSection(question,draft,passages,{withholdFlowDifference:priorGap?.missingCapacity})
+      if(arithmetic)checked.sections.push(arithmetic)
+      const countGap = testingCountGap(question, checked.sections) || capacityDifferenceGap(question, checked.sections, searchIndex.corpus.documents)
       if (countGap) {
         const related = checked.sections.map(section => ({...section,heading:section.heading || 'Related requirements'}))
         const result = renderResult(related, searchIndex.corpus, publicBase, token, 'insufficient_evidence', [countGap.reason])
-        result.report.unshift({heading:'Test count not established',sentences:[{text:countGap.action}]})
+        result.report.unshift({heading:countGap.kind==='testing_count'?'Test count not established':'Capacity difference not established',sentences:[{text:countGap.action}]})
         result.requiredInputs = {kind:countGap.kind,action:countGap.action}
         return attachReviewCoverage(result, retrieval.topics, draft.plan, {...checked,sections:related})
       }

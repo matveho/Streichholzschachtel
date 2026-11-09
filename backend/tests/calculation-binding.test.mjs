@@ -56,3 +56,14 @@ test('dependent arithmetic retains only the required preceding calculation chain
     1,
   )
 })
+
+test('independent unit conversion does not inherit another calculation source requirement',()=>{
+ const question='Runoff is 1.20 m3/s and existing capacity is 900 L/s.'
+ const rule='Increase the runoff by 25%.'
+ const calculations=verifyCalculations([{expression:'1.20 * 1.25',unit:'m3/s'},{expression:'900',unit:'m3/s'},{expression:'r1 - r2',unit:'m3/s'}],rule,question).calculations
+ assert.deepEqual(boundFindingCalculations(['c2'],calculations,'No source factor is needed for unit conversion.',question).map(step=>step.value),[0.9])
+ assert.deepEqual(boundFindingCalculations(['c3'],calculations,rule,question).map(step=>step.value),[1.5,0.9,0.6])
+ const repeatedValue=verifyCalculations([{expression:'600 / 2',unit:'mm'},{expression:'300',unit:'m3/s'}],'Test at halfway depth.','The depth is 600 mm and capacity is 300 L/s.').calculations
+ assert.deepEqual(repeatedValue[1].dependencies,[])
+ assert.deepEqual(boundFindingCalculations(['c2'],repeatedValue,'No depth criterion is cited.','The depth is 600 mm and capacity is 300 L/s.').map(step=>step.value),[0.3],'An equal numeric value in another dimension does not create a source dependency')
+})

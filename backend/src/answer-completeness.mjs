@@ -1,6 +1,8 @@
 // Completeness is separate from entailment: a true related fact may not answer
 // the requested quantity. These checks can withhold an answer, never approve it.
 import { applicableEvidence } from './applicability.mjs'
+import { quantityUnits } from './indexer.mjs'
+import { calculationUnits } from './calculations.mjs'
 const stages = (text) =>
   new Set([
     ...(/\bFAC\b|\bfinal acceptance\b/i.test(text) ? ['final'] : []),
@@ -14,6 +16,32 @@ const count =
   /\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|\d+)\b(?!\s*(?:mm|cm|km|m[²³23]?|ha|percent|square|cubic|metres?|meters?)\b)\s+(?:(?!of\b|per\b)[a-z/-]+\s+){0,4}(?:tests?|locations?|samples?|specimens?)\b/i
 const zeroRequired =
   /\bno\s+(?:[a-z]+\s+){0,4}(?:tests?|testing)\s+(?:is\s+|are\s+)?required\b|\btesting\s+is\s+not\s+required\b/i
+
+export function capacityDifferenceGap(question, sections, documents = []) {
+ if (!/\b(?:calculate|compute|exact|numerical|quantify)\b/i.test(question) ||
+     !/\b(?:difference|shortfall|deficit|gap)\b/i.test(question) ||
+     !/\b(?:capacity|conveyance|runoff|flow)\b/i.test(question)) return null
+ const findings=sections.filter(section=>!section.heading||section.arithmetic===true).flatMap(section=>section.claims)
+ const missing=/\bcapacity\b[^.!?]{0,60}\b(?:not (?:been )?(?:provided|supplied|known)|unknown)\b|\b(?:missing|unknown|unspecified)\b[^.!?]{0,30}\bcapacity\b/i.test(question)
+ const recorded=findings.some(claim=>claim.evidence?.some(proof=>
+  documents.some(doc=>doc.id===proof.passage?.doc&&doc.projectArtifact) &&
+  proof.excerpt.split(/[;!?]|\.(?=\s|$)/).some(sentence=>
+   /\b(?:existing|current|available)\b[^.!?]{0,45}\bcapacity\b/i.test(sentence) &&
+   !/\b(?:unknown|unstated|unspecified|not (?:provided|known|stated|supplied))\b/i.test(sentence) &&
+   quantityUnits(sentence).some(quantity=>calculationUnits[quantity.split(':').at(-1)]?.[0]==='flow'))))
+ const selectedBasis=/\bTable\s+\d|\b(?:selected|cited|reference)\s+(?:calculation\s+)?basis\b/i.test(question)
+ const answered=(!missing||recorded)&&findings.some(claim=>
+   claim.calculations?.some(step=>step.operation==='-'&&step.dimension==='flow'&&(!selectedBasis||step.inputOrigins?.includes('source'))))
+ if(answered) return null
+ return {
+  kind:'capacity_difference',
+  missingCapacity:missing&&!recorded,
+  reason:'The approved findings do not establish the requested numerical capacity difference.',
+  action:missing
+   ? 'Provide the existing conveyance capacity in compatible flow units before calculating the numerical shortfall.'
+   : 'The numerical capacity difference was not established. Review the cited calculation basis and supplied quantities before completing this check.',
+ }
+}
 export function testingCountGap(question, sections) {
   if (
     !/\bhow many\b|\bnumber of\b|\bcount of\b/i.test(question) ||

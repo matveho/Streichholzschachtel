@@ -1,10 +1,12 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { engineeringScenarios } from './engineering-scenarios.mjs'
+import { quantitativeScenarios } from './quantitative-scenarios.mjs'
 import { missingFindingTerms } from './quality-criteria.mjs'
 import { createHash } from 'node:crypto'
+import { calculationUnits } from '../src/calculations.mjs'
 const criteriaVersion = createHash('sha256').update([
-  './quality.mjs','./engineering-scenarios.mjs','./quality-criteria.mjs',
+  './quality.mjs','./engineering-scenarios.mjs','./quantitative-scenarios.mjs','./quality-criteria.mjs',
 ].map(file=>readFileSync(new URL(file,import.meta.url),'utf8')).join('')).digest('hex')
 const key = readFileSync(resolve(process.env.BASIS_STATE_DIR || 'state', 'session-token.txt'), 'utf8').trim(),
   testBase = process.env.BASIS_TEST_URL || 'http://127.0.0.1:8787',
@@ -63,7 +65,7 @@ const smokeCases = [
 const suite =
   process.env.BASIS_QUALITY_SUITE === 'engineering'
     ? engineeringScenarios
-    : smokeCases
+    : process.env.BASIS_QUALITY_SUITE === 'quantitative' ? quantitativeScenarios : smokeCases
 const caseId = process.env.BASIS_QUALITY_CASE
 if (caseId && !/^[a-z0-9-]+$/.test(caseId))
   throw new Error('Invalid quality case ID')
@@ -74,43 +76,52 @@ const runHealth = await (await fetch(testBase + '/health')).json()
 const outputs = []
 for (const c of cases) {
   const start = Date.now()
+  const queryPath='/v1'+(c.projectId?'/projects/'+c.projectId:'')+'/queries'
   let job = await (
-    await fetch(testBase + '/v1/queries', {
+    await fetch(testBase + queryPath, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ question: c.question }),
+      body: JSON.stringify({ question: c.question, ...(c.documentIds ? {documentIds:c.documentIds} : {}) }),
     })
   ).json()
   const deadline = Date.now() + 600000
   for (; Date.now() < deadline && ['queued', 'running'].includes(job.state);) {
     await new Promise((r) => setTimeout(r, 1000))
     job = await (
-      await fetch(testBase + '/v1/queries/' + job.id, { headers })
+      await fetch(testBase + queryPath + '/' + job.id, { headers })
     ).json()
   }
   const timedOut = ['queued', 'running'].includes(job.state)
   if (timedOut) {
     job = await (
-      await fetch(testBase + '/v1/queries/' + job.id, {
+      await fetch(testBase + queryPath + '/' + job.id, {
         method: 'DELETE',
         headers,
       })
     ).json()
   }
   const missingFindings = missingFindingTerms(job.result?.report,c.findingTerms)
+  const sourceScopeViolations=(job.result?.references || []).filter(reference=>c.documentIds&&!c.documentIds.includes(reference.doc)).map(reference=>reference.doc)
+  const sourceRegionsValid=(job.result?.references || []).every(reference=>reference.page>0 && reference.regions?.length>0 && reference.regions.every(rect=>rect.length===4&&rect.every(Number.isFinite)&&rect[2]>0&&rect[3]>0))
+  const arithmeticSourcesValid=(job.result?.arithmeticReview?.calculations || []).every(step=>step.sourceReferenceIds.every(id=>job.result.references.some(reference=>reference.id===id))&&(!step.inputOrigins.includes('source')||step.sourceReferenceIds.length>0))
+  const missingArithmetic=(c.arithmeticExpected || []).filter(expected=>!job.result?.arithmeticReview?.calculations.some(step=>step.dimension===expected.dimension&&(!expected.operation||step.operation===expected.operation)&&Math.abs(step.value*(calculationUnits[step.unit]?.[1] ?? NaN)-expected.value)<1e-9))
   const text = JSON.stringify(job.result?.report),
     evidenceChecksPassed =
       job.state === 'completed' &&
+      sourceRegionsValid && arithmeticSourcesValid && !sourceScopeViolations.length &&
+      !missingArithmetic.length &&
+      (!c.requiredInputKind || job.result?.requiredInputs?.kind===c.requiredInputKind) &&
+      !(c.forbidden || []).some((t) => t.test(text)) &&
       (c.noAnswer
         ? ['no_evidence', 'insufficient_evidence'].includes(job.result?.mode)
         : c.terms.every((t) => t.test(text)) &&
           !missingFindings.length &&
-          !(c.forbidden || []).some((t) => t.test(text)) &&
           new Set(job.result?.references.map((r) => r.doc)).size >=
             (c.minSources || 1)),
     passed =
       evidenceChecksPassed &&
       (c.noAnswer ||
+        (c.arithmeticExpected && job.result?.arithmeticReview?.status==='arithmetic_only' && job.result.arithmeticReview.applicabilityConfirmed===false) ||
         ['local_synthesis', 'cited_synthesis'].includes(job.result?.mode) ||
         (c.allowLookup && job.result?.mode === 'source_lookup'))
   const sourceCount = new Set(job.result?.references?.map(r => r.doc) || []).size
@@ -120,6 +131,11 @@ for (const c of cases) {
     forbiddenTerms: (c.forbidden || []).filter(term => term.test(text)).map(String),
     requiredSources: c.minSources || (c.noAnswer ? 0 : 1),
     actualSources: sourceCount,
+    sourceScopeViolations,
+    sourceRegionsValid,
+    arithmeticSourcesValid,
+    missingArithmetic,
+    ...(c.requiredInputKind?{expectedInputKind:c.requiredInputKind,actualInputKind:job.result?.requiredInputs?.kind}:{}),
     expectsNoAnswer: !!c.noAnswer,
   }
   outputs.push({
@@ -129,6 +145,7 @@ for (const c of cases) {
     criteriaVersion,
     diagnostics,
     question: c.question,
+    ...(c.projectId?{projectId:c.projectId,documentIds:c.documentIds}:{}),
     passed,
     state: job.state,
     timedOut,
@@ -140,6 +157,7 @@ for (const c of cases) {
     report: job.result?.report,
     notes: job.result?.notes,
     references: job.result?.references,
+    arithmeticReview:job.result?.arithmeticReview,
   })
   console.log(
     c.question,
@@ -153,7 +171,7 @@ for (const c of cases) {
   )
 }
 writeFileSync(
-  `test-results/quality${process.env.BASIS_QUALITY_SUITE === 'engineering' ? '-engineering' : ''}${caseId ? '-' + caseId : ''}.json`,
+  `test-results/quality${['engineering','quantitative'].includes(process.env.BASIS_QUALITY_SUITE) ? '-'+process.env.BASIS_QUALITY_SUITE : ''}${caseId ? '-' + caseId : ''}.json`,
   JSON.stringify(outputs, null, 2),
 )
 if (process.env.BASIS_STATE_DIR) writeFileSync(resolve(process.env.BASIS_STATE_DIR, 'quality-results.json'), JSON.stringify(outputs, null, 2))
