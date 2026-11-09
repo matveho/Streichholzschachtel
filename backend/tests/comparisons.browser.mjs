@@ -20,6 +20,10 @@ try {
  await page.waitForFunction(()=>/50\s*mm/.test(document.querySelector('.query-report')?.textContent||''),{},{timeout:60000})
  const result=await(await fetch(base+'/projects/demo-mill-creek/queries/'+job.id)).json()
  assert.equal(result.result.mode,'local_synthesis')
+ assert.ok(result.result.requirementsReview.rows.some(row=>/50 mm/.test(row.difference)&&/450 mm/.test(row.requirement)&&/400 mm/.test(row.projectValue)))
+ await page.locator('.requirements-review summary').click()
+ assert.match(await page.locator('.requirements-review').innerText(),/50 mm/)
+ await page.screenshot({path:'test-results/requirements-comparison.png',fullPage:true})
  assert.match(await report.innerText(),/450\s*mm/);assert.match(await report.innerText(),/400\s*mm/)
  for (const id of ['1','2']) {
   await page.getByRole('button',{name:new RegExp('^Source '+id+':')}).first().click()

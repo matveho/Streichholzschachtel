@@ -164,3 +164,20 @@ its old URL alone is not a usable rollback. On this workstation, `basis mode
 extractive` preserves the public route and project state while disabling model
 inference. A tunnel outage requires restoring the tunnel or publishing a new
 authorized endpoint; changing model policy cannot repair it.
+
+## Review tools for the live demonstration
+
+1. On a project dashboard, toggle **Show project issues** off and back on.
+   Findings and previous dismissals return; each project has its own preference.
+2. Run the box-planter comparison and expand **Requirements check**. Show the
+   450 mm criterion, 400 mm proposal and independently verified 50 mm difference;
+   select a source to inspect its PDF highlight.
+3. Open the capacity review, expand **Revise capacity assumptions**, use 55 ha,
+   five-year runoff 1600 L/s and existing capacity 0.90 m³/s. Run revised capacity
+   check. Expected reference flow: 2.0 m³/s; shortfall: 1.1 m³/s. Original review
+   remains in history. Inputs are scenario assumptions, not verified design data.
+4. Select **Export review**, inspect the source register, then **Print / save
+   PDF**. The brief contains the calculation, scope and source page references.
+
+Keep the pinned model and `demo` policy unchanged. The last 30 minutes before
+presentation are for rehearsal and recovery checks only, not new features.

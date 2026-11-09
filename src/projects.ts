@@ -1,6 +1,7 @@
 import { api, baseUrl } from './backend'
 import type { DocumentRecord } from './backend'
 export type Project = {
+  issuesEnabled?: boolean
   id: string
   name: string
   client: string

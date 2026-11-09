@@ -322,6 +322,7 @@ export class ProjectApi {
   issues(projectId) {
     const project = this.store.get(projectId),
       spec = demoProjects.find((p) => p.id === projectId)
+    if (project.issuesEnabled === false) return []
     const prepared = (spec?.issues || []).map(
       ({ proofs: _proofs, ...issue }) => {
         const evidence = this.evidence.get(projectId + '/' + issue.id)
@@ -676,7 +677,7 @@ export class ProjectApi {
           ),
           queries: this.history(projectId),
           issues: this.issues(projectId),
-          comparison: this.comparison(projectId),
+          comparison: project.issuesEnabled === false ? null : this.comparison(projectId),
           collections: this.store.collections.filter((c) =>
             project.collectionIds.includes(c.id),
           ),
@@ -701,6 +702,7 @@ export class ProjectApi {
       this.resetProject(projectId)
       return json(200, { project: this.project(projectId) })
     }
+    if (['/rescan','/compare-ifc'].includes(route) && req.method === 'POST' && project.issuesEnabled === false) throw problem(409, 'Enable project issues before rescanning.')
     if (route === '/rescan' && req.method === 'POST') {
       // Revalidate prepared document evidence and recompute current model checks.
       for (const key of this.evidence.keys())

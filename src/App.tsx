@@ -1,3 +1,6 @@
+import { exportReview } from './review-export'
+import { CapacityInputs } from './CapacityInputs'
+import { RequirementsReview } from './RequirementsReview'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
   Search,
@@ -531,6 +534,7 @@ export function QueryWorkspace({
               </span>
             )}
             <div className="result-actions">
+              {live.data && !nothingToCopy && <button onClick={()=>{if(!exportReview(live.data!,submitted,projectName||'',entry.projectId,live.data!.documentScope??entry.documentIds??Object.keys(projectDocuments??{}),documents))window.alert('Allow a new tab to open the engineering review brief.')}}>Export review</button>}
               {pinned.length > 0 && (
                 <button
                   onClick={() => {
@@ -608,6 +612,8 @@ export function QueryWorkspace({
                     onUpload={onUpload}
                   />
                 )}
+                {live.data?.mode==='verified_review' && live.data.reviewInputs?.kind==='storm_capacity' && <CapacityInputs key={live.data.id} result={live.data} disabled={busy||live.busy} onRun={question=>onRun(question, false, {from:submitted,choice:'Revised capacity assumptions',documentIds:queryScope})} />}
+                {live.data && <RequirementsReview result={live.data} onSelect={refs=>reveal(refs,true)} />}
                 {!nothingToCopy && (
                   <QueryReport
                     blocks={report}

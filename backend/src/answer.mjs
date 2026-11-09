@@ -1,3 +1,4 @@
+import {attachRequirementsReview} from './requirements-review.mjs'
 import { normalize, locateQuote, quantityUnits } from './indexer.mjs'
 import { evidenceInterpretationIssue, recommendationLanguage, namedReferenceEvidenceIssue, conditionalSourceItems } from './evidence-guards.mjs'
 import { foreignJurisdiction } from './catalog.mjs'
@@ -741,6 +742,7 @@ export function renderResult(
   const references = [],
     report = [],
     arithmetic = [],
+    calculationChecks = [],
     used = new Map(),
     renderedCalculations = new Set()
   const hasWorksheet=sections.some(section=>section.arithmetic)
@@ -779,6 +781,7 @@ export function renderResult(
         const calculationKey = JSON.stringify([c.expression, c.value, c.unit])
         if (renderedCalculations.has(calculationKey)) continue
         renderedCalculations.add(calculationKey)
+        calculationChecks.push({value:c.value,unit:c.unit,operation:c.operation,displayExpression:c.displayExpression,sourceReferenceIds:refs})
         if(section.arithmetic) arithmetic.push({value:c.value,unit:c.unit,dimension:c.dimension,operation:c.operation,displayExpression:c.displayExpression,inputOrigins:c.inputOrigins,sourceReferenceIds:refs})
         const expression = (c.displayExpression
           ? c.displayExpression.replaceAll(' * ', ' × ').replaceAll(' / ', ' ÷ ').replaceAll(' - ', ' − ')
@@ -824,6 +827,7 @@ export function renderResult(
     mode,
     notes,
     rejectedClaims: rejected,
+    ...(calculationChecks.length?{calculationChecks}:{}),
     ...(arithmetic.length?{arithmeticReview:{status:'arithmetic_only',calculations:arithmetic,applicabilityConfirmed:false}}:{}),
   })
 }
@@ -954,7 +958,7 @@ export async function answer(question, searchIndex, options) {
   if(options.metrics)options.metrics.index=scopeStatistics(searchIndex.corpus)
   const worked=example?workedCapacityReview(question,searchIndex,example):null
   const response=worked?{...renderResult(worked.sections,searchIndex.corpus,options.publicBase,options.token,'verified_review',['Source-verified worked review. Supplied scenario figures are assumptions; source applicability and engineering approval require review.']),reviewInputs:worked.inputs}:example?{...await answerFromUnits(question,searchIndex,{...options,sourceOnly:true}),mode:'insufficient_evidence',requiredInputs:{kind:'worked_review_basis',action:'Confirm the worked review source documents and supplied inputs before completing this calculation.'}}:await answerCore(question,searchIndex,options)
-  const result=attachPipeReviewInputs(attachProjectMeasurements(response,question),question)
+  const result=attachRequirementsReview(attachPipeReviewInputs(attachProjectMeasurements(response,question),question))
   return example ? {...result,reviewExample:{id:example.id,title:example.title,documentIds:example.documentIds},notes:[...(result.notes||[]),'Worked scenario: supplied figures are assumptions; this review uses the identified drainage design references.']} : result
 }
 

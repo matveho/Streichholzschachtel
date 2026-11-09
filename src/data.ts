@@ -1,6 +1,7 @@
 export type DocId = string
 // PDF points measured from the top-left of each original 612 × 792 pt page.
 export type Reference = {
+  extraction?: string
   id: string
   doc: DocId
   page: number

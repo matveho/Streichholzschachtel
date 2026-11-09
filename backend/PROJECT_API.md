@@ -109,3 +109,29 @@ From `backend`: `node --test tests/projects.test.mjs`; against private API 8810:
 Project descriptions default to an automatic local summary of selected collections and imported document topics/types. Editing a description stores a manual override; setting `description` to an empty string regenerates it. Description edits are allowed on protected examples and do not invalidate existing document-scoped query results. Reset restores original descriptions. `BASIS_STATE_DIR` can isolate development storage from the active demo.
 
 `persistOnReset` is a boolean project field (POST/PATCH), defaulting to false for ordinary projects. Protected seeds always return true and reject attempts to set false with 403. This flag does not prevent explicit deletion of an ordinary project. All visible Reset demo controls call the workspace endpoint. Opted-in projects retain documents, history and bookmarks; built-in examples return to their initial state. Reset rejects concurrent imports with 409. Destructive reset tests must run on the isolated 8840/8842 runtime with `BASIS_STATE_DIR` pointing to `state/ui-preview`, never the presenter’s live data.
+
+## Review presentation and project Issues preference
+
+`POST /v1/projects` and `PATCH /v1/projects/:project` accept `issuesEnabled`
+(boolean). It defaults to true, including existing projects. False hides the
+project's findings and issue count, returns `issues: []` and `comparison: null`,
+and rejects explicit rescan/legacy compare requests with 409. It preserves
+existing dismissal states and query history. Re-enabling restores findings.
+The preference survives process restart and protected-project recovery.
+
+New answers may include `requirementsReview.rows`: source criterion, paired
+project evidence (or explicit missing evidence), independently verified
+arithmetic difference where available, assessment, and citation IDs. This is a
+presentation of existing checked evidence, not a new compliance classification.
+`calculationChecks` retains already verified arithmetic with its citation IDs.
+
+The frontend's capacity editor is available only for a successful
+`verified_review` with `reviewInputs.kind: storm_capacity`. It submits a new
+query with explicit area/runoff/capacity roles and units, preserving the document
+scope and original history. The current worksheet supports catchments greater
+than 30 ha and does not compute pond storage volume.
+
+Export review opens a printable brief with the question, document scope,
+requirements checks, full findings and calculations, source excerpts and PDF
+page numbers. Print / save PDF uses the browser's PDF output. Exported input
+and source text is HTML-escaped; backend access tokens are not exported.

@@ -15,6 +15,9 @@ export type DocumentRecord = {
   pageSizes?: Record<number, [number, number]>
 }
 export type LiveResult = {
+  documentScope?: string[]
+  reviewInputs?: {kind:string;catchmentArea:{value:number;unit:string};fiveYearRunoff:{value:number;unit:string};existingSewerCapacity:{value:number;unit:string}}
+  requirementsReview?: {rows: {heading?:string;requirement:string;projectValue:string;difference:string;assessment:string;refs:string[]}[]}
   searchStats?: SearchStats
   documents: Record<string, DocumentRecord>
   references: Reference[]
@@ -96,7 +99,7 @@ export async function api(path: string, init: RequestInit = {}) {
   return body
 }
 /** A finished query job as the backend returns it. */
-export type QueryJob = { id: string; state: string; result?: unknown }
+export type QueryJob = { id: string; state: string; result?: unknown; documentIds?: string[] }
 
 type RawResult = Omit<LiveResult, 'documents' | 'id'> & {
   documents: (DocumentRecord & { id: string })[]
@@ -112,7 +115,7 @@ function liveResult(job: QueryJob): LiveResult {
       throw new Error('The backend returned a document on a different server.')
     docs[record.id] = { ...record, file: file.href }
   }
-  return { ...result, documents: docs, id: job.id }
+  return { ...result, documents: docs, id: job.id, documentScope:job.documentIds }
 }
 
 export function useLiveQuery(

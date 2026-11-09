@@ -39,6 +39,7 @@ export class ProjectStore {
     const existing = this.read()
     let migrated = false
     for (const project of existing.projects) {
+      if (typeof project.issuesEnabled !== 'boolean') { project.issuesEnabled = true; migrated = true }
       if (typeof project.persistOnReset !== 'boolean') {
         project.persistOnReset = !!project.protectedDemo
         migrated = true
@@ -133,6 +134,7 @@ export class ProjectStore {
       persistOnReset: true,
       collectionIds: [...spec.collectionIds],
       documentIds: this.selection(spec.collectionIds, undefined, privateIds),
+      issuesEnabled: true,
       issueStates: {},
       savedQueryIds: [],
       revision: 1,
@@ -176,6 +178,7 @@ export class ProjectStore {
         ...canonical,
         documentIds,
         collectionIds,
+        issuesEnabled: previous.issuesEnabled !== false,
         issueStates: previous.issueStates || {},
         savedQueryIds: previous.savedQueryIds || [],
         description:
@@ -218,6 +221,7 @@ export class ProjectStore {
     return project
   }
   create(input) {
+    if (input.issuesEnabled !== undefined && typeof input.issuesEnabled !== 'boolean') throw problem(400, 'issuesEnabled must be a boolean.')
     if (
       input.persistOnReset !== undefined &&
       typeof input.persistOnReset !== 'boolean'
@@ -249,6 +253,7 @@ export class ProjectStore {
         .slice(0, 1000),
       discipline: 'Engineering research',
       descriptionMode: input.description?.trim() ? 'manual' : 'auto',
+      issuesEnabled: input.issuesEnabled !== false,
       protectedDemo: false,
       persistOnReset: input.persistOnReset === true,
       collectionIds: [...new Set(collectionIds)],
@@ -265,6 +270,7 @@ export class ProjectStore {
     return project
   }
   update(id, input) {
+    if (input.issuesEnabled !== undefined && typeof input.issuesEnabled !== 'boolean') throw problem(400, 'issuesEnabled must be a boolean.')
     const project = this.get(id)
     if (
       input.persistOnReset !== undefined &&
@@ -298,6 +304,7 @@ export class ProjectStore {
     }
     const next = {
       ...project,
+      issuesEnabled: input.issuesEnabled ?? project.issuesEnabled ?? true,
       persistOnReset:
         project.protectedDemo ||
         (input.persistOnReset ?? project.persistOnReset ?? false),
