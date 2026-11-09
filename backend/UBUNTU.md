@@ -83,7 +83,7 @@ protected project artifacts. The two duplicate standards retain filename aliases
 Indexing is READY with zero failures. User-local Tesseract 5.3.4 and PyMuPDF 1.26.7
 provide OCR, original word geometry and table extraction.
 
-- 232 Node tests pass, plus OCR, isolated project API/import/isolation/restart checks.
+- 246 Node tests pass, plus OCR, isolated project API/import/isolation/restart checks.
 - Nine comparison capability cases cover two real numeric comparisons, verified
   arithmetic, unsupported/missing design bases, foreign jurisdiction, empty and
   foreign document scopes, and extractive routing for general reviews.
@@ -98,6 +98,10 @@ provide OCR, original word geometry and table extraction.
   criteria are listed with their measurement datums and original PDF citations.
   The browser suite checks both highlights, the required design-basis input and
   persistence. A request naming one publication remains limited to that source.
+- Multi-check review validation and repair are bounded per requested check,
+  preserving later findings instead of silently dropping them. Source-use
+  coverage distinguishes partial findings from source evidence still requiring
+  interpretation and links those provisions to their original PDFs.
 
 ```bash
 scripts/linux/test-backend
@@ -113,6 +117,11 @@ For example, select the Connection Guide and Construction Specifications and ask
 separates the 2.4 m connection criterion from the 2.0 m invert-to-curb criterion;
 it requests a design-basis/datum decision instead of equating those values.
 This register identifies provisions to reconcile, not proven document conflicts.
+
+`scripts/linux/test-review-coverage` tests the generated multi-check coverage
+display in an isolated experimental backend. It does not enable unrestricted
+generation in the demo. General review quality remains incomplete; production
+keeps the pinned comparison configuration and extractive general-query path.
 
 Test runners use disposable state under backend/state/verification. They reserve
 8810, 8814 or 8840/8842; do not run runners sharing a port concurrently. Browser

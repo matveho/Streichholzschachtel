@@ -24,6 +24,82 @@ import {
 const corpus = await buildIndex(),
   search = new SearchIndex(corpus)
 
+test('every failed check invalidates all its rejected drafts before bounded repair feedback',async(t)=>{
+ const original={...config}
+ t.after(()=>Object.assign(config,original))
+ Object.assign(config,{provider:'ollama',extractiveOnly:false,localSynthesis:true,localSynthesisPolicy:'all',localReasoning:false,entailmentDir:'',maxFindingsPerCheck:6})
+ const drafts=new Map(),retained=[]
+ t.mock.method(globalThis,'fetch',async(_url,options)=>{
+  const body=JSON.parse(options.body),system=body.messages[0].content,input=JSON.parse(body.messages[1].content)
+  let output
+  if(system.startsWith('Decompose'))output={queries:[
+   {heading:'Private storm system',query:'private storm sewer systems multi-family requirements',sections:[]},
+   {heading:'Property boundaries',query:'private on-site water sewer systems separately titled property requirements',sections:[]},
+  ]}
+  else if(system.includes('Select ALL directly')){
+   const pattern=/separately/i.test(input.check)?/Private on-site water and sewer systems must not cross/:/Private storm sewer systems are required/
+   const source=input.context.find(unit=>pattern.test(unit.quote))
+   assert.ok(source,'The actual scoped source clause is available')
+   output={answerable:true,evidence:[source.id],unresolved:[]}
+  }else if(system.startsWith('Include calculation IDs')){
+   const count=(drafts.get(input.focusedCheck)||0)+1
+   drafts.set(input.focusedCheck,count)
+   if(count===1)output={findings:Array.from({length:6},(_,i)=>({text:`The source requires a storm service diameter of ${9000+i} mm.`,evidence:[input.provisions[0].id],calculations:[]}))}
+   else{
+    retained.push({check:input.focusedCheck,findings:input.alreadyRetainedFindings,feedback:input.validationIssues})
+    output={findings:[{text:input.provisions[0].quote,evidence:[input.provisions[0].id],calculations:[]}]}
+   }
+  }else if(system.startsWith('Use verifiedConditions'))output={verdicts:Object.fromEntries(input.claims.map(claim=>[String(claim.id),{reason:'The attached exact quote supports this scoped finding.',supported:true,relevant:true}]))}
+  else throw Error('Unexpected model phase in repair regression')
+  return new Response(JSON.stringify({message:{content:JSON.stringify(output)},done_reason:'stop'}))
+ })
+ const result=await answer('Review private storm sewer and property boundary requirements for a four-unit development, retaining all independently sourced requirements.',search,{
+  publicBase:'http://localhost',token:'test',signal:AbortSignal.timeout(30000),
+ })
+ assert.equal(result.mode,'local_synthesis')
+ assert.equal(retained.length,2)
+ for(const check of retained){
+  assert.deepEqual(check.findings,[],`${check.check} must not retain any rejected draft`)
+  assert.ok(check.feedback.length<=8,'Feedback remains bounded per check')
+ }
+})
+
+test('failed early checks cannot silently discard a valid later servicing finding',()=>{
+ const quote='Private storm sewer systems are required by all commercial, industrial, institutional and multi-family developments (3-plex and larger).'
+ const passage=corpus.passages.find(p=>p.text.includes(quote))
+ assert.ok(passage)
+ const failed=check=>({check,text:'A fabricated requirement is mandatory.',evidence:[{passageId:passage.id,quote:'This quote is not in the document.'}]})
+ const valid=check=>({check,text:quote,evidence:[{passageId:passage.id,quote}]})
+ const result=validateSynthesis({sections:[{claims:[...Array.from({length:6},()=>failed('design')),...Array.from({length:6},()=>failed('construction')),valid('servicing')]}]},[passage],
+  'For a four-unit infill, what private storm servicing is required?',corpus.documents,{checks:['design','construction','servicing']})
+ assert.equal(result.sections.flatMap(s=>s.claims).length,1)
+ assert.equal(result.sections[0].claims[0].check,'servicing')
+ assert.equal(result.rejected,12)
+})
+
+test('all eight bounded source checks survive the separate conclusions section',()=>{
+ const quote='Private storm sewer systems are required by all commercial, industrial, institutional and multi-family developments (3-plex and larger).'
+ const passage=corpus.passages.find(p=>p.text.includes(quote))
+ const checks=Array.from({length:8},(_,i)=>'check-'+i)
+ const source=check=>({heading:check,claims:[{check,text:quote,evidence:[{passageId:passage.id,quote}]}]})
+ const result=validateSynthesis({sections:[{claims:[]},...checks.map(source)]},[passage],'Review private storm servicing.',corpus.documents,{checks})
+ assert.equal(result.sections.length,8)
+ assert.equal(result.sections.at(-1).claims[0].check,'check-7')
+})
+
+test('per-check findings stay bounded and unknown check IDs cannot borrow another budget',()=>{
+ const quote='Private storm sewer systems are required by all commercial, industrial, institutional and multi-family developments (3-plex and larger).'
+ const passage=corpus.passages.find(p=>p.text.includes(quote))
+ const claim=check=>({check,text:quote,evidence:[{passageId:passage.id,quote}]})
+ const first=Array.from({length:config.maxFindingsPerCheck+1},()=>claim('first'))
+ const result=validateSynthesis({sections:[{claims:[...first,claim('second'),claim('unrequested')]}]},[passage],'Review private storm servicing.',corpus.documents,{checks:['first','second']})
+ const accepted=result.sections.flatMap(s=>s.claims)
+ assert.equal(accepted.filter(c=>c.check==='first').length,config.maxFindingsPerCheck)
+ assert.equal(accepted.filter(c=>c.check==='second').length,1)
+ assert.equal(accepted.some(c=>c.check==='unrequested'),false)
+ assert.ok(result.issues.some(issue=>/check budget/.test(issue.reason)))
+})
+
 test('focused retrieval retains the competing connection criterion and its original anchor',()=>{
  const selected=diversePassages(search.searchSingle('Storm service connection depth criteria'))
  const units=evidenceUnits(search.withPageContext(selected),30000)

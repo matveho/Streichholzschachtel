@@ -28,7 +28,7 @@ export const engineeringScenarios = [
     ],
     findingTerms: [
       /private.*storm|storm.*private/i,
-      /(?:(?:confirm|resolve|clarif|EPCOR|remain|still|separat)[^.]{0,150}(?:servic|obligation|requirement)|(?:servic|obligation)[^.]{0,150}(?:confirm|resolve|clarif|EPCOR|remain|still|separat))/i,
+      /(?:(?:confirm|resolve|clarif\w*|reconcile)[^.!?]{0,150}(?:servic|obligation|requirement)|(?:servic|obligation)[^.!?]{0,150}(?:confirm|resolve|clarif\w*|reconcile))/i,
     ],
     minSources: 3,
   },

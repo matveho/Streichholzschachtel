@@ -17,10 +17,13 @@ export function requiresOptionalComponent(claim, quotes, question = '') {
       'i',
     )
     const conditional = new RegExp(
-      `\\b(?:if|when|where)\\s+(?:an?\\s+|the\\s+)?${component}\\b|\\b${component}\\b[^.!?;]{0,30}\\bif (?:present|used|installed|provided)\\b`,
+      `\\b(?:if|when|where)\\s+(?:an?\\s+|the\\s+)?${component}\\b|\\b(?:if|when|where)\\s+(?:[a-z]+[ -]){0,6}(?:includes?|contains?|incorporates?|has)\\s+(?:an?\\s+|the\\s+)?${component}\\b|\\b${component}\\b[^.!?;]{0,30}\\bif (?:present|used|installed|provided)\\b`,
       'i',
     )
-    if (explicit.test(question) || conditional.test(claim)) continue
+    const stated = question.split(/[;!?]|\.(?=\s|$)/).some(clause =>
+      explicit.test(clause) && !/\b(?:if|when|where|whether|unless)\b|^\s*(?:does|do|is|are|should|would|could|can|will)\b/i.test(clause))
+    const assertions = claim.split(/[;!?]|\.(?=\s|$)/).filter(clause=>existence.test(clause))
+    if (stated || assertions.every(clause=>conditional.test(clause))) continue
     const otherSentences = [
       ...new Intl.Segmenter('en', { granularity: 'sentence' }).segment(text),
     ]

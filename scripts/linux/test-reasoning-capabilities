@@ -5,7 +5,7 @@ export BASIS_STATE_DIR
 BASIS_STATE_DIR=$(mktemp -d "$PWD/state/verification/run-gpu-XXXXXXXX")
 export PDF_CACHE_DIR="$PWD/state"
 export EXTRACTIVE_ONLY=0 GENERATION_PROVIDER=ollama LOCAL_SYNTHESIS=1
-export OLLAMA_URL=http://127.0.0.1:11435 OLLAMA_MODEL="${1:-qwen3:32b-q4_K_M}"
+export OLLAMA_URL=http://127.0.0.1:11435 OLLAMA_MODEL="${1:-basis-qwen35-comparisons:72aac7c28be8}"
 export TESSERACT_PATH="$HOME/.local/share/basis-ocr/usr/bin/tesseract"
 export TESSDATA_PREFIX="$HOME/.local/share/basis-ocr/usr/share/tesseract-ocr/5/tessdata"
 export BASIS_TEST_URL=http://127.0.0.1:8814

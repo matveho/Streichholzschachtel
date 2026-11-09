@@ -4,7 +4,7 @@ The live demo uses the pinned Qwen3.5 model for explicit project/reference compa
 
 ## Implemented
 
-- Default local model selection: qwen3:32b-q4_K_M. Explicit OLLAMA_MODEL overrides remain supported.
+- Default local model selection: qwen3.5:35b-a3b-q4_K_M. The demo pins the validated digest through its comparison alias; explicit OLLAMA_MODEL overrides remain supported.
 - LOCAL_REASONING=1 enables reasoning only for calls marked reasoning:true: arithmetic proposals, findings and evidence review. Retrieval planning and source-ID selection remain non-thinking.
 - LOCAL_REASONING_TOKENS (default 4096) augments each call's output budget; LOCAL_CONTEXT_TOKENS defaults to 16384. Both settings are range-validated. Completion at the token limit remains a failure; incomplete output is not released.
 - Ollama endpoints must be loopback, matching the existing llama.cpp restriction. Reasoning traces are excluded from returned results; only parsed final JSON is used.
@@ -307,3 +307,70 @@ bases, empty/foreign scope, and the real width/cover differences. Browser
 highlights, reload/history, offline general review and automatic IFC findings
 after the final datum-label refinement. Default Linux browser checks now include
 the reference-reconciliation suite.
+
+## Controlled model comparison and complete multi-check validation
+
+The dense 32B and current 35B models were evaluated with the same loaded source
+tree (`e27d4cb7192d95174259d19b3c1f27529b63430c`), eight questions, 16K context,
+Q4_K_M weights and reasoning disabled. The dense model was fully GPU-resident
+at 24,484,700,487 bytes; the current model used 21,782,960,536 bytes.
+
+| Model | Cases passed | Total query time | State |
+| --- | --- | --- | --- |
+| qwen3:32b-q4_K_M | 3/8 | 474 s | run-gpu-VR7vI7l4 |
+| pinned Qwen3.5 35B-A3B | 5/8 | 198 s | run-gpu-kedY1lgl |
+
+These are end-to-end observations for this suite, including runtime warm-up,
+not a parameter-count-only experiment or general accuracy estimate. Both loaded
+the pre-fix implementation before the following validation changes. The dense
+candidate was not promoted; the verified comparison release retains Qwen3.5.
+Generic configuration and Linux evaluation defaults now select the current
+model instead of the older 32B/14B defaults. The demo alias/digest is unchanged.
+
+Diagnosis found two application limits that silently lost later checks:
+
+- All locally drafted findings were combined into one section, then validation
+  examined only its first 12 claims. It also retained only eight total sections,
+  although eight source checks plus their conclusions require nine sections.
+  Validation now uses the server's requested check IDs, bounds findings per
+  check, and retains every bounded source section. Unknown IDs and excess
+  findings cannot borrow another check's budget; legacy unplanned output keeps
+  its previous limits.
+- Repair received only the first eight errors globally. Later rejected drafts
+  consequently appeared to be retained findings. All failed claims now reach
+  cache invalidation; feedback is bounded per check and prioritizes its rejected
+  drafts before source-only diagnostics. A real mocked-provider regression
+  reproduced four unsupported retained drafts before the fix and none after it.
+
+An observed infill run consequently retained findings across all six checks
+rather than only the first two (30 versus 9 findings in those snapshots).
+These counts include paraphrases and do not establish engineering accuracy.
+Conditional design inclusion is also preserved: "if the design includes an
+underdrain" does not mandate installing one. A separate conditional sentence
+cannot excuse an unconditional installation claim, and a hypothetical question
+cannot establish that the component exists.
+
+The review now exposes citation use per selected source provision. Partially
+used evidence produces `partial_findings`, with selected/cited/source-only/
+unreported counts. Shared sources are credited without duplicate backlogs;
+repeated wording on a different page cannot credit the wrong anchor. The report
+links source-only provisions under "Selected evidence awaiting interpretation".
+It never equates citation use with complete interpretation or design approval,
+and does not expose withheld quotations without a public citation.
+
+Quality gates now match finding terms within actual finding sentences. Earlier
+whole-report JSON could join unrelated "private" and "storm" statements, or
+mistake naming EPCOR for a clarification. Explicit servicing clarification is
+required, and evaluation records include a criteria fingerprint. Re-scoring the
+stored comparison preserves 3/8 versus 5/8. The post-fix
+`run-gpu-hgYjgfpn` also remains 5/8 under the stricter gates: servicing decisions,
+qualified capacity arithmetic and damaged-LID testing/corrective work remain
+incomplete. Unrestricted general synthesis is still not qualified.
+
+Final regression `run-7uiNaE1n`: 246/246 unit tests, OCR, isolated project API,
+imports, isolation and restart persistence passed. Comparison capability run
+`run-gpu-Moqr3wK2` passed all nine cases. Browser `run-browser-pZxnl2KQ` passed
+actual UI review submission, partial-check coverage, independent source-use
+invariants, the pending-source PDF highlight and reload/history. Use
+`scripts/linux/test-review-coverage` to reproduce that isolated experimental
+workflow without changing the production mode.

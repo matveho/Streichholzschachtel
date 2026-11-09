@@ -1,5 +1,18 @@
 const textKey = (text) => String(text).replace(/\s+/g, ' ').trim()
 
+export function repairFeedback(cached, issues, limit = 8) {
+  const draftKeys = new Set(cached.map(finding => textKey(finding.text)))
+  const ownDrafts = issues.filter(issue => draftKeys.has(textKey(issue.claim)))
+  const sourceIssues = issues.filter(issue => !draftKeys.has(textKey(issue.claim)))
+  const seen = new Set()
+  return [...ownDrafts, ...sourceIssues].filter(issue => {
+    const key = textKey(issue.claim) + '\0' + issue.reason
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  }).slice(0, limit)
+}
+
 export function scopedRepair(cached, issues, check) {
   const own = issues.filter((issue) => !issue.check || issue.check === check)
   const failed = new Set(own.map((issue) => textKey(issue.claim)))

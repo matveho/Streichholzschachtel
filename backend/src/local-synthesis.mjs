@@ -6,7 +6,7 @@ import { config } from './config.mjs'
 import { generate } from './model.mjs'
 import { tokens, rankProvisions } from './search.mjs'
 import { verifyCalculations } from './calculations.mjs'
-import { scopedRepair } from './synthesis-repair.mjs'
+import { scopedRepair, repairFeedback } from './synthesis-repair.mjs'
 import { permitsLocalSynthesis } from './generation-policy.mjs'
 
 export function cleanSourceCallout(text, labels) {
@@ -370,7 +370,7 @@ export async function draftLocal(
           }),
         ),
         unresolved: plan.unresolved,
-        ...(groupIssues.length ? { validationIssues: groupIssues } : {}),
+        ...(groupIssues.length ? { validationIssues: repairFeedback(cached, groupIssues) } : {}),
       },
       {
         type: 'object',

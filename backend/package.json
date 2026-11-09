@@ -15,7 +15,6 @@
     "test:ifc-contradictions": "node tests/fixtures/ifc-contradictions/run.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.6.0",
     "ai": "^7.0.164",
     "pdfjs-dist": "6.5.438"
   }

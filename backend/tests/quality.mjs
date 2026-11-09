@@ -1,6 +1,11 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { engineeringScenarios } from './engineering-scenarios.mjs'
+import { missingFindingTerms } from './quality-criteria.mjs'
+import { createHash } from 'node:crypto'
+const criteriaVersion = createHash('sha256').update([
+  './quality.mjs','./engineering-scenarios.mjs','./quality-criteria.mjs',
+].map(file=>readFileSync(new URL(file,import.meta.url),'utf8')).join('')).digest('hex')
 const key = readFileSync(resolve(process.env.BASIS_STATE_DIR || 'state', 'session-token.txt'), 'utf8').trim(),
   testBase = process.env.BASIS_TEST_URL || 'http://127.0.0.1:8787',
   headers = {
@@ -92,16 +97,14 @@ for (const c of cases) {
       })
     ).json()
   }
-  const findings = JSON.stringify(
-    job.result?.report?.filter((block) => !block.heading) || [],
-  )
+  const missingFindings = missingFindingTerms(job.result?.report,c.findingTerms)
   const text = JSON.stringify(job.result?.report),
     evidenceChecksPassed =
       job.state === 'completed' &&
       (c.noAnswer
         ? ['no_evidence', 'insufficient_evidence'].includes(job.result?.mode)
         : c.terms.every((t) => t.test(text)) &&
-          (c.findingTerms || []).every((t) => t.test(findings)) &&
+          !missingFindings.length &&
           !(c.forbidden || []).some((t) => t.test(text)) &&
           new Set(job.result?.references.map((r) => r.doc)).size >=
             (c.minSources || 1)),
@@ -113,7 +116,7 @@ for (const c of cases) {
   const sourceCount = new Set(job.result?.references?.map(r => r.doc) || []).size
   const diagnostics = {
     missingEvidenceTerms: (c.terms || []).filter(term => !term.test(text)).map(String),
-    missingFindingTerms: (c.findingTerms || []).filter(term => !term.test(findings)).map(String),
+    missingFindingTerms: missingFindings.map(String),
     forbiddenTerms: (c.forbidden || []).filter(term => term.test(text)).map(String),
     requiredSources: c.minSources || (c.noAnswer ? 0 : 1),
     actualSources: sourceCount,
@@ -123,6 +126,7 @@ for (const c of cases) {
     ...(c.id ? {caseId:c.id} : {}),
     model: runHealth.model,
     provider: runHealth.provider,
+    criteriaVersion,
     diagnostics,
     question: c.question,
     passed,

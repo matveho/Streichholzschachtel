@@ -25,7 +25,7 @@ export const config = {
   port: Number(process.env.PORT || 8787),
   token: process.env.BASIS_TOKEN || readFileSync(tokenFile, 'utf8').trim(),
   ollamaUrl: process.env.OLLAMA_URL || 'http://127.0.0.1:11435',
-  model: process.env.OLLAMA_MODEL || 'qwen3:32b-q4_K_M',
+  model: process.env.OLLAMA_MODEL || 'qwen3.5:35b-a3b-q4_K_M',
   maxFindingsPerCheck: Number(process.env.LOCAL_MAX_FINDINGS_PER_CHECK || 6),
   localReasoning: process.env.LOCAL_REASONING === '1',
   localReasoningTokens: Number(process.env.LOCAL_REASONING_TOKENS || 4096),
@@ -37,8 +37,6 @@ export const config = {
   llamaManifest: process.env.LOCAL_MODEL_MANIFEST || '',
   releaseForVerifier: process.env.LOCAL_MODEL_RELEASE_FOR_VERIFIER === '1',
   gatewayModel: process.env.AI_GATEWAY_MODEL || 'google/gemini-4-argon',
-  anthropicModel: process.env.ANTHROPIC_MODEL || 'claude-opus-5-5',
-  anthropicEffort: process.env.ANTHROPIC_EFFORT || 'medium',
   extractiveOnly: process.env.EXTRACTIVE_ONLY === '1',
   localSynthesis: process.env.LOCAL_SYNTHESIS === '1',
   localSynthesisPolicy: process.env.LOCAL_SYNTHESIS_POLICY || 'all',
@@ -52,7 +50,7 @@ export const config = {
     .filter(Boolean),
 }
 if (
-  !['extractive', 'anthropic', 'ollama', 'llamacpp', 'gateway'].includes(
+  !['extractive', 'ollama', 'llamacpp', 'gateway'].includes(
     config.provider,
   )
 )

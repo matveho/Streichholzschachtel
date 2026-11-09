@@ -47,3 +47,16 @@ test('optional component checks preserve conditional duties and stated project c
     false,
   )
 })
+
+test('a conditional design inclusion remains conditional without adding an installation obligation',()=>{
+ assert.equal(requiresOptionalComponent('If the box planter design includes an underdrain, a storm sewer connection must be provided.',quotes),false)
+ assert.equal(requiresOptionalComponent('The connection must be provided when the design contains an underdrain.',quotes),false)
+ assert.equal(requiresOptionalComponent('The planter must have an underdrain; if an underdrain is present, connect it to a storm sewer.',quotes),true)
+})
+
+test('a hypothetical or interrogative project input cannot prove the component exists',()=>{
+ const claim='The planter must have an underdrain.'
+ assert.equal(requiresOptionalComponent(claim,quotes,'If the planter has an underdrain, what connection is needed?'),true)
+ assert.equal(requiresOptionalComponent(claim,quotes,'Does the planter include an underdrain?'),true)
+ assert.equal(requiresOptionalComponent(claim,quotes,'The planter has an underdrain. What connection is needed?'),false)
+})

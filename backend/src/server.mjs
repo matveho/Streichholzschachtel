@@ -71,7 +71,6 @@ const engineVersion = createHash('sha256')
       'catalog.mjs',
       'units.mjs',
       'lookup.mjs',
-      'claude.mjs',
       '../extract.py',
       '../native-table-layout.py',
     ]
@@ -354,9 +353,7 @@ export const server = http.createServer(async (req, res) => {
               ? config.gatewayModel
               : config.provider === 'llamacpp'
                 ? config.llamaModel
-                : config.provider === 'anthropic'
-                  ? config.anthropicModel
-                  : config.model,
+                : config.model,
         units: corpus?.units?.length || 0,
         provider: config.provider,
         generationPolicy: config.extractiveOnly ? 'extractive' : config.localSynthesisPolicy,

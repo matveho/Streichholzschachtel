@@ -25,7 +25,6 @@ import { verifyCalculations } from './calculations.mjs'
 import { sourceLookup } from './source-lookup.mjs'
 import { checkContradictions } from './entailment.mjs'
 import { UnitIndex, lookup } from './lookup.mjs'
-import { claudeAnswer } from './claude.mjs'
 
 const schema = {
   type: 'object',
@@ -113,14 +112,33 @@ function supportedNumbers(claim, sources, question, calculations = []) {
   )
 }
 
-export function validateSynthesis(output, passages, question, documents = []) {
+export function validateSynthesis(output, passages, question, documents = [], {checks} = {}) {
   const byId = new Map(passages.map((p) => [p.id, p]))
   const sections = []
   const issues = []
   let rejected = 0
-  for (const section of (output?.sections || []).slice(0, 8)) {
+  // Local drafts combine every check into one conclusions section. Applying
+  // the legacy 12-claim section limit there silently discarded later checks.
+  // Check IDs come from our retrieval plan, never from a model-selected budget.
+  if (checks !== undefined && (!Array.isArray(checks) || checks.length > 8 || checks.some(id=>typeof id !== 'string' || !id.length || id.length > 80)))
+    throw new Error('Invalid requested-check validation budget')
+  const requested = checks === undefined ? null : new Set(checks)
+  const findingCounts = new Map(), sourceCounts = new Map()
+  const sectionLimit = requested ? requested.size + 1 : 8
+  for (const section of (output?.sections || []).slice(0, sectionLimit)) {
     const claims = []
-    for (const claim of (section.claims || []).slice(0, 12)) {
+    const claimLimit = requested ? section.heading ? 32 : requested.size * config.maxFindingsPerCheck : 12
+    for (const claim of (section.claims || []).slice(0, claimLimit)) {
+      if (requested) {
+        const counts = section.heading ? sourceCounts : findingCounts
+        const budget = section.heading ? 32 : config.maxFindingsPerCheck
+        if (!requested.has(claim.check) || (counts.get(claim.check) || 0) >= budget) {
+          rejected++
+          issues.push({check:claim.check,claim:claim.text,reason:'The finding has an unknown check ID or exceeds its requested check budget.'})
+          continue
+        }
+        counts.set(claim.check,(counts.get(claim.check) || 0)+1)
+      }
       if (
         typeof claim.text !== 'string' ||
         claim.text.length > 1400 ||
@@ -752,74 +770,18 @@ export function renderUnits(sections, corpus, publicBase, token, mode, notes) {
   )
 }
 
-// Offline extractive answer, optionally rewritten by Claude from the same units.
+// Offline extractive answer from original source units.
 async function answerFromUnits(
   question,
   searchIndex,
-  { publicBase, token, signal, progress, sourceOnly },
+  { publicBase, token, progress },
 ) {
   const corpus = searchIndex.corpus
   const index = (searchIndex.unitIndex ??= new UnitIndex(corpus))
   progress('Searching tables, provisions and document versions')
   const found = lookup(question, index)
-  let { sections, mode } = found
-  let notes = [...found.notes]
-  const jurisdictionRefusal =
-    found.mode === 'no_evidence' && !found.candidates?.length
-  if (
-    !sourceOnly &&
-    config.provider === 'anthropic' &&
-    !jurisdictionRefusal &&
-    found.mode !== 'version_answer'
-  ) {
-    try {
-      progress('Writing a cited answer with Claude')
-      const written = await claudeAnswer(question, found, index, signal)
-      const versionSection = found.sections.find(
-        (s) => s.heading === 'Version and applicability',
-      )
-      if (written.answerable) {
-        sections = [
-          ...written.sections,
-          ...(versionSection ? [versionSection] : []),
-        ]
-        mode = 'cited_synthesis'
-        notes = [
-          `Written by ${written.model} from the cited source excerpts; every sentence's citations and numbers were checked against the source text. Engineering review is still required.`,
-        ]
-        if (written.limitations) notes.push(written.limitations)
-        if (written.rejected)
-          notes.push(
-            `${written.rejected} sentence(s) were withheld because their citations or numbers could not be verified.`,
-          )
-      } else if (found.mode !== 'no_evidence') {
-        sections = [
-          {
-            heading: 'No confirmed answer',
-            sentences: [
-              {
-                text:
-                  written.limitations ||
-                  'The retrieved passages do not directly answer this question.',
-                units: [],
-              },
-            ],
-          },
-          ...found.sections.map((s) => ({
-            ...s,
-            heading: `Closest source text: ${s.heading}`,
-          })),
-        ]
-        mode = 'insufficient_evidence'
-      }
-    } catch (error) {
-      if (signal.aborted) throw error
-      notes.push(
-        'Claude synthesis was unavailable; showing the offline source answer.',
-      )
-      console.warn('Claude synthesis:', error.message)
-    }
-  }
+  let { sections } = found
+  const { mode, notes } = found
   const selectedCriteria = sections.flatMap(section=>section.sentences.flatMap(sentence=>(sentence.units || []).map(unit=>({excerpt:unit.text,heading:unit.heading,passage:{doc:unit.doc}}))))
   const related = supplementaryReferenceCriteria(question,selectedCriteria,searchIndex)
   if (related.length) sections = [...sections,{
@@ -841,7 +803,7 @@ export async function answer(
 ) {
   if (foreignJurisdiction(question, searchIndex.corpus.documents))
     return answerFromUnits(question, searchIndex, { publicBase, token, signal, progress, sourceOnly: true })
-  if (sourceOnly || ['extractive', 'anthropic'].includes(config.provider))
+  if (sourceOnly || config.provider === 'extractive')
     return answerFromUnits(question, searchIndex, {
       publicBase,
       token,
@@ -928,7 +890,7 @@ export async function answer(
         }
       }
       if (draft.answerable) {
-        checked = validateSynthesis(draft, passages, question, searchIndex.corpus.documents)
+        checked = validateSynthesis(draft, passages, question, searchIndex.corpus.documents, {checks:draft.plan.groups.map(group=>group.id)})
         if (checked.sections.length) {
           progress('Checking findings against their exact source evidence')
           checked = await auditConclusion(checked)
@@ -942,11 +904,11 @@ export async function answer(
             passages,
             searchIndex,
             signal,
-            checked.issues.slice(0, 8),
+            checked.issues,
             draft.plan,
           )
           if (repaired.answerable) {
-            let corrected = validateSynthesis(repaired, passages, question, searchIndex.corpus.documents)
+            let corrected = validateSynthesis(repaired, passages, question, searchIndex.corpus.documents, {checks:repaired.plan.groups.map(group=>group.id)})
             if (corrected.sections.length) {
               corrected = await auditConclusion(corrected)
               if (process.env.BASIS_DEBUG_RETRIEVAL === '1')

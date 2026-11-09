@@ -3,7 +3,18 @@ import assert from 'node:assert/strict'
 import {
   scopedRepair,
   mergeApprovedSynthesis,
+  repairFeedback,
 } from '../src/synthesis-repair.mjs'
+
+test('bounded repair feedback prioritizes rejected drafts over source-only diagnostics',()=>{
+ const cached=[{text:'The rejected draft.'}]
+ const source=Array.from({length:10},(_,i)=>({claim:`Source clause ${i}`,reason:'Source context needs qualification.'}))
+ const rejected={claim:'The rejected draft.',reason:'The draft has the wrong scope.'}
+ const feedback=repairFeedback(cached,[...source,rejected,rejected])
+ assert.equal(feedback.length,8)
+ assert.equal(feedback[0],rejected)
+ assert.equal(feedback.filter(issue=>issue.claim===rejected.claim).length,1)
+})
 
 test('repair instructions stay with their own check and preserve unrelated cached findings', () => {
   const cached = [
