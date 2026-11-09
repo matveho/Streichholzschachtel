@@ -1,5 +1,6 @@
 import { generate } from './model.mjs'
 import { tokens } from './search.mjs'
+import { pipeMeasurementSearches } from './project-measurements.mjs'
 
 export function sectionCatalog(question, baseline, index) {
   const terms = new Set(tokens(question))
@@ -238,8 +239,7 @@ export async function expandRetrieval(question, baseline, index, signal) {
     { temperature: 0.7, top_p: 0.8, top_k: 20, min_p: 0, seed: 42 },
   )
   const topics = [
-    ...(plan.queries || [])
-      .slice(0, 5)
+    ...pipeMeasurementSearches(question,(plan.queries || []).slice(0,5))
       .map((t) => ({ ...t, role: 'focused-check' })),
     ...(constructionControlSearch(question, (plan.queries || []).slice(0, 5))
       ? [constructionControlSearch(question, (plan.queries || []).slice(0, 5))]

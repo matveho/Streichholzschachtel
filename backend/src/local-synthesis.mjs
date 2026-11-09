@@ -1,5 +1,5 @@
 import { evidenceUnits, isProvision, evidenceUnitKey } from './evidence-units.mjs'
-import { applicableEvidence, quantityComparisons } from './applicability.mjs'
+import { applicableEvidence, quantityComparisons, incompatiblePipeRole } from './applicability.mjs'
 import { linkedTableEvidence } from './linked-tables.mjs'
 import { linkedProcedureEvidence } from './linked-procedures.mjs'
 import { relatedCriteriaEvidence, depthCriterion } from './related-criteria.mjs'
@@ -9,6 +9,7 @@ import { tokens, rankProvisions } from './search.mjs'
 import { verifyCalculations, calculationUnits, completeUnitConversions, calculationChain } from './calculations.mjs'
 import { scopedRepair, repairFeedback, rejectedFindingTargets, repairResponseFormat, repairedFindings } from './synthesis-repair.mjs'
 import { permitsLocalSynthesis } from './generation-policy.mjs'
+import { pipeProjectMeasurements } from './project-measurements.mjs'
 
 export function cleanSourceCallout(text, labels) {
   if (typeof text !== 'string') return text
@@ -76,7 +77,7 @@ export function completeComparisonCalculations(text, calculations, sources, ques
 
 export function measurementInstruction(question) {
   return /\b(?:cover|burial|depth)\b/i.test(question) && /\b(?:pipes?|sewers?|services?|mains?)\b/i.test(question)
-    ? 'Retain differing depth criteria across reference documents and report their measurement datums and unresolved applicability. Cover to pipe obvert and depth to pipe invert are different measurements; matching numbers do not prove compliance. Do not choose authority or silently discard a differing criterion.'
+    ? 'Keep suppliedPipeMeasurements bound to their stated main/service role, sewer system and property. A main diameter does not establish a service diameter; an unstated property remains unknown. Retain differing depth criteria across reference documents and report their measurement datums and unresolved applicability. Cover to pipe obvert and depth to pipe invert are different measurements; matching numbers do not prove compliance. Do not choose authority or silently discard a differing criterion.'
     : ''
 }
 
@@ -84,9 +85,9 @@ export function focusedInstruction(role, hasSharedRequirement) {
   if (role === 'comparison')
     return 'State the project value and reference criterion, then their actual difference using verified calculations. Cite BOTH source roles for the comparison. Compare only the same property, structural position, process and acceptance stage. An asphalt overlay, remaining material below recycling, and a new pavement layer are different roles. If applicability or either value is missing, state that the comparison is unresolved. Do not grant approval or infer which publication governs.'
   if (role === 'original-system')
-    return 'State only the existing-system obligation and its stated scope. Do not infer that it prohibits the alternative or invent a connection arrangement.'
+    return 'State the existing-system obligation as a source rule with its actual category and threshold. Do not rewrite it as a resolved project decision. Preserve if-required conditions on individual items. Do not infer that it prohibits the alternative or invent a connection arrangement.'
   if (hasSharedRequirement)
-    return 'Use one finding for the explicit alternative permission and its conditions, and one for the independent existing-system obligation and clarification needed. Do not infer which provision prevails or grant blanket project approval.'
+    return 'Use three separate atomic findings: the explicit alternative permission and its conditions; the independent existing-system obligation as a source rule with its actual category and threshold; and the servicing interface to confirm, citing both provisions. Do not bundle the source rule with a claim that it definitively controls this project. Do not infer which provision prevails or grant blanket project approval.'
   return 'Answer only this focused check. Keep recommendations and conditional duties separate. Other checks are handled separately; do not make a whole-project replacement decision.'
 }
 
@@ -198,10 +199,11 @@ export async function draftLocal(
       const applicable = applicableEvidence(
         question,
         evidenceUnits(topic.passages, 30000),
+        {pipeScope:topic.assetScope},
       )
       let contextCharacters = 0
       const ranked = rankProvisions(
-        applicable.units.filter(isProvision),
+        applicable.units.filter(isProvision).filter(unit=>!topic.assetScope||!incompatiblePipeRole(`${topic.assetScope.system} ${topic.assetScope.role}`,unit)),
         topic.query,
       )
       const units = ranked.filter((unit) => {
@@ -224,6 +226,8 @@ export async function draftLocal(
         {
           question: topic.scope || topic.query,
           suppliedProject: projectDescription(question),
+          suppliedPipeMeasurements: pipeProjectMeasurements(question),
+          ...(topic.assetScope?{focusedAsset:topic.assetScope}:{}),
           check: topic.scope || topic.query,
           documents: index.corpus.documents
             .filter((d) => units.some((u) => u.passage.doc === d.id))
@@ -278,7 +282,7 @@ export async function draftLocal(
         .filter((u) => {
           const key = evidenceUnitKey(u)
           if (topic.role === 'original-system') originalSystemKeys.add(key)
-          if (seen.has(key)) return false
+          if (seen.has(key) && !topic.assetScope) return false
           seen.add(key)
           return true
         })
@@ -288,6 +292,7 @@ export async function draftLocal(
           heading: topic.heading,
           query: topic.scope || topic.query,
           role: topic.role,
+          ...(topic.assetScope?{assetScope:topic.assetScope}:{}),
           units: chosen,
         })
     }
@@ -318,7 +323,7 @@ export async function draftLocal(
     ) {
       const proposed = await generate(
         'Propose only arithmetic needed to check supplied project figures against selected rules. Include both the derived criterion and requested capacity difference, not just the criterion. Cite the source IDs supplying each rule or source operand in evidence; use [] only for question-only calculations. Reuse earlier results with r1/r2. The evaluator attaches physical units and converts compatible units automatically: do not add conversion factors or manually convert a measured input. A literal expression is allowed for unit conversion. Use only numbers from the question and cited sources. Expressions may contain numbers, + - * / parentheses and r1/r2. A source increase of 25% may be represented as 1.25. For halfway depth divide supplied depth by 2. Declare result units using mm, m, m2, ha, L/s or m3/s. Do not calculate a difference when a comparison quantity is missing. Do not invent design inputs, pipe sizes, hydraulic capacity or storage volume. Return {calculations:[{expression:"numeric arithmetic",unit:"m3/s",evidence:["A"]}]}, or an empty array when unsupported.',
-        { question, provisions: context },
+        { question, provisions: context, suppliedPipeMeasurements: pipeProjectMeasurements(question) },
         {
           type: 'object',
           properties: {
@@ -393,8 +398,10 @@ export async function draftLocal(
         question: group.query || group.heading,
         originalQuestion: question,
         focusedCheck: group.heading,
+        ...(group.assetScope?{focusedAsset:group.assetScope}:{}),
         findingBudget: config.maxFindingsPerCheck,
         suppliedProject: projectDescription(question),
+        suppliedPipeMeasurements: pipeProjectMeasurements(question),
         searchScope: group.query,
         instruction: [focusedInstruction(group.role, sharedForCheck.length > 0), measurementInstruction(group.query || group.heading)].filter(Boolean).join(' '),
         alreadyRetainedFindings: repair.retained.map((finding) => finding.text),
@@ -511,6 +518,7 @@ export async function draftLocal(
     return {
       text: finding.text,
       check: finding.check,
+      ...(group?.assetScope?{assetScope:group.assetScope}:{}),
       evidence: proof(cited),
       calculationBasisEvidence:proof(supportingCalculations),
       ...(calculations.length ? { calculations } : {}),

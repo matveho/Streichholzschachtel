@@ -59,6 +59,7 @@ const engineVersion = createHash('sha256')
       'related-criteria.mjs',
       'evidence-guards.mjs',
       'answer-completeness.mjs',
+      'project-measurements.mjs',
       'generation-policy.mjs',
       'review-coverage.mjs',
       'synthesis-repair.mjs',

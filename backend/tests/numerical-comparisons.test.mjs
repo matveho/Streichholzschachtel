@@ -31,6 +31,19 @@ test('explicit comparison differences require correct arithmetic and compatible 
  assert.deepEqual(falseComparisons('A 75% proportion exceeds 50% by 50%.'),[],'An ambiguous relative percentage is not assumed to mean percentage points')
 })
 
+test('a stated offset before less-than remains a difference rather than an operand',()=>{
+ const text='The proposed cover of 1.650 m for storm sewer ST1 is 0.35 m less than the required minimum of 2.0 m for pipes smaller than 600 mm diameter.'
+ assert.deepEqual(falseComparisons(text),[])
+ const calculations=completeComparisonCalculations(text,[],'The reference minimum cover is 2.0 m.','The supplied cover is 1.650 m.')
+ assert.equal(calculations.length,1)
+ assert.equal(calculations[0].value,.35)
+ assert.equal(calculations[0].displayExpression,'(2.0 m - 1.650 m)')
+ assert.equal(falseComparisons(text.replace('0.35 m','0.45 m')).length,1)
+ assert.equal(falseComparisons('The 900 L/s capacity is 600 L/s less than the cited 1.50 m3/s criterion.').length,0)
+ assert.equal(falseComparisons('The 900 L/s capacity is 600 mm less than the cited 1.50 m3/s criterion.').length,1)
+ assert.deepEqual(falseComparisons('The cover is 1.65 m, and the offset is 0.35 m less than the minimum 2.0 m.'),[])
+})
+
 test('an explicit comparison gets a grounded difference even when the draft omits the gap',()=>{
  const sources='The cited criterion is 1.50 m3/s.'
  const question='The existing capacity is 0.90 m3/s.'

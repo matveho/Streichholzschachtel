@@ -4,7 +4,24 @@ import {
   batchEvidenceChecks,
   uniqueReviewVerdicts,
   evidenceReviewSchema,
+  evidenceReviewCheck,
 } from '../src/answer.mjs'
+
+test('review preserves the source identity of a rule and a different publication\'s conditional alternative',()=>{
+ const text='Storm services require at least 2.4 m cover at the property line.'
+ const other='When this depth is not practical, provide a minimum cover of 2.0 m to pipe obvert for the storm service.'
+ const passage=(id,doc,text)=>({id,doc,page:1,section:'Storm service depth',text,lines:[{text,rect:[10,10,500,20]}]})
+ const rule=passage('p1','connection-guide',text), alternative=passage('p2','design-guide',other)
+ const claim={text:'The Connection Guide requires 2.4 m cover for storm services.',evidence:[{passage:rule,excerpt:text,quoteStart:0}]}
+ const check=evidenceReviewCheck(claim,0,'Review the storm service cover.',[alternative])
+ assert.deepEqual(check.quotes,[text])
+ assert.equal(check.quoteSources[0].document,'connection-guide')
+ const index=check.relatedProvisions.findIndex(quote=>quote.includes('not practical'))
+ assert.ok(index>=0)
+ assert.equal(check.relatedSources.find(source=>source.provisionIndex===index).document,'design-guide')
+ assert.equal(check.relatedSources.find(source=>source.provisionIndex===index).page,1)
+ assert.equal(check.quoteSources[0].quoteIndex,0)
+})
 
 test('the review contract requires one verdict for every actual batch ID', () => {
   const schema = evidenceReviewSchema([4, 7])

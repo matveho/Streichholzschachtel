@@ -597,3 +597,72 @@ public query. Run benchmarks sequentially during an idle interval, and restore
 the pinned model with `node scripts/linux/prepare-comparison-model.mjs` when
 evaluation finishes. The inference runtime and all test servers remain on
 loopback; candidate downloads do not change the production model selection.
+
+## Bound project inputs and source-aware review
+
+Pipe reviews now retain explicit main/service measurements as typed project
+inputs: role, system, diameter/cover/depth, compatible length value and an
+explicitly stated datum where available. A main diameter cannot establish a
+service diameter, and a service cover cannot become the main cover. Identifier
+suffixes and negative dimensions are not silently converted to positive inputs.
+These are query assumptions, not document-verified facts or unique IFC element
+identities. Unstated or ambiguous properties remain unresolved.
+
+Mixed main/service cover questions receive separate focused checks while
+retaining other requested tasks and selected source sections. Each check filters
+incompatible pipe roles. Source diameter conditions use that role's supplied
+diameter, not a cover measurement or another asset's diameter. Shared quotations
+can support both checks without transferring their different applicability
+verdicts. Scoped findings about a different role are withheld. An unknown
+applicability input cannot support a completed meets/fails judgment; a later
+clarification sentence does not cancel an unconditional assertion.
+
+The existing frontend displays a **Supplied project measurements** register
+through the normal report contract. API `projectInputs` records its query
+origin and `verifiedAgainstDocuments:false`. The register identifies unstated
+datums and does not add source citations to supplied assumptions. It also works
+in the public comparison-policy backend's extractive general-review path.
+Empty evidence scopes retain their empty document/reference result. The new
+module participates in the backend engine fingerprint for query-cache recovery.
+
+Evidence review now carries indexed document/page/section identities for both
+attached quotes and related provisions. Identical wording in different documents
+does not erase its provenance. This supports source-specific review, but the
+current model still sometimes treats a different publication's permission as a
+waiver; richer metadata alone did not qualify that interpretation.
+
+The natural comparison form “1.650 m is 0.35 m less than 2.0 m” now derives
+and checks the offset using actual operands and units. Wrong differences,
+dimension substitutions and unrelated clauses remain rejected. This repaired
+a Parkview comparison regression exposed during this increment.
+
+The full engineering run `run-gpu-UdofmiZs` recorded 6/8 in 210 seconds, but
+manual source inspection invalidated its apparent infill pass: a cited
+if-required service became a “separate mandatory requirement.” Do not use that
+6/8 as qualification. The veto now also covers shortened/ambiguous service-line
+names and mandatory/obligation wording while preserving explicitly named water
+and sanitary duties and genuinely conditional wording. The infill negative gate
+was strengthened. Follow-up `run-gpu-zV5WGl4a` correctly withheld that claim but
+still failed the interface-clarification finding gate (57 seconds). Frost-cover
+and expanded-capacity interpretation also remain unqualified. Production keeps
+the pinned model and comparison policy.
+
+Reproduce the input-register browser check with:
+
+```bash
+BASIS_BROWSER_SUITES='comparisons pipe-measurements' scripts/linux/test-comparisons
+```
+
+Initial browser `run-browser-2HBh3W8w` passed real submission, the three supplied
+main/service measurements, unknown service diameter, original PDF highlighting
+and persisted report reload. Comparison capability `run-gpu-QjgnWwnJ` passed
+all nine checks and rejected foreign-project selection before inference.
+
+Final regression `run-0fGz4rqM` passed 294/294 unit tests, OCR, isolated project
+APIs, imports, project isolation and restart persistence. Browser
+`run-browser-4CqyhsZF` passed both the GPU comparison workflow (both original
+PDF highlights, history reload, extractive general review and IFC findings)
+and the new input-register workflow (real submission, bound input rows, unknown
+service diameter, original PDF highlight and history reload). These results
+support release of the input-binding and arithmetic safeguards under the
+existing comparison policy, not unrestricted synthesis.

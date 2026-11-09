@@ -87,14 +87,18 @@ export function dropsConditionalItem(claim, source) {
     if (words.length < 2) continue
     const noun = words.map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + 's?').join('[ -]+')
     const object = new RegExp('\\b' + noun + '\\b', 'i')
+    const tail = words.length > 2 && /^(?:storm|sanitary|water)$/i.test(words[0])
+      ? new RegExp('\\b'+words.slice(1).map(word=>word+'s?').join('[ -]+')+'\\b','gi') : null
     const gap = '(?:(?!\\b(?:and|but)\\b)[^;!?]){0,70}'
-    const qualified = new RegExp(
-      '\\b(?:if|where|when)\\s+(?:required|necessary|applicable|needed)\\b' + gap + '\\b' + noun + '\\b|' +
-      '\\b' + noun + '\\b' + gap + '\\b(?:if|where|when)\\s+(?:required|necessary|applicable|needed)\\b|' +
-      '\\b(?:if|where|when|confirm whether|determine whether|verify whether)\\b' + gap + '\\b' + noun + '\\b' + gap + '\\b(?:required|necessary|applicable|needed)\\b', 'i')
+    const qualified = boundNoun => new RegExp(
+      '\\b(?:if|where|when)\\s+(?:required|necessary|applicable|needed)\\b' + gap + '\\b' + boundNoun + '\\b|' +
+      '\\b' + boundNoun + '\\b' + gap + '\\b(?:if|where|when)\\s+(?:required|necessary|applicable|needed)\\b|' +
+      '\\b(?:if|where|when|confirm whether|determine whether|verify whether)\\b' + gap + '\\b' + boundNoun + '\\b' + gap + '\\b(?:required|necessary|applicable|needed)\\b', 'i')
     for (const clause of claim.split(/[;!?]|\.(?=\s|$)/)) {
-      if (!object.test(clause) || !/\b(?:must|shall|requires?|required|needs?|provid(?:e|ed)|install(?:ed)?|construct(?:ed)?)\b/i.test(clause)) continue
-      if (!qualified.test(clause)) return true
+      const ambiguous = tail && [...clause.matchAll(tail)].some(match=>!new RegExp('\\b(?:'+['storm','sanitary','water'].filter(word=>word!==words[0].toLowerCase()).join('|')+')(?:[ -]+[a-z]+){0,2}[ -]+$','i').test(clause.slice(0,match.index)))
+      const specific=object.test(clause)
+      if ((!specific && !ambiguous) || !/\b(?:must|shall|requires?|required|requirements?|obligations?|mandatory|needs?|provid(?:e|ed)|install(?:ed)?|construct(?:ed)?)\b/i.test(clause)) continue
+      if (!qualified(specific?noun:words.slice(1).map(word=>word+'s?').join('[ -]+')).test(clause)) return true
     }
   }
   return false

@@ -11,6 +11,10 @@ test('an inline conditional service cannot become an unconditional installation 
  assert.equal(issue('One water service line shall be provided for each unit.',source),null)
  assert.match(issue('A water service line is provided if required and a storm service line must be installed for every unit.',source),/conditional/)
  assert.match(issue('If required, one storm service line shall be provided; every storm service line must be installed for each unit.',source),/conditional/)
+ assert.match(issue('The LID guide does not resolve whether its alternative satisfies the separate mandatory requirement for direct service lines off EPCOR mains.',source),/conditional/)
+ assert.match(issue('Direct service lines are mandatory for each unit.',source),/conditional/)
+ assert.equal(issue('One sanitary service line shall be provided for each unit.',source),null)
+ assert.equal(issue('Direct service lines shall be provided where required.',source),null)
 })
 test('matching numbers cannot equate pipe cover with invert-to-curb depth',()=>{
  const source='The depth of a storm service pipe at the property line shall be 2.0 m from invert elevation to finished curb top grade.'

@@ -1,5 +1,6 @@
 import { normalizeMeasurements } from './indexer.mjs'
 import { calculationUnits } from './calculations.mjs'
+import { pipeProjectMeasurements } from './project-measurements.mjs'
 
 // A duty conditional on a component's existence does not require that component.
 export function requiresOptionalComponent(claim, quotes, question = '') {
@@ -79,6 +80,21 @@ export function quantityComparisons(text) {
   const canonicalUnit = unit => Object.keys(calculationUnits).find(name=>name.toLowerCase()===unit.toLowerCase()) || unit
   const basis = '(?:the\\s+)?(?:(?:cited|required|recommended|proposed|existing|specified|reference|minimum|maximum|design)\\s+){0,3}(?:(?:capacity|flow|runoff|rate|cover|depth|width|area|volume|criterion|value|threshold|limit)(?:\\s+(?:requirement|criterion|limit))?\\s+)?(?:of\\s+)?'
   const minimum = '(?=\\s+(?:the\\s+)?(?:(?:required|recommended)\\s+)?minimum\\b)'
+  const offsets = new RegExp('\\b(is|are|was|were)\\s+(?:exactly\\s+)?'+number+'\\s*('+physicalUnits+')(?![\\p{L}\\d/])\\s+(less than|greater than|smaller than|larger than|shallower than|deeper than|below|above)\\s+'+basis+number+'\\s*('+physicalUnits+')(?![\\p{L}\\d/])','giu')
+  for (const match of normalized.matchAll(offsets)) {
+    const dimension=dimensions[match[6].toLowerCase()]
+    const before=normalized.slice(Math.max(0,match.index-150),match.index)
+    const left=[...before.matchAll(new RegExp(number+'\\s*('+physicalUnits+')(?![\\p{L}\\d/])','giu'))].filter(quantity=>dimensions[quantity[2].toLowerCase()]?.[0]===dimension[0]).at(-1)
+    if(!left)continue
+    const bridge=before.slice(left.index+left[0].length)
+    if(/[,;.!?]|\b(?:with|that|which|and|or)\b/i.test(bridge))continue
+    result.push({
+      left:{value:Number(left[1]),unit:canonicalUnit(left[2]),baseValue:Number(left[1])*dimensions[left[2].toLowerCase()][1],dimension:dimension[0]},
+      right:{value:Number(match[5]),unit:canonicalUnit(match[6]),baseValue:Number(match[5])*dimension[1],dimension:dimension[0]},
+      operator:match[1]+' '+match[4],less:/less|smaller|shallower|below/i.test(match[4]),negated:false,
+      difference:{value:Number(match[2]),unit:canonicalUnit(match[3]),baseValue:Number(match[2])*dimensions[match[3].toLowerCase()][1],dimension:dimensions[match[3].toLowerCase()][0]},
+    })
+  }
   const comparisons = new RegExp('\\b(exceeds?|is greater than|is larger than|is deeper than|is less than|is smaller than|is shallower than|is below|is above|falls? short of|fails? to meet'+minimum+'|is insufficient to meet'+minimum+')\\s+'+basis+number+'\\s*('+physicalUnits+')(?![\\p{L}\\d/])','giu')
   for (const m of normalized.matchAll(comparisons)) {
     const rightDimension = dimensions[m[3].toLowerCase()]
@@ -155,7 +171,7 @@ export function incompatibleConveyanceEvidence(question, unit) {
     (requestedSanitary && !requestedStorm && source.storm && !source.sanitary)
 }
 
-export function applicableEvidence(question, evidence) {
+export function applicableEvidence(question, evidence, {pipeScope} = {}) {
   const requestedLidTypes = lidTypes(question)
   const constructionOnly =
     /\bconstruct(?:ion|ing|ed)?\b|\binstall(?:ation|ing)?\b|\bbefore excavation\b/i.test(
@@ -353,7 +369,14 @@ export function applicableEvidence(question, evidence) {
           )
         )
           continue
-        const supplied = values.get(m[2])
+        let supplied = values.get(m[2])
+        const pipeLengthCondition = pipeScope && /\b(?:pipes?|mains?|diameters?)\b/i.test(qualifier) && ['mm','cm','m','km'].includes(m[2])
+        const diameterCondition = pipeLengthCondition && /\bdiameters?\b/i.test(qualifier+' '+text.slice(m.index+m[0].length,m.index+m[0].length+30))
+        if (diameterCondition) {
+          const scale = {mm:.001,cm:.01,m:1,km:1000}[m[2]]
+          supplied = new Set(pipeProjectMeasurements(question).filter(record=>record.property==='diameter' && record.role===pipeScope.role && (!record.system||record.system===pipeScope.system)).map(record=>Number((record.baseValue/scale).toPrecision(12))))
+        }
+        else if (pipeLengthCondition) supplied = undefined
         if (supplied?.size !== 1) {
           unresolvedConditions.push({unit:m[2],sourceCondition:m[0]})
           continue // Missing or multiple quantities need interpretation.
@@ -366,6 +389,7 @@ export function applicableEvidence(question, evidence) {
           unit: m[2],
           sourceCondition: m[0],
           matches,
+          ...(diameterCondition?{property:'diameter',role:pipeScope.role,system:pipeScope.system}:{}),
         })
       }
     }

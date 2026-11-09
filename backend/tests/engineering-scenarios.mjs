@@ -31,6 +31,7 @@ export const engineeringScenarios = [
       /(?:(?:confirm|resolve|clarif\w*|reconcile)[^.!?]{0,150}(?:servic|obligation|requirement)|(?:servic|obligation)[^.!?]{0,150}(?:confirm|resolve|clarif\w*|reconcile))/i,
     ],
     minSources: 3,
+    forbidden:[/separate mandatory requirement for direct service lines/i,/direct service lines are mandatory/i],
   },
   {
     id: 'frost-cover',

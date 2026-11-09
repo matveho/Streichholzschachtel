@@ -17,6 +17,16 @@ The frontend uses the keyless `/local-api` gateway. The underlying API requires 
 
 Citation geometry and the existing PDF renderer are reused. `src/projects.ts` provides frontend contracts; `src/backend.ts` supports scoped submission and reopening jobs. Routes are `#projects`, `#project/ID`, `#project/ID/new`, `#project/ID/query/QUERY`, `#project/ID/document/DOCUMENT`.
 
+Multi-role pipe reviews may include optional `result.projectInputs` with
+`kind: "pipe_measurements"`, `origin: "question"`,
+`verifiedAgainstDocuments: false`, and a `measurements` array. Entries identify
+the main/service role, stated system, diameter/cover/depth, value, unit, compatible
+base length value and stated measurement datum where available. They are supplied
+query assumptions, not source evidence or unique IFC element identities. Unstated
+diameters are not inferred from another role. The normal `report` also includes
+a readable input register; these rows do not gain document citation IDs. Empty
+evidence scopes retain empty references/documents.
+
 ## Isolation
 
 Omitted document IDs select project associations. Explicit `[]` selects nothing. Foreign IDs are rejected. Indexes physically contain only selected project documents, passages and layout units. Retrieval, subqueries, expansions, model context and fallback suggestions receive that scoped index. Returned citation/document IDs are checked again. Cache identity includes project, document and engine revisions. Scope changes withhold obsolete cached result bodies. Private artifacts are excluded from legacy global retrieval/files.
