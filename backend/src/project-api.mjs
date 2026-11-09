@@ -248,6 +248,8 @@ export class ProjectApi {
       try {
         const elements = readIfcProperties(file.text)
         models.push({ name: file.name, elements })
+        const unsupported=elements.flatMap(element=>element.properties).filter(property=>(property.explicitUnit||property.unitRequired)&&!property.measurementUnit).length
+        if (unsupported) errors.push(`${file.name}: ${unsupported} measured properties were excluded because their numeric value/unit definitions are unsupported, missing or ambiguous.`)
         if (!elements.length)
           errors.push(`${file.name}: no supported element property sets found.`)
       } catch (error) {

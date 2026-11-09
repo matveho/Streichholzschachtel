@@ -37,6 +37,25 @@ function args(text) {
   return result
 }
 const refs = (s = '') => s.match(/#\d+/g) || []
+const measureTypes = {
+  IFCLENGTHMEASURE: 'LENGTHUNIT', IFCPOSITIVELENGTHMEASURE: 'LENGTHUNIT',
+  IFCNONNEGATIVELENGTHMEASURE: 'LENGTHUNIT', IFCAREAMEASURE: 'AREAUNIT',
+  IFCVOLUMEMEASURE: 'VOLUMEUNIT',
+}
+// Resolve supported IFC units, rather than assuming an SI-looking property
+// name overrides IfcPropertySingleValue.Unit or the project unit context.
+function siUnit(entities, id) {
+  const entity = entities.get(id)
+  if (entity?.type !== 'IFCSIUNIT') return null
+  const [,type,prefix,name] = entity.args
+  if (type === '.LENGTHUNIT.' && name === '.METRE.')
+    return ({'$':'m','.MILLI.':'mm','.CENTI.':'cm','.KILO.':'km'})[prefix] || null
+  if (prefix !== '$') return null
+  if (type === '.AREAUNIT.' && name === '.SQUARE_METRE.') return 'm2'
+  if (type === '.VOLUMEUNIT.' && name === '.CUBIC_METRE.') return 'm3'
+  return null
+}
+const unitType = unit => ({m:'LENGTHUNIT',mm:'LENGTHUNIT',cm:'LENGTHUNIT',km:'LENGTHUNIT',m2:'AREAUNIT',m3:'VOLUMEUNIT'})[unit]
 export function readIfcProperties(text) {
   if (!text.includes('ISO-10303-21;'))
     throw new Error('Unsupported IFC encoding; STEP IFC is required.')
@@ -48,6 +67,13 @@ export function readIfcProperties(text) {
       type: match[2].toUpperCase(),
       args: args(match[3]),
     })
+  const projects = [...entities.values()].filter(entity=>entity.type==='IFCPROJECT')
+  const assignment = projects.length===1 ? entities.get(projects[0].args[8]) : null
+  const defaults = new Map()
+  if (assignment?.type==='IFCUNITASSIGNMENT') for (const id of refs(assignment.args[0])) {
+    const type=entities.get(id)?.args[1]?.replaceAll('.','')
+    if (type) defaults.set(type,defaults.has(type)?null:siUnit(entities,id))
+  }
   const result = []
   for (const relation of entities.values()) {
     if (relation.type !== 'IFCRELDEFINESBYPROPERTIES') continue
@@ -60,15 +86,22 @@ export function readIfcProperties(text) {
       for (const propertyId of refs(set.args[4])) {
         const p = entities.get(propertyId)
         if (p?.type !== 'IFCPROPERTYSINGLEVALUE') continue
-        const typed = p.args[2]?.match(/^IFC\w+\((.*)\)$/i)
+        const typed = p.args[2]?.match(/^(IFC\w+)\((.*)\)$/i)
         if (!typed) continue
+        const value = typed[2].startsWith("'") ? unquote(typed[2]) : Number(typed[2])
+        const explicitUnit = !!p.args[3] && p.args[3] !== '$'
+        const requiredType = measureTypes[typed[1].toUpperCase()]
+        const measurementUnit = explicitUnit ? siUnit(entities,p.args[3]) : requiredType ? defaults.get(requiredType) : null
         properties.push({
           name: unquote(p.args[0]),
-          value: typed[1].startsWith("'")
-            ? unquote(typed[1])
-            : Number(typed[1]),
+          value,
           propertyId,
-          explicitUnit: p.args[3] !== '$',
+          explicitUnit,
+          ...((explicitUnit || requiredType) ? {
+            unitRequired:true,
+            measurementUnit: typeof value==='number' && (!requiredType||unitType(measurementUnit)===requiredType) ? measurementUnit || null : null,
+            unitOrigin:explicitUnit?'explicit':'project',
+          } : {}),
         })
       }
       result.push({
@@ -122,7 +155,7 @@ const unitNames = {
   m3: 'm3',
 }
 function propertyMetric(property) {
-  if (property.explicitUnit) return null
+  if ((property.explicitUnit || property.unitRequired) && !property.measurementUnit) return null
   const name = property.name
   const labelled =
     typeof property.value === 'string' &&
@@ -131,8 +164,8 @@ function propertyMetric(property) {
       .match(
         /^(-?\d+(?:\.\d+)?)\s*(mm|m|%|percent|km\/h|kph|L\/s|m³\/s|m3\/s|m²|m2|m³|m3)$/,
       )
-  const match = name.match(/^(.*)_(m|mm|percent|kph|m2|m3)$/i)
-  if (!match && !labelled) return null
+  const match = name.match(/^(.*)_(m|mm|cm|km|percent|kph|m2|m3)$/i)
+  if (!match && !labelled && !property.measurementUnit) return null
   const words = (match ? match[1] : name)
     .replace(/([a-z])([A-Z])/g, '$1 $2')
     .toLowerCase()
@@ -143,7 +176,7 @@ function propertyMetric(property) {
       : 'exact'
   return {
     words: words.replace(/^(min|max) /, '').split(' '),
-    unit: labelled ? unitNames[labelled[2]] : match[2].toLowerCase(),
+    unit: property.measurementUnit || (labelled ? unitNames[labelled[2]] : match[2].toLowerCase()),
     value: labelled ? Number(labelled[1]) : property.value,
     bound,
   }
@@ -151,12 +184,23 @@ function propertyMetric(property) {
 const units = {
   m: 'm(?:et(?:re|er)s?)?',
   mm: 'mm|millimet(?:re|er)s?',
+  cm: 'cm|centimet(?:re|er)s?',
+  km: 'km|kilomet(?:re|er)s?',
   percent: '%|percent',
   kph: 'km/h|kph|kmph',
   m2: 'm²|m2',
   m3: 'm³|m3',
   lps: 'L/s',
   m3ps: 'm³/s|m3/s',
+}
+const lengths = {m:1,mm:.001,cm:.01,km:1000}
+function documentUnit(text, fallback) {
+  if (!(fallback in lengths)) return fallback
+  const name=text.toLowerCase()
+  if (/^(mm|millimet)/.test(name)) return 'mm'
+  if (/^(cm|centimet)/.test(name)) return 'cm'
+  if (/^(km|kilomet)/.test(name)) return 'km'
+  return 'm'
 }
 
 function identifies(element, text) {
@@ -276,7 +320,7 @@ export function compareIfcDocuments(models, documents, passages) {
                 .join('|')
               const locator = `(?:\\s+(?:of|for)\\s+(?:[a-z]+\\s+){0,3}(?:${identifierPattern}))?`
               const pattern = new RegExp(
-                `(?:(minimum|maximum|min|max|at least|at most)\\s+)?${metricPattern}${locator}\\s*(?:shall be|must be|is|of|=|:)?\\s*(?:(minimum|maximum|min|max|at least|at most)\\s*)?${number}\\s*(${units[metric.unit]})(?![a-z0-9²³/])`,
+                `(?:(minimum|maximum|min|max|at least|at most)\\s+)?${metricPattern}${locator}\\s*(?:shall be|must be|is|of|=|:)?\\s*(?:(minimum|maximum|min|max|at least|at most)\\s*)?${number}\\s*(${metric.unit in lengths ? ['mm','cm','km','m'].map(unit=>units[unit]).join('|') : units[metric.unit]})(?![a-z0-9²³/])`,
                 'ig',
               )
               for (const match of chunk.matchAll(pattern)) {
@@ -291,26 +335,28 @@ export function compareIfcDocuments(models, documents, passages) {
                 if (shadowed) continue
                 const expected = Number(match[3]),
                   qualifier = match[1] || match[2] || ''
+                const comparedUnit=documentUnit(match[4],metric.unit)
+                const actual=comparedUnit===metric.unit ? metric.value : Number((metric.value*lengths[metric.unit]/lengths[comparedUnit]).toPrecision(12))
                 const bound = /minimum|^min$|at least/i.test(qualifier)
                   ? 'min'
                   : /maximum|^max$|at most/i.test(qualifier)
                     ? 'max'
                     : 'exact'
-                const key = `${model.name}/${element.elementId}/${property.propertyId}/${doc.id}/${passage.page}/${expected}/${bound}/${metric.value}`
+                const key = `${model.name}/${element.elementId}/${property.propertyId}/${doc.id}/${passage.page}/${expected}/${bound}/${actual}` + (comparedUnit!==metric.unit?`/${comparedUnit}`:'')
                 if (seen.has(key)) continue
                 seen.add(key)
                 checks++
                 const fails =
                   bound === 'min'
-                    ? metric.value < expected
+                    ? actual < expected
                     : bound === 'max'
-                      ? metric.value > expected
-                      : Math.abs(metric.value - expected) > 1e-6
+                      ? actual > expected
+                      : Math.abs(actual - expected) > 1e-6
                 if (!fails) continue
                 issues.push({
                   id: 'ifc-' + hash(key),
                   title: `${element.name}: ${property.name} differs from ${doc.label || doc.title}`,
-                  explanation: `${model.name}, ${element.elementId} (${element.globalId}) has ${property.name} = ${metric.value} ${metric.unit}. The document states ${bound === 'exact' ? '' : bound + ' '}${expected} ${metric.unit}. Review this potential discrepancy.`,
+                  explanation: `${model.name}, ${element.elementId} (${element.globalId}) has ${property.name} = ${metric.value} ${metric.unit}.${comparedUnit!==metric.unit?` This converts to ${actual} ${comparedUnit}.`:''} The document states ${bound === 'exact' ? '' : bound + ' '}${expected} ${comparedUnit}. Review this potential discrepancy.`,
                   prepared: false,
                   verified: true,
                   queryId: null,
@@ -319,8 +365,11 @@ export function compareIfcDocuments(models, documents, passages) {
                   elementId: element.elementId,
                   globalId: element.globalId,
                   property: property.name,
-                  actual: metric.value,
+                  actual,
                   expected,
+                  unit:comparedUnit,
+                  modelValue:metric.value,
+                  modelUnit:metric.unit,
                   comparison: bound,
                   citations: [
                     {
@@ -352,6 +401,10 @@ export function compareIfcDocuments(models, documents, passages) {
   return {
     issues,
     coverage,
+    unitDiagnostics: models.flatMap(model=>model.elements.flatMap(element=>element.properties
+      .filter(property=>(property.explicitUnit||property.unitRequired)&&!property.measurementUnit)
+      .map(property=>({model:model.name,elementId:element.elementId,property:property.name,propertyId:property.propertyId,
+        reason:'Unsupported, missing or ambiguous numeric value/unit definition; this property was not compared.'})))),
     modelCount: models.length,
     checkedAt: new Date().toISOString(),
   }

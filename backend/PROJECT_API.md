@@ -49,6 +49,14 @@ extractive path. See [DEMO.md](DEMO.md) for preparation and presentation.
 
 ## Isolation
 
+IFC comparisons resolve supported explicit SI property units and project-default
+units for typed length, area and volume measures. Length comparisons convert
+metres, millimetres, centimetres and kilometres. Findings include `unit`,
+`modelValue` and `modelUnit`; `actual` and `expected` share the comparison unit.
+Unresolved value/unit definitions appear in `comparison.unitDiagnostics` and
+scan errors, and are excluded from numeric comparisons. This does not establish
+compliance or perform geometric clash detection.
+
 Omitted document IDs select project associations. Explicit `[]` selects nothing. Foreign IDs are rejected. Indexes physically contain only selected project documents, passages and layout units. Retrieval, subqueries, expansions, model context and fallback suggestions receive that scoped index. Returned citation/document IDs are checked again. Cache identity includes project, document and engine revisions. Scope changes withhold obsolete cached result bodies. Private artifacts are excluded from legacy global retrieval/files.
 
 Collection membership is explicit. Users can deselect individual documents. Synthetic artifacts have owner projects and cannot be assigned elsewhere. Deleting an ordinary project removes its associations/history without deleting shared reference PDFs.
