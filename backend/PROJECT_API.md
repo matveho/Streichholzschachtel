@@ -72,6 +72,9 @@ valid original passage or extracted table-cell coordinates. Evidence reports
 are created on inspection and persist across restarts. Changing model bytes or
 the document scope invalidates previous evidence snapshots; a rescan provides
 the current link. A finding without anchored source evidence has no query link.
+After an engine update, opening a still-current IFC finding regenerates its
+report from current anchored evidence. It does not release the obsolete cached
+body; changed models or missing evidence still withhold the old snapshot.
 
 Omitted document IDs select project associations. Explicit `[]` selects nothing. Foreign IDs are rejected. Indexes physically contain only selected project documents, passages and layout units. Retrieval, subqueries, expansions, model context and fallback suggestions receive that scoped index. Returned citation/document IDs are checked again. Cache identity includes project, document and engine revisions. Scope changes withhold obsolete cached result bodies. Private artifacts are excluded from legacy global retrieval/files.
 

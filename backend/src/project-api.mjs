@@ -287,6 +287,18 @@ export class ProjectApi {
     this.jobs.set(projectId+'/'+id,job);this.persist(job)
     return job
   }
+  readQuery(projectId,id){
+    let job
+    try{job=this.raw(projectId,id)}catch(error){
+      if(error.status!==404)throw error
+      return this.openIfcFinding(projectId,id)
+    }
+    // An engine update may invalidate the cached rendering while the current
+    // model finding and source signature are unchanged. Rebuild from freshly
+    // anchored evidence; never release the stale cached body itself.
+    if(job.ifcFinding&&this.stale(job)&&this.comparison(projectId).issues.some(issue=>issue.queryId===id&&issue.verified))return this.openIfcFinding(projectId,id)
+    return job
+  }
   issues(projectId) {
     const project = this.store.get(projectId),
       spec = demoProjects.find((p) => p.id === projectId)
@@ -759,11 +771,7 @@ export class ProjectApi {
     }
     const queryMatch = route.match(/^\/queries\/([a-f0-9-]{36})$/)
     if (queryMatch) {
-      let job
-      try{job=this.raw(projectId,queryMatch[1])}catch(error){
-        if(error.status!==404||req.method!=='GET')throw error
-        job=this.openIfcFinding(projectId,queryMatch[1])
-      }
+      const job=req.method==='GET'?this.readQuery(projectId,queryMatch[1]):this.raw(projectId,queryMatch[1])
       if (req.method === 'GET') return json(200, this.serialize(job))
       if (req.method === 'PATCH') {
         this.store.saveQuery(projectId, job.id, (await input()).saved)
