@@ -51,7 +51,6 @@ export function SearchDiagnostics({result,onOpen}:{result:LiveResult;onOpen?:()=
         {stats && <div className="diagnostics-stages">
           <span>Execution stages</span>
           <ol>{stats.timing.stages.map((stage,index)=><li key={index}><span>{stage.name}</span><span>{duration(stage.ms)}</span></li>)}</ol>
-          <p>Recorded server execution. Network transfer and PDF rendering are excluded. Candidate counts describe retained retrieval results, not compliance checks.</p>
         </div>}
       </details>
     </section>

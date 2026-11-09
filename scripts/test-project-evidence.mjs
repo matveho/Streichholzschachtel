@@ -152,14 +152,11 @@ test('recover the project connection and open cited evidence from project histor
     const scan = page.getByRole('dialog', { name: 'IFC scan coverage' })
     await expect(scan).toContainText('4 of 17 files compared against 2 models')
     await expect(scan.getByRole('listitem')).toHaveCount(4)
-    await scan.getByRole('button', { name: 'Not compared (13)' }).click()
-    await expect(scan.getByRole('listitem')).toHaveCount(13)
+    await expect(scan).toContainText('13 files were not assessed')
+    await expect(scan.getByRole('button', { name: /Not compared/ })).toHaveCount(0)
+    await expect(scan.getByRole('listitem')).toHaveCount(4)
     assert.equal((await issues.boundingBox()).height, before.height)
-    assert(
-      await scan
-        .locator('.scan-list')
-        .evaluate((el) => el.scrollHeight > el.clientHeight),
-    )
+    await expect(scan).toContainText('Check counts are not pass counts.')
     await page.keyboard.press('Escape')
     await expect(scanButton).toBeFocused()
     await page.getByText('Check design criterion', { exact: true }).click()

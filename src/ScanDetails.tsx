@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { ListFilter, X } from 'lucide-react'
 import { categoryLabels } from './fileCategories'
 import type { ProjectData } from './projects'
@@ -9,10 +9,9 @@ export function ScanDetails({
   scan: NonNullable<ProjectData['comparison']>
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
-  const [compared, setCompared] = useState(true)
   const checked = scan.coverage.filter((file) => file.checks > 0)
   const skipped = scan.coverage.filter((file) => file.checks === 0)
-  const rows = compared ? checked : skipped
+  const notices = [...new Set(scan.errors)]
   return (
     <>
       <button
@@ -20,7 +19,6 @@ export function ScanDetails({
         className="scan-trigger"
         aria-haspopup="dialog"
         onClick={() => {
-          setCompared(checked.length > 0 || skipped.length === 0)
           dialog.current?.showModal()
         }}
       >
@@ -43,28 +41,22 @@ export function ScanDetails({
           {checked.length} of {scan.coverage.length} files compared against{' '}
           {scan.modelCount} {scan.modelCount === 1 ? 'model' : 'models'}.
         </p>
-        <div className="scan-filter" role="group" aria-label="Coverage filter">
-          <button aria-pressed={compared} onClick={() => setCompared(true)}>
-            Compared ({checked.length})
-          </button>
-          <button aria-pressed={!compared} onClick={() => setCompared(false)}>
-            Not compared ({skipped.length})
-          </button>
-        </div>
+        <p className="scan-summary">Property checks compare explicit model values with document evidence. Check counts are not pass counts.</p>
+        {skipped.length > 0 && <p className="scan-summary">{skipped.length} {skipped.length === 1 ? 'file was' : 'files were'} not assessed: no matching element/property value with compatible units was established. Only compared files are listed below.</p>}
         <div
           className="scan-list"
           tabIndex={0}
           aria-label="File coverage details"
           role="region"
         >
-          {scan.errors.map((message, i) => (
+          {notices.map((message, i) => (
             <p className="scan-notice" key={i}>
               {message}
             </p>
           ))}
-          {rows.length ? (
+          {checked.length ? (
             <ul>
-              {rows.map((file) => (
+              {checked.map((file) => (
                 <li key={file.doc}>
                   <div>
                     <strong>{file.label}</strong>
@@ -73,16 +65,14 @@ export function ScanDetails({
                     </small>
                   </div>
                   <span>
-                    {compared
-                      ? file.checks + (file.checks === 1 ? ' check' : ' checks')
-                      : file.reason || 'No matching IFC property.'}
+                    {file.checks + (file.checks === 1 ? ' property check' : ' property checks')}
                   </span>
                 </li>
               ))}
             </ul>
           ) : (
             <p>
-              {compared ? 'No files were compared.' : 'No files were skipped.'}
+              No comparable property values were established. Review model identifiers, numeric properties and units alongside the document records.
             </p>
           )}
         </div>
