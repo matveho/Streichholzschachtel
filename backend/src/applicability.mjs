@@ -78,7 +78,7 @@ export function quantityComparisons(text) {
   const physicalUnits = Object.keys(dimensions).sort((a,b)=>b.length-a.length).map(unit=>unit.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')
   const result = []
   const canonicalUnit = unit => Object.keys(calculationUnits).find(name=>name.toLowerCase()===unit.toLowerCase()) || unit
-  const basis = '(?:the\\s+)?(?:(?:cited|required|recommended|proposed|existing|specified|reference|minimum|maximum|design)\\s+){0,3}(?:(?:capacity|flow|runoff|rate|cover|depth|width|area|volume|criterion|value|threshold|limit)(?:\\s+(?:requirement|criterion|limit))?\\s+)?(?:of\\s+)?'
+  const basis = '(?:the\\s+)?(?:(?:cited|required|recommended|proposed|existing|specified|reference|minimum|maximum|design)\\s+){0,3}(?:(?:main|service)\\s+)?(?:(?:capacity|flow|runoff|rate|cover|depth|width|area|volume|criterion|value|threshold|limit)(?:\\s+(?:requirement|criterion|limit))?\\s+)?(?:of\\s+)?'
   const minimum = '(?=\\s+(?:the\\s+)?(?:(?:required|recommended)\\s+)?minimum\\b)'
   const offsets = new RegExp('\\b(is|are|was|were)\\s+(?:exactly\\s+)?'+number+'\\s*('+physicalUnits+')(?![\\p{L}\\d/])\\s+(less than|greater than|smaller than|larger than|shallower than|deeper than|below|above)\\s+'+basis+number+'\\s*('+physicalUnits+')(?![\\p{L}\\d/])','giu')
   for (const match of normalized.matchAll(offsets)) {
@@ -110,7 +110,7 @@ export function quantityComparisons(text) {
     const a = Number(left[1]) * dimensions[left[2].toLowerCase()][1],
       b = Number(m[2]) * rightDimension[1]
     const less = /less|smaller|shallower|below|short|fails?|insufficient/i.test(m[1])
-    const difference = normalized.slice(m.index + m[0].length).match(new RegExp('^\\s+by\\s+'+number+'\\s*('+physicalUnits+')(?![\\p{L}\\d/])','iu'))
+    const difference = normalized.slice(m.index + m[0].length).match(new RegExp('^\\s+by\\s+(?:(?:a\\s+)?(?:(?:calculated|verified)\\s+)?(?:shortfall|difference|deficit|gap)\\s+of\\s+)?'+number+'\\s*('+physicalUnits+')(?![\\p{L}\\d/])','iu'))
     result.push({
       left:{value:Number(left[1]),unit:canonicalUnit(left[2]),baseValue:a,dimension:rightDimension[0]},
       right:{value:Number(m[2]),unit:canonicalUnit(m[3]),baseValue:b,dimension:rightDimension[0]},

@@ -67,6 +67,20 @@ test('a stated offset before less-than remains a difference rather than an opera
  assert.deepEqual(falseComparisons('The cover is 1.65 m, and the offset is 0.35 m less than the minimum 2.0 m.'),[])
 })
 
+test('a main-cover comparison verifies a named shortfall against both source operands',()=>{
+ const text='The proposed cover for storm sewer ST1 (300 mm pipe) is 1.650 m, which falls short of the reference minimum main cover requirement of 2.0 m by a calculated shortfall of 0.35 m.'
+ const source='Cover at 0+018 = finished grade 671.300 minus outside crown 669.650 = 1.650 m. A minimum cover from finished grade to pipe obvert of 2.0 m for storm sewer is to be provided.'
+ const question='Compare the proposed cover of storm sewer ST1 (300 mm pipe) against the reference minimum main cover.'
+ assert.deepEqual(falseComparisons(text),[])
+ const calculations=completeComparisonCalculations(text,[],source,question)
+ assert.equal(calculations.length,1)
+ assert.equal(calculations[0].value,.35)
+ assert.equal(falseComparisons(text.replace('0.35 m','0.45 m')).length,1)
+ assert.deepEqual(completeComparisonCalculations(text.replace('0.35 m','0.45 m'),[],source,question),[])
+ assert.deepEqual(completeComparisonCalculations(text,[],source.replace('1.650 m','1.750 m'),question),[])
+ assert.equal(falseComparisons(text.replace('main cover','service cover').replace('0.35 m','0.45 m')).length,1)
+})
+
 test('an explicit comparison gets a grounded difference even when the draft omits the gap',()=>{
  const sources='The cited criterion is 1.50 m3/s.'
  const question='The existing capacity is 0.90 m3/s.'
