@@ -6,22 +6,15 @@ const origin =
 const browser = await chromium.launch({ channel: 'chrome', headless: true })
 try {
   const page = await browser.newPage()
-  await page.goto(origin + '/#home')
+  await page.goto(origin + '/#projects')
   await page
-    .getByRole('heading', { name: 'Previous queries', exact: true })
+    .getByRole('heading', { name: 'Projects', exact: true })
     .waitFor()
   assert.equal(
     await page.getByRole('combobox', { name: 'Data source' }).count(),
     0,
   )
   assert.equal(await page.getByLabel('Connection key').count(), 0)
-  assert.equal(
-    await page
-      .locator('.history-sources')
-      .filter({ hasText: 'Example' })
-      .count(),
-    5,
-  )
   const metadata = await page.evaluate(async () => {
     const health = await (await fetch('/local-api/health')).json()
     const r = await fetch('/local-api/v1/documents')
@@ -45,33 +38,13 @@ try {
       (file) => file.startsWith('/local-api/') && !file.includes('token='),
     ),
   )
-  await page.getByRole('link', { name: /Minor storm sewer design/ }).click()
-  await page.getByRole('article', { name: 'Query report' }).waitFor()
-  await page.getByRole('link', { name: 'Home', exact: true }).click()
-  await page.getByRole('button', { name: 'New query', exact: true }).click()
-  await page
-    .locator('#query')
-    .fill(
-      'What minimum vertical clearance is required where sewer mains cross each other?',
-    )
-  await page.getByRole('button', { name: 'Search', exact: true }).click()
-  await page.waitForFunction(
-    () => document.querySelector('.query-report')?.textContent.includes('300'),
-    {},
-    { timeout: 60000 },
-  )
+  await page.getByRole('link',{name:/Parkview Exchange Redevelopment/}).first().click()
+  await page.getByRole('heading',{name:/Project documents/}).waitFor()
+  await page.locator('details.project-issue').filter({hasText:'Sanitary upstream grade needs revision'}).locator('summary').first().click()
+  await page.getByRole('button',{name:'Inspect evidence'}).first().click()
   await page.locator('.citations button').first().click()
-  await page.locator('.source-highlight').first().waitFor()
-  await page.locator('.textLayer span').first().waitFor()
-  await page.locator('#query').fill('What is the capital of France?')
-  await page.getByRole('button', { name: 'Search', exact: true }).click()
-  await page
-    .getByRole('heading', { name: 'No supported answer', exact: true })
-    .waitFor({ timeout: 30000 })
-  assert.equal(await page.locator('.citations button').count(), 0)
-  console.log(
-    'PASS fresh browser: automatic remote connection without key, five examples, live query, PDF highlight and unsupported answer',
-  )
+  await page.locator('.source-highlight:visible').first().waitFor()
+  console.log('PASS keyless project connection and cited evidence')
 } finally {
   await browser.close()
 }

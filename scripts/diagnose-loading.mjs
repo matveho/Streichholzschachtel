@@ -2,7 +2,7 @@ import { chromium } from '@playwright/test'
 const browser = await chromium.launch({ channel: 'chrome', headless: true })
 try {
  const page=await browser.newPage({viewport:{width:1100,height:1100}})
- await page.goto('http://127.0.0.1:5173/#query/storm')
+ await page.goto('http://127.0.0.1:5173/#project/parkview-exchange/query/ab513c56-eb35-3e15-76d3-8bd34b1a31f3')
  await page.waitForFunction(()=>!document.querySelector('.pdf-status'))
  const geometry=await page.locator('.pdf-pane').first().evaluate(el=>({sheet:el.querySelector('.pdf-sheet').getBoundingClientRect().height,scroll:el.querySelector('.pdf-scroll').getBoundingClientRect().height,client:el.querySelector('.pdf-scroll').clientHeight,width:el.querySelector('.pdf-scroll').clientWidth,padding:getComputedStyle(el.querySelector('.pdf-scroll')).padding}))
  console.log('geometry',geometry)

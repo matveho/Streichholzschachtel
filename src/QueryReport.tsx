@@ -1,4 +1,3 @@
-import { references } from './data'
 import { useDocuments } from './DocumentContext'
 import type { Reference } from './data'
 
@@ -12,13 +11,13 @@ export function QueryReport({
   selected,
   onPreview,
   onSelect,
-  sourceReferences = references,
+  sourceReferences,
 }: {
   blocks: ReportBlock[]
   selected: string[]
   onPreview: (refs: string[] | null) => void
   onSelect: (refs: string[]) => void
-  sourceReferences?: Reference[]
+  sourceReferences: Reference[]
 }) {
   const documents = useDocuments()
   return (

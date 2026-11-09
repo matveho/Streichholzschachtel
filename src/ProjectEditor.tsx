@@ -5,7 +5,7 @@ import {
 } from './fileCategories'
 import { useEffect, useRef, useState } from 'react'
 import { Search, X, Plus, FolderOpen, FilePlus, RotateCcw } from 'lucide-react'
-import { api, readSettings } from './backend'
+import { api } from './backend'
 import { projectPath, requestProject } from './projects'
 import type { Project, ProjectDocument, Collection } from './projects'
 
@@ -54,7 +54,7 @@ export function ProjectEditor({
   useEffect(() => {
     nameInput.current?.focus()
     const controller = new AbortController()
-    api(readSettings(), '/v1/reference-collections', {
+    api('/v1/reference-collections', {
       signal: controller.signal,
     })
       .then(setCatalog)

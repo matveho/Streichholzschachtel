@@ -14,11 +14,11 @@ import {
   FileText,
   Pencil,
 } from 'lucide-react'
-import LegacyApp, { QueryWorkspace } from './App'
+import { QueryWorkspace } from './App'
 import type { RunContext } from './App'
 import { ProjectEditor } from './ProjectEditor'
 import { WorkspaceSettings } from './WorkspaceSettings'
-import { api, ApiError, readSettings } from './backend'
+import { api, ApiError } from './backend'
 import { navigate, navigateLink } from './navigation'
 import { AppHeader } from './AppHeader'
 import { DocumentContext } from './DocumentContext'
@@ -46,8 +46,7 @@ const date = (value: string) =>
     day: 'numeric',
   }).format(new Date(value))
 function useResource<T>(path: string, context = '', keepStale = false) {
-  const [settings] = useState(readSettings),
-    [version, setVersion] = useState(0)
+  const [version, setVersion] = useState(0)
   const [state, setState] = useState<{
     key: string
     data: T | null
@@ -59,7 +58,7 @@ function useResource<T>(path: string, context = '', keepStale = false) {
   useEffect(() => {
     const controller = new AbortController()
     let retry: ReturnType<typeof setTimeout> | undefined
-    api(settings, path, { signal: controller.signal })
+    api(path, { signal: controller.signal })
       .then((data) => {
         if (!controller.signal.aborted)
           setState({ key: identity, data, error: '', status: 200 })
@@ -82,7 +81,7 @@ function useResource<T>(path: string, context = '', keepStale = false) {
       controller.abort()
       clearTimeout(retry)
     }
-  }, [path, key, identity, settings])
+  }, [path, key, identity])
   return {
     ...(state.key === identity
       ? state
@@ -881,18 +880,14 @@ function QueryReader({
     <QueryWorkspace
       key={job.id}
       entry={{
-        id: job.id,
         queryId: job.id,
         projectId: data.project.id,
         prompt: job.question,
-        title: job.question,
-        caseId: 'storm',
         sourceOnly: job.sourceOnly,
       }}
-      settings={readSettings()}
       projectName={data.project.name}
       projectDocuments={projectDocumentMap(data.documents)}
-      onRun={(q, _case, sourceOnly, context) => onRun(q, sourceOnly, context)}
+      onRun={onRun}
       preloadedJob={job}
       onNew={onNew}
       thread={thread}
@@ -1018,16 +1013,12 @@ function ProjectPage({
           draftTab ? (text) => tabs.setDraft(draftTab.key, text) : undefined
         }
         entry={{
-          id: 'new',
           projectId: id,
           prompt: '',
-          title: '',
-          caseId: 'storm',
         }}
-        settings={readSettings()}
         projectName={data.project.name}
         projectDocuments={projectDocumentMap(data.documents)}
-        onRun={(q, _case, sourceOnly, context) => run(q, sourceOnly, context)}
+        onRun={run}
         onNew={tabs.openNew}
       />
     )
@@ -1116,11 +1107,18 @@ export default function ProjectApplication() {
   const match = hash.match(
     /^#project\/([a-zA-Z0-9-]+)(?:\/(new|query|document|upload)(?:\/([a-zA-Z0-9-]+))?)?$/,
   )
-  if (capability.status === 404 && !match) return <LegacyApp />
   if (capability.error)
     return (
       <Shell>
-        <Message text={capability.error} error onRetry={capability.refresh} />
+        <Message
+          text={
+            capability.status === 404
+              ? 'The project workspace API is unavailable. Check the backend connection, then retry.'
+              : capability.error
+          }
+          error
+          onRetry={capability.refresh}
+        />
       </Shell>
     )
   if (!capability.data)

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { Settings, Lock } from 'lucide-react'
 import { requestProject, projectPath } from './projects'
 import type { Project } from './projects'
-import { api, readSettings } from './backend'
+import { api } from './backend'
 
 export function WorkspaceSettings({
   children,
@@ -26,7 +26,7 @@ export function WorkspaceSettings({
   useEffect(() => {
     if (!open || !requestedId || project) return
     const controller = new AbortController()
-    api(readSettings(), projectPath(requestedId), { signal: controller.signal })
+    api(projectPath(requestedId), { signal: controller.signal })
       .then((data) => setContext(data.project))
       .catch((e) => {
         if (!controller.signal.aborted) setError(e.message)

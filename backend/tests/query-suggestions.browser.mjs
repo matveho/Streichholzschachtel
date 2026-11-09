@@ -12,10 +12,10 @@ try {
   page.on('pageerror', (e) => errors.push(e.message))
   const submissions = []
   page.on('request', (r) => {
-    if (r.method() === 'POST' && r.url().endsWith('/v1/queries'))
+    if (r.method() === 'POST' && r.url().endsWith('/v1/projects/parkview-exchange/queries'))
       submissions.push(r.postDataJSON())
   })
-  await page.goto(origin + '/#new')
+  await page.goto(origin + '/#project/parkview-exchange/new')
   const original = 'What insulation R-value is required for storm sewer cover?'
   await page.locator('#query').fill(original)
   await page.getByRole('button', { name: 'Search', exact: true }).click()
@@ -42,7 +42,7 @@ try {
   await page.screenshot({ path: 'test-results/query-alternatives.png' })
   await first.click()
   await page.waitForFunction(() =>
-    document.querySelector('.live-mode')?.textContent.includes('Source text'),
+    document.querySelector('.query-report .citations button'),
   )
   assert.equal(await page.locator('#query').inputValue(), question)
   assert.ok(
@@ -55,12 +55,12 @@ try {
   await page.reload()
   await page.locator('.query-report').waitFor()
   assert.equal(await page.locator('#query').inputValue(), question)
-  await page.getByRole('link', { name: 'Home', exact: true }).click()
+  await page.getByRole('link', { name: 'Project dashboard', exact: true }).first().click()
   assert.ok(await page.getByRole('link').filter({ hasText: original }).count())
   assert.ok(await page.getByRole('link').filter({ hasText: question }).count())
   assert.deepEqual(errors, [])
   console.log(
-    'PASS real no-results query → source alternative → original PDF highlight → reload and history',
+    'PASS real no-results query -> source alternative -> original PDF highlight -> reload and history',
   )
 } finally {
   await browser.close()

@@ -4,7 +4,7 @@
 
 | Time | On screen | Presenter cue |
 | --- | --- | --- |
-| 0:00–0:18 | Open **Parkview Exchange Redevelopment → New query**. | “We’re reviewing a proposed sewer pipe called S1. Which detail would you like me to look up: its length or its diameter?” |
+| 0:00–0:18 | Open **Parkview Exchange Redevelopment -> New query**. | “We’re reviewing a proposed sewer pipe called S1. Which detail would you like me to look up: its length or its diameter?” |
 | 0:18–0:35 | Type the chosen question below and click **Search**. Click citation **1** in the live answer and point to the value in the PDF. | Length: “The model register gives its length as 43 metres.” Diameter: “The servicing memo specifies a 200 millimetre pipe.” |
 | 0:35–0:52 | Switch to the preloaded North Ridge tab. Point to the three source tabs above the viewer. Click **2** in the first answer paragraph: **G101 / G102 / G201**, PDF page **3**. | “Here’s a completed review on a different project. How far can a driver see at this highway crest? The drawing gives us 165 metres looking east.” |
 | 0:52–1:10 | Click **1** in that same paragraph: **Highway Guide B**, PDF page **9**, Table B-2-3a. Point from **100** on the left to **185** on the right. | “At the 100 kilometre-per-hour design speed, Alberta’s level-road table gives 185 metres of stopping sight distance.” |
@@ -13,9 +13,9 @@
 
 **Judge’s choice — exact live wording**
 
-- **Length:** “How long is sanitary pipe S1?” → **43 m**, **PX-IFC-001**, PDF page **4**.
-- **Diameter:** “what diameter is sanitary pipe S1?” → **200 mm**, **PX-DM-001**, PDF page **1**.
+- **Length:** “How long is sanitary pipe S1?” -> **43 m**, **PX-IFC-001**, PDF page **4**.
+- **Diameter:** “what diameter is sanitary pipe S1?” -> **200 mm**, **PX-DM-001**, PDF page **1**.
 
-**15-second fallback:** Start the clock when you click **Search**. If a clear cited answer hasn’t appeared by 15 seconds, or if the result asks for clarification, switch to the preloaded review: “Let’s look at a review we completed earlier on a highway project.” Continue with citation **2**. The saved review’s citation order is **2 → 1 → 3**: measured distance, published value, owner’s requirement.
+**15-second fallback:** Start the clock when you click **Search**. If a clear cited answer hasn’t appeared by 15 seconds, or if the result asks for clarification, switch to the preloaded review: “Let’s look at a review we completed earlier on a highway project.” Continue with citation **2**. The saved review’s citation order is **2 -> 1 -> 3**: measured distance, published value, owner’s requirement.
 
 **Rehearsal timing:** On the deployed site at 1366 × 768, the length route took 1:38 and the diameter route 1:39 from Projects to the closing line. Timings include typed questions, a three-second judge response, PDF reading pauses, and narration paced at 130 words per minute. Tab setup is outside the clock.

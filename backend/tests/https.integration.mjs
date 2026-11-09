@@ -6,7 +6,7 @@ const origin =
 const browser = await chromium.launch({ channel: 'chrome', headless: true })
 try {
   const page = await browser.newPage()
-  await page.goto(origin + '/#home')
+  await page.goto(origin + '/#projects')
   const result = await page.evaluate(async () => {
     const base = '/local-api'
     const health = await (await fetch(base + '/health')).json()

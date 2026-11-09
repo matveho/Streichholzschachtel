@@ -1,14 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Reference } from './data'
 import type { ReportBlock } from './QueryReport'
-export type BackendMode = 'static' | 'main' | 'matvey'
-export type BackendSettings = {
-  mode: BackendMode
-  mainUrl: string
-  matveyUrl: string
-  key: string
-  mainKey: string
-}
 export type DocumentRecord = {
   model?: string
   label: string
@@ -57,25 +49,7 @@ export type QuerySuggestion = {
   preview: string
   sourceOnly: true
 }
-const defaults: BackendSettings = {
-  mode: 'matvey',
-  mainUrl: '',
-  matveyUrl: location.origin + '/local-api',
-  key: '',
-  mainKey: '',
-}
-export function readSettings(): BackendSettings {
-  return { ...defaults }
-}
-export function saveSettings(value: BackendSettings) {
-  try {
-    localStorage.setItem('basis.backends.v1', JSON.stringify(value))
-  } catch {}
-}
-export const baseUrl = (s: BackendSettings) =>
-  (s.mode === 'main' ? s.mainUrl : s.matveyUrl).replace(/\/$/, '')
-export const connectionKey = (s: BackendSettings) =>
-  s.mode === 'main' ? s.mainKey : s.key
+export const baseUrl = location.origin + '/local-api'
 export class ApiError extends Error {
   status: number
   constructor(status: number, message: string) {
@@ -83,18 +57,10 @@ export class ApiError extends Error {
     this.status = status
   }
 }
-export async function api(
-  s: BackendSettings,
-  path: string,
-  init: RequestInit = {},
-) {
-  const base = baseUrl(s)
-  if (!base) throw new Error('Set the backend URL in Home first.')
-  const secret = connectionKey(s)
-  const response = await fetch(base + path, {
+export async function api(path: string, init: RequestInit = {}) {
+  const response = await fetch(baseUrl + path, {
     ...init,
     headers: {
-      ...(secret ? { Authorization: 'Bearer ' + secret } : {}),
       ...(init.body ? { 'Content-Type': 'application/json' } : {}),
       ...init.headers,
     },
@@ -123,46 +89,30 @@ type RawResult = Omit<LiveResult, 'documents' | 'id'> & {
 }
 
 /** Turns a completed job into a result, pinning document links to the backend. */
-function liveResult(settings: BackendSettings, job: QueryJob): LiveResult {
+function liveResult(job: QueryJob): LiveResult {
   const result = job.result as RawResult,
     docs: Record<string, DocumentRecord> = {}
   for (const record of result.documents) {
-    const file = new URL(record.file, baseUrl(settings))
-    if (file.origin !== new URL(baseUrl(settings)).origin)
+    const file = new URL(record.file, baseUrl)
+    if (file.origin !== new URL(baseUrl).origin)
       throw new Error('The backend returned a document on a different server.')
-    const secret = connectionKey(settings)
-    if (secret) file.searchParams.set('token', secret)
     docs[record.id] = { ...record, file: file.href }
   }
   return { ...result, documents: docs, id: job.id }
 }
 
 export function useLiveQuery(
-  settings: BackendSettings,
   question: string,
-  retry: number,
-  sourceOnly = false,
-  projectId?: string,
+  projectId: string,
   existingJobId?: string,
   /** An already fetched job, shown immediately instead of fetched again. */
   preloaded?: QueryJob,
 ) {
-  const path = projectId
-    ? `/v1/projects/${encodeURIComponent(projectId)}/queries`
-    : '/v1/queries'
-  const key = JSON.stringify([
-    settings,
-    question,
-    retry,
-    sourceOnly,
-    projectId,
-    existingJobId,
-  ])
+  const path = `/v1/projects/${encodeURIComponent(projectId)}/queries`
+  const key = JSON.stringify([projectId, existingJobId])
   const ready = useMemo(() => {
     if (
-      settings.mode === 'static' ||
       !question ||
-      retry ||
       !existingJobId ||
       preloaded?.id !== existingJobId ||
       preloaded.state !== 'completed' ||
@@ -170,14 +120,14 @@ export function useLiveQuery(
     )
       return null
     try {
-      return { data: liveResult(settings, preloaded), error: '' }
+      return { data: liveResult(preloaded), error: '' }
     } catch (error) {
       return {
         data: null,
         error: error instanceof Error ? error.message : 'Unusable result.',
       }
     }
-  }, [settings, question, retry, existingJobId, preloaded])
+  }, [question, existingJobId, preloaded])
   const cancelRef = useRef<() => void>(() => {})
   const [state, setState] = useState<{
     key: string
@@ -186,77 +136,26 @@ export function useLiveQuery(
     error: string
   }>({ key: '', phase: '', data: null, error: '' })
   useEffect(() => {
-    if (settings.mode === 'static' || !question || ready) return
+    if (!question || !existingJobId || ready) return
     const controller = new AbortController()
-    let jobId = '',
-      finished = false,
-      createdHere = false,
-      cancellable = false
+    let cancellable = false
+    const url = path + '/' + existingJobId
     cancelRef.current = () => {
       controller.abort()
-      if (jobId && (createdHere || cancellable))
-        void api(settings, `${path}/${jobId}`, { method: 'DELETE' }).catch(
-          () => {},
-        )
+      if (cancellable) void api(url, { method: 'DELETE' }).catch(() => {})
       setState({ key, phase: '', data: null, error: 'Query cancelled.' })
     }
     async function run() {
       try {
-        const cacheKey =
-          'basis.result.' +
-          JSON.stringify([
-            settings.mode,
-            baseUrl(settings),
-            question,
-            sourceOnly,
-            projectId,
-          ])
-        let job
-        if (existingJobId && !retry) {
-          job = await api(settings, `${path}/${existingJobId}`, {
-            signal: controller.signal,
-          })
-          if (job.stale)
-            throw new Error(
-              'Project documents changed. Run this query again from the project dashboard.',
-            )
-        } else if (!retry) {
-          try {
-            const saved = localStorage.getItem(cacheKey)
-            if (saved)
-              job = await api(settings, path + '/' + saved, {
-                signal: controller.signal,
-              })
-          } catch {}
-        }
-        if (
-          !job ||
-          job.stale ||
-          (!existingJobId && job.state !== 'completed')
-        ) {
-          const requestedId =
-            settings.mode === 'matvey' ? crypto.randomUUID() : undefined
-          if (requestedId) jobId = requestedId
-          createdHere = true
-          job = await api(settings, path, {
-            method: 'POST',
-            body: JSON.stringify({
-              question,
-              sourceOnly,
-              ...(requestedId ? { id: requestedId } : {}),
-            }),
-            signal: controller.signal,
-          })
-        }
-        jobId = job.id
+        let job = await api(url, { signal: controller.signal })
+        if (job.stale)
+          throw new Error(
+            'Project documents changed. Run the query again from the project dashboard.',
+          )
         cancellable = ['queued', 'running'].includes(job.state)
         while (!controller.signal.aborted) {
           if (job.state === 'completed') {
-            const data = liveResult(settings, job)
-            try {
-              localStorage.setItem(cacheKey, job.id)
-            } catch {}
-            finished = true
+            const data = liveResult(job)
             setState({
               key,
               phase: 'Complete',
@@ -284,7 +183,7 @@ export function useLiveQuery(
             }, 1000)
             controller.signal.addEventListener('abort', stop, { once: true })
           })
-          job = await api(settings, `${path}/${jobId}`, {
+          job = await api(url, {
             signal: controller.signal,
           })
         }
@@ -302,24 +201,8 @@ export function useLiveQuery(
       }
     }
     void run()
-    return () => {
-      controller.abort()
-      if (jobId && createdHere && !finished)
-        void api(settings, `${path}/${jobId}`, { method: 'DELETE' }).catch(
-          () => {},
-        )
-    }
-  }, [
-    key,
-    settings,
-    question,
-    retry,
-    sourceOnly,
-    projectId,
-    existingJobId,
-    path,
-    ready,
-  ])
+    return () => controller.abort()
+  }, [key, question, existingJobId, path, ready])
   if (ready)
     return {
       phase: ready.data ? 'Complete' : '',
@@ -327,7 +210,7 @@ export function useLiveQuery(
       busy: false,
       cancel: () => cancelRef.current(),
     }
-  if (settings.mode === 'static' || !question)
+  if (!question)
     return {
       phase: '',
       data: null,

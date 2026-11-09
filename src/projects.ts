@@ -1,4 +1,4 @@
-import { api, readSettings, baseUrl, connectionKey } from './backend'
+import { api, baseUrl } from './backend'
 import type { DocumentRecord } from './backend'
 export type Project = {
   id: string
@@ -81,28 +81,24 @@ export type ProjectData = {
 export const projectPath = (id: string) =>
   '/v1/projects/' + encodeURIComponent(id)
 export const requestProject = (path: string, method: string, value?: unknown) =>
-  api(readSettings(), path, {
+  api(path, {
     method,
     ...(value === undefined ? {} : { body: JSON.stringify(value) }),
   })
 export function projectDocumentMap(
   records: ProjectDocument[],
 ): Record<string, DocumentRecord> {
-  const settings = readSettings(),
-    origin = new URL(baseUrl(settings)).origin
+  const origin = new URL(baseUrl).origin
   return Object.fromEntries(
     records.map((doc) => {
-      const file = new URL(doc.file, baseUrl(settings))
+      const file = new URL(doc.file, baseUrl)
       if (file.origin !== origin)
         throw new Error('A project document pointed to a different server.')
-      const key = connectionKey(settings)
-      if (key) file.searchParams.set('token', key)
       let model: string | undefined
       if (doc.model) {
-        const url = new URL(doc.model, baseUrl(settings))
+        const url = new URL(doc.model, baseUrl)
         if (url.origin !== origin)
           throw new Error('A project model pointed to a different server.')
-        if (key) url.searchParams.set('token', key)
         model = url.href
       }
       return [doc.id, { ...doc, file: file.href, model }]
