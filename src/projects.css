@@ -247,8 +247,7 @@ button.primary-action:hover {
 .project-document-group h3 {
   font-size: 12px;
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.65px;
+  letter-spacing: 0.01em;
   color: var(--color-secondary);
   margin: 0;
 }
@@ -256,9 +255,10 @@ button.primary-action:hover {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 10px 15px;
+  padding: 7px 15px;
   cursor: pointer;
-  background: var(--surface-muted);
+  border-top: 1px solid var(--line);
+  background: #f7faf9;
 }
 .project-document-group > summary::-webkit-details-marker {
   display: none;
@@ -384,18 +384,10 @@ button.primary-action:hover {
   margin: 0 0 12px;
 }
 .issue-sources {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-bottom: 13px;
-}
-.issue-sources span {
   font-size: 12px;
+  line-height: 1.5;
   color: var(--color-secondary);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  padding: 3px 5px;
-  border-radius: 2px;
+  overflow-wrap: anywhere;
 }
 .issue-actions {
   display: flex;
@@ -1053,8 +1045,53 @@ button.primary-action:hover {
   font-weight: 700;
 }
 
+.dashboard-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 16px;
+}
+.dashboard-heading .project-back {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+.dashboard-heading h1 {
+  font-size: clamp(22px, 2vw, 28px);
+  line-height: 1.18;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  margin: 2px 0;
+}
+.dashboard-heading p {
+  grid-column: 1 / -1;
+  color: var(--color-secondary);
+  margin: 0;
+}
+.project-dashboard {
+  padding-top: 24px;
+}
+.project-description-line {
+  margin: 4px 0 14px;
+}
+.project-dashboard button {
+  font-family: inherit;
+  font-weight: 400;
+}
 button.query-files {
-  min-height: 44px;
+  min-height: 36px;
+  background: var(--color-text);
+  border-color: var(--color-text);
+  font-weight: 600;
+}
+button.query-files:hover {
+  background: #203750;
+}
+.project-panel .project-panel-tabs button.selected {
+  background: transparent;
+  box-shadow: inset 0 -2px var(--color-text);
+}
+.project-document-row small {
+  font-family: 'IBM Plex Mono', monospace;
 }
 
 .unanswered-hint {

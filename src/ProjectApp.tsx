@@ -349,26 +349,24 @@ function ProjectDashboard({
       }
     >
       <div className="project-dashboard">
-        <div className="project-page-heading">
-          <div>
-            <a className="project-back" href="#projects" onClick={navigateLink}>
-              <ArrowLeft size={13} />
-              Projects
-            </a>
-            <h1>{project.name}</h1>
-            <p>
-              {[project.client, project.location].filter(Boolean).join(' · ')}
-            </p>
-          </div>
+        <header className="dashboard-heading">
+          <a className="project-back" href="#projects" onClick={navigateLink}>
+            <ArrowLeft size={13} /> Projects
+          </a>
+          <h1>{project.name}</h1>
           <button
             className="primary-action query-files"
             disabled={!documents.length}
             onClick={onQueryFiles}
           >
-            <Search size={17} />
-            New query
+            <Search size={16} /> New query
           </button>
-        </div>
+          {(project.client || project.location) && (
+            <p>
+              {[project.client, project.location].filter(Boolean).join(' \u00b7 ')}
+            </p>
+          )}
+        </header>
         {descriptionEditing ? (
           <form
             className="project-description-editor"
@@ -514,12 +512,12 @@ function ProjectDashboard({
                           <FileText size={15} />
                           <span>
                             <strong>{doc.title}</strong>
-                            <small>
-                              {doc.label} · {doc.edition}
-                            </small>
+                            {doc.label && doc.label !== doc.title && (
+                              <small>{doc.label}</small>
+                            )}
                           </span>
                           <span className="register-edition">
-                            {doc.edition || '�'}
+                            {doc.edition || '\u2014'}
                           </span>
                           <span className="document-pages">{doc.pages}</span>
                         </a>
@@ -548,13 +546,6 @@ function ProjectDashboard({
             <section className="project-panel" aria-label="Potential issues">
               <div className="project-panel-heading">
                 <h2 title="Document and IFC findings requiring engineering review">
-                  {openIssueCount > 0 && (
-                    <TriangleAlert
-                      className="issue-warning"
-                      size={17}
-                      aria-hidden="true"
-                    />
-                  )}
                   Potential issues
                 </h2>
                 <button
@@ -632,17 +623,17 @@ function ProjectDashboard({
                       aria-hidden="true"
                     />
 
-                    <div className="issue-sources">
-                      {[
-                        ...new Set(
-                          issue.citations.map(
-                            (c) => `${c.label} · p. ${c.page}`,
+                    {issue.citations.length > 0 && (
+                      <span className="issue-sources">
+                        {[
+                          ...new Set(
+                            issue.citations.map(
+                              (c) => `${c.label} p.\u00a0${c.page}`,
+                            ),
                           ),
-                        ),
-                      ].map((label) => (
-                        <span key={label}>{label}</span>
-                      ))}
-                    </div>
+                        ].join(' \u00b7 ')}
+                      </span>
+                    )}
                   </summary>
                   {issue.category && (
                     <p>{labels[issue.category] || issue.category}</p>

@@ -1181,7 +1181,7 @@ button,
   height: 34px;
   min-height: 34px;
   flex-shrink: 0;
-  background: var(--surface-muted);
+  background: var(--color-background);
   border-top: 1px solid var(--line);
   padding-left: 12px;
 }
@@ -1201,7 +1201,7 @@ button,
   flex-shrink: 0;
   max-width: 220px;
   border-right: 1px solid var(--line);
-  border-top: 2px solid transparent;
+  position: relative;
   color: var(--color-secondary);
 }
 .query-tab:first-child {
@@ -1209,8 +1209,17 @@ button,
 }
 .query-tab.selected {
   background: var(--surface);
-  border-top-color: var(--color-text);
+
   color: var(--color-text);
+}
+.query-tab.selected::after {
+  content: '';
+  position: absolute;
+  inset: auto auto 0 12px;
+  width: 24px;
+  height: 2px;
+  background: currentColor;
+  pointer-events: none;
 }
 .query-tab-name {
   height: 100%;
