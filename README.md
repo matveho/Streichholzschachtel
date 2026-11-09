@@ -2,12 +2,12 @@
 
 **Where did this number come from?** Civil engineers often need a drawing, a client brief and a design standard to check a single value. basis brings those documents into one project workspace. Ask a question about the project, then select a citation to see the passage or table row highlighted in the original PDF.
 
-[Open basis](https://streichholzschachtel.vercel.app/#projects) · [Pitch slides](https://canva.link/qka5al8g2vxy1wv) · [3D system architecture](https://streichholzschachtel.vercel.app/architecture/)
+[Open *basis*](https://streichholzschachtel.vercel.app/#projects) · [Pitch slides](https://canva.link/qka5al8g2vxy1wv) · [3D system architecture](https://streichholzschachtel.vercel.app/architecture/)
 
 Built for natHacks 2026 by team Streichholzschachtel.
 
 ---
-
+Because the public site depends on the host computer and the tunnel being online, a recreated tunnel needs the rewrite in vercel.json updated (launcher control P does this).
 ## Try a design review
 
 1. **Ask a live question.** Open **Parkview Exchange Redevelopment -> New query**, enter “How long is sanitary pipe S1?” and select **Search**. Select citation **1** to verify the **43 m** length on PDF page **4** of the model register.
@@ -99,25 +99,23 @@ The public site is a static Vite build on Vercel. Vercel rewrites `/local-api/*`
 | 8788 | Development API | Used for engine experiments, kept separate from the demo. |
 | 8840 / 8842 | Isolated test runtime | The only safe target for destructive reset tests. |
 
-Because the public site depends on the host computer and the tunnel being online, a recreated tunnel needs the rewrite in [vercel.json](vercel.json) updated (launcher control **P** does this).
-
 ### Indexing pipeline
 
 1. **Identify the edition.** `catalog.mjs` looks up the PDF's SHA-256 hash to attach its publisher, edition and date. An unknown PDF is still indexed, labelled "edition not supplied".
-2. **Extract.** `extract.py` (PyMuPDF) reads the words and their page geometry, using Tesseract OCR for scanned pages. `native-table-layout.py` recovers the columns of ruled tables. Results are cached with atomic writes.
-3. **Build evidence units.** `indexer.mjs` normalises measurements and annotates sections. `units.mjs` groups lines into cells, table rows and sentences, each keeping its exact PDF regions.
+2. **Extract.** `extract.py` (PyMuPDF) reads the words and their page geometry, using Tesseract OCR for scanned pages. `native-table-layout.py` recovers the columns of ruled tables then results are cached with atomic writes.
+3. **Build evidence units.** `indexer.mjs` normalises measurements and annotates sections, `units.mjs` groups lines into cells, table rows and sentences, each keeping its exact PDF regions.
 4. **Search.** The units feed `SearchIndex` (`search.mjs`) and `UnitIndex` (`lookup.mjs`).
 
 If Python and PyMuPDF are unavailable, a pdf.js fallback extractor is used with its own cache, so installing the native extractor later triggers a clean rebuild.
 
 ### Query pipeline
 
-A query is a pollable job. Each citation in the result carries a document ID, a page number and highlight rectangles.
+Each citation in the result carries a document ID, a page number and highlight rectangles.
 
-1. The browser posts the question to `/local-api/v1/projects/:id/queries`. The gateway forwards it with the device key.
+1. The browser posts the question to `/local-api/v1/projects/:id/queries`, then the gateway forwards it with the device key.
 2. `project-api.mjs` builds an index from **this project's documents only** and returns a job ID.
-3. `answer.mjs` runs `lookup.mjs`, which applies domain rewrites (for example "manhole" -> "maintenance hole") and ranks provisions and table rows. Version questions are answered from the catalog's cover and revision pages.
-4. If evidence is found, it is rendered as verbatim units with their PDF regions. If not, `clarify.mjs` and `query-suggestions.mjs` offer clarifying questions or alternatives that have already been checked to return sourced answers.
+3. `answer.mjs` runs `lookup.mjs`, which applies domain rewrites (for example "manhole" -> "maintenance hole") and ranks provisions and table rows, version questions are answered from the catalog's cover and revision pages.
+4. If evidence is found, it is rendered as verbatim units with their PDF regions and if not, `clarify.mjs` and `query-suggestions.mjs` offer clarifying questions or alternatives that have already been checked to return sourced answers.
 5. If a synthesis provider is configured, it drafts cited sentences. Each sentence must pass the checks (valid citation IDs, every number present in the cited text, applicability and calculation checks, optional contradiction veto). If no sentence passes, *basis* falls back to the verbatim answer.
 6. The browser polls until the result is ready, then requests the original PDF with byte ranges and highlights the passage.
 
