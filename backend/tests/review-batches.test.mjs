@@ -7,6 +7,18 @@ import {
   evidenceReviewCheck,
 } from '../src/answer.mjs'
 
+test('a focused service review receives only service inputs and explicit unresolved conditions',()=>{
+ const question='Review a 450 mm storm main with 1.7 m cover and a storm service with 2.0 m cover.'
+ const quote='A minimum cover to pipe obvert of 2.0 m is required for storm sewers smaller than 600 mm diameter.'
+ const passage={id:'p',doc:'guide',page:1,section:'Storm cover',text:quote,lines:[{text:quote,rect:[10,10,500,25]}]}
+ const check=evidenceReviewCheck({text:'A quoted service cover rule.',assetScope:{role:'service',system:'storm'},evidence:[{passage,excerpt:quote}]},0,question)
+ assert.equal(check.suppliedMeasurements.length,1)
+ assert.equal(check.suppliedMeasurements[0].role,'service')
+ assert.equal(check.suppliedMeasurements[0].datum,'not-stated')
+ assert.ok(!check.suppliedMeasurements.some(record=>record.property==='diameter'))
+ assert.ok(check.unresolvedConditions.length)
+})
+
 test('review preserves the source identity of a rule and a different publication\'s conditional alternative',()=>{
  const text='Storm services require at least 2.4 m cover at the property line.'
  const other='When this depth is not practical, provide a minimum cover of 2.0 m to pipe obvert for the storm service.'
@@ -72,6 +84,7 @@ test('review batching preserves every complete check and its original ID within 
     )
   }
   assert.deepEqual(batchEvidenceChecks([]), [])
+  assert.ok(batchEvidenceChecks(checks,12000,1).every(batch=>batch.length===1))
   assert.throws(
     () => batchEvidenceChecks([{ id: 0, quotes: ['x'.repeat(12001)] }]),
     /exceeds.*context budget/,

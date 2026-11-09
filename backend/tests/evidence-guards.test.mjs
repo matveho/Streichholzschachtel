@@ -1,6 +1,29 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {evidenceInterpretationIssue as issue, recommendationLanguage} from '../src/evidence-guards.mjs'
+import {evidenceInterpretationIssue as issue, recommendationLanguage,namedReferenceEvidenceIssue,conditionalSourceItems} from '../src/evidence-guards.mjs'
+
+test('inline service qualifiers remain bound to their own subject as structured source metadata',()=>{
+ const source='One water, one sanitary and if required, one storm service line shall be provided for each unit.'
+ const items=conditionalSourceItems(source)
+ assert.deepEqual(items.map(({subject,condition})=>({subject,condition})),[{subject:'storm service line',condition:'if required'}])
+ assert.ok(source.includes(items[0].excerpt))
+ assert.equal(issue('One storm service line must be provided for each unit.',source)?.includes('conditional'),true)
+ assert.equal(issue('Confirm whether the storm service line is required for this alternative.',source),null)
+})
+
+test('cross-publication requirements need the actual named sources as positive evidence',()=>{
+ const documents=[{id:'design',title:'Design Guidelines',label:'Vol 3-03'},{id:'connection',title:'Drainage Customer Connection Guide',label:'Connection Guide'}]
+ const proof=doc=>({passage:{doc}})
+ const claim='The Connection Guide specifies a minimum depth of 2.4 m, creating an unresolved interface with the Design Guidelines which specify 2.0 m cover.'
+ assert.match(namedReferenceEvidenceIssue(claim,[proof('connection')],documents),/without citing/)
+ assert.equal(namedReferenceEvidenceIssue(claim,[proof('connection'),proof('design')],documents),null)
+ assert.match(namedReferenceEvidenceIssue('The Design Guidelines require 2.0 m cover.',[proof('connection')],documents),/without citing/)
+ assert.equal(namedReferenceEvidenceIssue('The Connection Guide requires designs to comply with the Design Guidelines.',[proof('connection')],documents),null,'A cited incorporation clause does not quote the contents of the incorporated publication')
+ assert.equal(namedReferenceEvidenceIssue('The quoted reference requires 2.0 m cover.',[proof('design')],documents),null)
+ const ambiguous=[...documents,{id:'other-edition',title:'Design Guidelines',label:'Another edition'}]
+ assert.match(namedReferenceEvidenceIssue(claim,[proof('connection')],ambiguous),/without citing/)
+ assert.equal(namedReferenceEvidenceIssue(claim,[proof('connection'),proof('design')],ambiguous),null)
+})
 test('a numerical capacity deficit does not mandate an unsupported construction remedy',()=>{
  const source='Storm sewers serving areas greater than 30 ha use 1.25 times the five-year runoff.'
  assert.match(issue('The capacity is insufficient for the 1.50 m3/s design flow, necessitating an upgrade.',source),/construction remedy/)
@@ -52,6 +75,8 @@ test('necessary-traffic restrictions cannot classify an unexplained delivery as 
  assert.match(issue(claim,source,'Delivery vehicles crossed the facility.'),/purpose of the access/)
  assert.equal(issue('Confirm whether the delivery was unnecessary traffic before reporting a violation.',source,'Delivery vehicles crossed the facility.'),null)
  assert.equal(issue('Limit vehicular access to necessary traffic only.',source,'Delivery vehicles crossed the facility.'),null)
+ assert.equal(issue('Unnecessary traffic is prohibited.',source,'Delivery vehicles crossed the facility.'),null)
+ assert.match(issue('The basin use as a sediment trap and crossing by delivery vehicles violates the prohibition against sediment storage or unnecessary traffic.','Do not use LID facilities as temporary sediment basins.','Delivery vehicles crossed the facility.'),/necessary-traffic restriction/)
  assert.equal(issue(claim,source,'The reported delivery was unnecessary traffic.'),null)
 })
 test('missing field-test counts do not establish exemptions',()=>{

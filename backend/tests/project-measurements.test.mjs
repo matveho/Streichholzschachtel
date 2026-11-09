@@ -8,6 +8,21 @@ import {config} from '../src/config.mjs'
 
 const question='Before excavation, review a 450 mm storm main with 1.7 m cover and a storm service with 2.0 m cover at the property line. Can we use these details without insulation or further approval?'
 
+test('a source datum cannot silently become an unstated project measurement datum',()=>{
+ const claim='The proposed 450 mm storm main with 1.7 m cover to obvert fails the minimum 2.0 m cover to obvert criterion.'
+ assert.match(issue(claim,question),/does not establish.*datum/)
+ assert.equal(issue(claim,'Review a proposed 450 mm storm main with 1.7 m cover to pipe obvert.'),null)
+ assert.match(issue(claim,'Review a proposed 450 mm storm main with 1.7 m depth to invert.'),/does not establish.*datum|does not match/)
+ assert.equal(issue('If the supplied cover is measured to obvert, the proposed storm main with 1.7 m cover would be below the cited criterion.',question),null)
+ assert.equal(issue('The reference requires 2.0 m cover to pipe obvert for a storm main.',question),null)
+ assert.match(issue('If approval is needed, the proposed main with 1.7 m cover to obvert fails the criterion.',question),/datum/)
+ assert.match(issue('The proposed storm main with 1.7 m cover does not meet the 2.0 m cover to obvert requirement.',question),/datum is unstated/)
+ assert.match(issue('The proposed storm main with 1.7 m cover requires insulation because it is below the source minimum.',question),/datum is unstated/)
+ assert.equal(issue('We cannot confirm whether the proposed storm main with 1.7 m cover meets the criterion until the datum is supplied.',question),null)
+ assert.equal(issue('The proposed storm service with 2.0 m cover lacks a stated datum to confirm it is measured to the pipe obvert.',question),null)
+ assert.match(issue('When the required 2.0 m cover cannot be achieved as demonstrated by the 1.7 m project value, the source mandates providing pipe insulation.',question,'',{role:'main',system:'storm'}),/no stated datum/)
+})
+
 test('the public input register distinguishes supplied assumptions, missing datums and source evidence',()=>{
  const original={mode:'extractive_answer',references:[{id:'1',doc:'manual',page:1}],report:[{sentences:[{text:'A quoted source rule.',refs:['1']}]}]}
  const result=attachProjectMeasurements(original,question)
@@ -90,7 +105,8 @@ test('citation and number presence cannot authorize reassignment of project pipe
 test('an unstated service diameter cannot support a completed conditional cover check',()=>{
  const quote='A minimum cover from finished grade to pipe obvert of 2.0 m for storm sewer is to be provided for all pipes smaller than 600 mm diameter.'
  const passage={id:'p1',doc:'standard',page:1,section:'Storm sewer cover',text:quote,lines:[{text:quote,rect:[10,10,500,25]}]}
- const run=(text,role='service')=>validateSynthesis({sections:[{claims:[{text,assetScope:{role,system:'storm'},evidence:[{passageId:'p1',quote}]}]}]},[passage],question)
+ const measured=question.replace('service with 2.0 m cover','service with 2.0 m cover to obvert')
+ const run=(text,role='service')=>validateSynthesis({sections:[{claims:[{text,assetScope:{role,system:'storm'},evidence:[{passageId:'p1',quote}]}]}]},[passage],measured)
  const unqualified=run('The proposed storm service with 2.0 m cover meets the minimum requirement for pipes smaller than 600 mm diameter.')
  assert.equal(unqualified.sections.length,0)
  assert.match(unqualified.issues[0].reason,/no supplied value/)

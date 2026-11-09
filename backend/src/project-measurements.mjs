@@ -5,6 +5,7 @@ const length = '(mm|cm|km|m)(?![a-z\\d/])'
 const scale = { mm: .001, cm: .01, m: 1, km: 1000 }
 const entity = /\b(?:(storm|sanitary|foundation(?: drain)?)\s+(?:sewer\s+)?)?(main|service)(?:s|\s+(?:pipe|connection)s?)?\b/gi
 const request = /\b(?:meets?|satisfies|complies|compared|against|below|above|exceeds?|minimum|maximum|required|criterion)\b/i
+const datumCondition = /\b(?:if|assuming|on the assumption that)\b[^,.;!?]{0,90}\b(?:cover|depth|measurement|datum)\b[^,.;!?]{0,60}\b(?:measured\s+to|to)\s+(?:the\s+)?(?:pipe\s+)?(?:obvert|invert)\b/i
 
 // Record explicit supplied pipe measurements. No datum, missing diameter or
 // project suitability is inferred from a value stated for another asset.
@@ -27,7 +28,9 @@ export function pipeProjectMeasurements(text) {
         baseValue: Number((Number(value) * scale[unit]).toPrecision(12)), suppliedText }
       if (property !== 'diameter') {
         const invert = /\binvert\b/i.test(local), obvert = /\bobvert\b/i.test(local)
-        record.datum = invert && !obvert ? 'invert-depth' : obvert && !invert ? 'cover-to-obvert' : 'not-stated'
+        const unknown=local.search(/\black(?:s|ing)?\s+(?:a\s+)?(?:stated|known|confirmed)\s+datum\b|\bdatum\s+(?:is\s+)?(?:unknown|unspecified|not\s+(?:stated|known|confirmed|provided))\b/i)
+        const explicit=local.search(/\b(?:obvert|invert)\b/i)
+        record.datum = unknown>=0&&(explicit<0||unknown<explicit) ? 'not-stated' : invert && !obvert ? 'invert-depth' : obvert && !invert ? 'cover-to-obvert' : 'not-stated'
       }
       if (!measurements.some(previous => previous.role === role && previous.system === system && previous.property === property && previous.baseValue === record.baseValue))
         measurements.push(record)
@@ -45,14 +48,46 @@ export function pipeProjectMeasurements(text) {
 
 // Only veto a project assertion when a numeric premise was reassigned between
 // explicit pipe roles. A source criterion alone is not a project measurement.
-export function pipeProjectMeasurementIssue(claim, question, projectEvidence = '') {
+export function pipeProjectMeasurementIssue(claim, question, projectEvidence = '', focusedAsset) {
   if (!/\b(?:project|proposed|supplied|assumed|given|existing)\b/i.test(claim)) return null
   const supplied = pipeProjectMeasurements(question + '; ' + projectEvidence)
+  if(focusedAsset){
+    const unknown=supplied.filter(record=>record.role===focusedAsset.role&&(!record.system||record.system===focusedAsset.system)&&record.property!=='diameter'&&record.datum==='not-stated')
+    const unsupported=claim.split(/[;!?]|\.(?=\s|$)/).some(sentence=>{
+      if(datumCondition.test(sentence)||!/\b(?:project|proposed|supplied|assumed|given|existing)\b/i.test(sentence))return false
+      const quantities=[...normalizeMeasurements(sentence).matchAll(new RegExp(number+'\\s*'+length,'gi'))]
+      if(!unknown.some(record=>quantities.some(match=>Math.abs(Number(match[1])*scale[match[2].toLowerCase()]-record.baseValue)<1e-9)))return false
+      const judgment=sentence.search(/\b(?:meets?|fails?|complies|compliant|satisfies)\b|\b(?:requires?|must|mandates?)\b[^;!?]{0,65}\binsulat/i)
+      const uncertain=sentence.search(/\b(?:cannot|can't|does not|do not|not yet)\s+(?:be\s+)?(?:confirm|establish|determine|assess|verify)\b/i)
+      return judgment>=0&&!(uncertain>=0&&uncertain<judgment)
+    })
+    if(unsupported)return 'The focused project measurement has no stated datum. Its numeric value cannot establish compliance or prove that an insulation condition is met. Keep the rule conditional and confirm the measurement datum.'
+  }
   const asserted = pipeProjectMeasurements(claim)
   for (const measurement of asserted) {
     const sameSystem = record => !record.system || !measurement.system || record.system === measurement.system
     const known = supplied.filter(record => sameSystem(record) && record.role === measurement.role && record.property === measurement.property)
-    if (known.some(record => Math.abs(record.baseValue - measurement.baseValue) < 1e-9)) continue
+    const matching=known.filter(record=>Math.abs(record.baseValue-measurement.baseValue)<1e-9)
+    const dimensionalKnown=matching.length?matching:supplied.filter(record=>sameSystem(record)&&record.role===measurement.role&&record.property!=='diameter'&&measurement.property!=='diameter'&&Math.abs(record.baseValue-measurement.baseValue)<1e-9)
+    if(dimensionalKnown.length){
+      const conditional=datumCondition.test(claim)
+      if(measurement.datum&&measurement.datum!=='not-stated'){
+        const datums=new Set(dimensionalKnown.map(record=>record.datum).filter(datum=>datum&&datum!=='not-stated'))
+        if((datums.size&&!datums.has(measurement.datum))||(!datums.size&&!conditional))
+          return 'The supplied project measurement does not establish this obvert/invert datum. Preserve an unstated datum as unknown; quote the reference criterion separately and request datum confirmation before comparing compliance.'
+      }
+      if(measurement.property!=='diameter'&&!conditional&&dimensionalKnown.every(record=>record.datum==='not-stated')){
+        const judgment=claim.split(/[;!?]|\.(?=\s|$)/).some(sentence=>{
+          if(!/\b(?:project|proposed|supplied|assumed|given|existing)\b/i.test(sentence))return false
+          if(!pipeProjectMeasurements(sentence).some(record=>record.role===measurement.role&&record.property===measurement.property&&Math.abs(record.baseValue-measurement.baseValue)<1e-9))return false
+          const verdict=sentence.search(/\b(?:meets?|fails?|complies|compliant|satisfies)\b|\b(?:requires?|must)\b[^;!?]{0,65}\binsulat/i)
+          const unknown=sentence.search(/\b(?:cannot|can't|does not|do not|not yet)\s+(?:be\s+)?(?:confirm|establish|determine|assess|verify)\b/i)
+          return verdict>=0&&!(unknown>=0&&unknown<verdict)
+        })
+        if(judgment)return 'The supplied cover/depth datum is unstated, so these figures cannot establish a project compliance result or an insulation decision. Report the source requirement and numerical comparison separately; confirm the measurement datum first.'
+      }
+      if(matching.length)continue
+    }
     const foreign = supplied.find(record => sameSystem(record) && record.role !== measurement.role && record.property === measurement.property && Math.abs(record.baseValue - measurement.baseValue) < 1e-9)
     if (foreign)
       return `The supplied ${foreign.role} ${measurement.property} was reassigned to the ${measurement.role}. Keep each project measurement with its stated asset; do not infer a missing ${measurement.role} ${measurement.property}.`

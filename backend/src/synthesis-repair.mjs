@@ -4,7 +4,7 @@ export function rejectedFindingTargets(cached, issues) {
   return cached.flatMap(finding => {
     const failures = issues.filter(issue => textKey(issue.claim) === textKey(finding.text))
     return failures.length ? [{ finding: finding.text, reasons: [...new Set(failures.map(issue => issue.reason))] }] : []
-  }).map((target, index) => ({ id: `repair-${index}`, ...target }))
+  }).map((target, index) => ({ id: `repair-${index}`, rejectedFinding:target.finding, reasons:target.reasons }))
 }
 
 // One named slot per rejected finding prevents retained facts from consuming

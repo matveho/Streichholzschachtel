@@ -1,5 +1,28 @@
 // Conservative vetoes for source extraction ambiguity and unsupported exemptions.
 // These checks may withhold a claim; they never approve an engineering conclusion.
+export function namedReferenceEvidenceIssue(claim,evidence,documents){
+  const words=text=>String(text||'').toLowerCase().replace(/[^\p{L}\d]+/gu,' ').trim()
+  const text=' '+words(claim)+' '
+  const cited=new Set(evidence.map(proof=>proof.passage?.doc))
+  const aliases=new Map()
+  for(const document of documents)for(const name of [document.title,document.label]){
+    const alias=words(name)
+    if(alias.length<8||alias.split(' ').length<2)continue
+    if(!aliases.has(alias))aliases.set(alias,new Set())
+    aliases.get(alias).add(document.id)
+  }
+  const named=[],attributed=[]
+  for(const [alias,owners] of aliases){
+    const position=text.indexOf(' '+alias+' ')
+    if(position<0)continue
+    named.push(owners)
+    const after=text.slice(position+alias.length+2).trimStart()
+    if(/^(?:(?:which|that|also)\s+){0,2}(?:requires?|specif(?:y|ies)|states?|mandates?|recommends?|permits?|allows?|provides?|defines?)\b|^(?:s\s+)?(?:minimum|maximum|required)\b/.test(after))attributed.push(owners)
+  }
+  if(named.some(a=>named.some(b=>![...a].some(id=>b.has(id))))&&/\b(?:conflict|contradict|whereas|unresolved interface|differing|reconcil)\w*\b/i.test(claim))attributed.push(...named)
+  if(attributed.some(owners=>![...owners].some(id=>cited.has(id))))return 'The finding attributes a requirement or a cross-reference comparison to a named publication without citing that publication. Cite each actual source for its own rule; related context cannot supply missing positive evidence.'
+  return null
+}
 const exemption = /\b(?:no\s+(?:mandatory|required)\b|not\s+(?:required|necessary|mandated)|does\s+not\s+require|exempt(?:ed|ion|s)?\b)/i
 const projectComparison = /\b(?:exceeds?|meets?|complies|greater than|less than|shortfall|falls? short|satisfies|adequate|sufficient|(?:is|are) (?:below|above)|(?:thicker|thinner) than|defici(?:t|ent))\b/i
 export function recommendationLanguage(text) {
@@ -28,8 +51,9 @@ export function evidenceInterpretationIssue(claim, source, question = '', {proje
       !/\b(?:depth|cover)\b[^.;!?]{0,45}\b(?:to|from)\s+(?:the\s+)?(?:pipe\s+)?invert\b/i.test(projectBasis) &&
       !/\b(?:confirm|unresolved|different datums|not directly comparable|cannot be compared)\b/i.test(claim))
     return 'Pipe cover and depth measured to the invert use different datums. Establish the project measurement datum before claiming that matching depths satisfy the criterion.'
-  if (/\bnecessary (?:construction )?traffic only\b/i.test(source) &&
+  if ((/\bnecessary (?:construction )?traffic only\b/i.test(source)||/\bunnecessary (?:construction )?traffic\b/i.test(claim)) &&
       claim.split(/[;!?]|\.(?=\s|$)/).some(clause =>
+        /\b(?:delivery|reported|crossing|crossed|project|proposed)\b/i.test(clause) &&
         /\bunnecessary (?:construction )?traffic\b|\bunauthori[sz]ed\b[^.!?;]{0,60}\b(?:access|traffic|vehicles?)\b|\b(?:delivery|vehicles?|access|traffic)\b[^.!?;]{0,150}\b(?:violates?|violation|contravenes?|breaches?|noncompliant|contrary)\b/i.test(clause) &&
         !/\b(?:if|whether|confirm|verify|assess|determine|unresolved)\b/i.test(clause)) &&
       !/\bunnecessary (?:construction )?traffic\b/i.test(projectBasis) &&
@@ -84,10 +108,14 @@ export function evidenceInterpretationIssue(claim, source, question = '', {proje
 }
 
 // A shared "shall" must not erase an inline condition on one item in a list.
+export function conditionalSourceItems(source) {
+ return [...source.matchAll(/\b(?:if|where|when)\s+(?:required|necessary|applicable|needed)\s*,?\s+(?:(?:a|an|one|the|each|any)\s+)?([a-z]+(?:[ -][a-z]+){0,5}?)\s+(?:shall|must)\s+(?:be\s+)?(?:provided|installed|included|constructed)\b/gi)]
+  .map(item=>({subject:item[1].trim(),condition:item[0].match(/^(?:if|where|when)\s+(?:required|necessary|applicable|needed)/i)[0],excerpt:item[0]}))
+}
 export function dropsConditionalItem(claim, source) {
-  const items = [...source.matchAll(/\b(?:if|where|when)\s+(?:required|necessary|applicable)\s*,?\s+(?:(?:a|an|one|the|each|any)\s+)?([a-z]+(?:[ -][a-z]+){0,5}?)\s+(?:shall|must)\s+(?:be\s+)?(?:provided|installed|included|constructed)\b/gi)]
+  const items = conditionalSourceItems(source)
   for (const item of items) {
-    const words = item[1].trim().split(/[ -]+/)
+    const words = item.subject.split(/[ -]+/)
     if (words.length < 2) continue
     const noun = words.map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + 's?').join('[ -]+')
     const object = new RegExp('\\b' + noun + '\\b', 'i')

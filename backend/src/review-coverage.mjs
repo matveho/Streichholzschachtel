@@ -180,6 +180,7 @@ export function attachReviewCoverage(result, topics = [], plan, checked) {
   }
   return {
     ...result,
+    ...(plan?.calculationUnavailable?{notes:[...(result.notes||[]),'The model did not establish a calculation plan. Any displayed arithmetic must still pass independent operand and unit verification.']}:{}),
     review,
     report: [
       ...result.report,

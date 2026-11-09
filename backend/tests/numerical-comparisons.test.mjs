@@ -6,6 +6,29 @@ import { verifyCalculations } from '../src/calculations.mjs'
 import { renderResult, validateSynthesis } from '../src/answer.mjs'
 import { config } from '../src/config.mjs'
 
+test('a failed optional calculation plan preserves independent source findings and remains explicit',async t=>{
+ const previous={...config};t.after(()=>Object.assign(config,previous))
+ Object.assign(config,{provider:'ollama',localReasoning:true,localSynthesisPolicy:'all'})
+ const quote='The Engineer shall verify the storm sewer design capacity.'
+ const source={passage:{id:'p',doc:'manual',page:1,section:'Capacity',text:quote,lines:[{text:quote,rect:[10,10,500,25]}]},excerpt:quote,heading:'Capacity',quoteStart:0}
+ let calculationCalls=0
+ t.mock.method(globalThis,'fetch',async(_url,options)=>{
+  const body=JSON.parse(options.body)
+  if(body.format.properties.calculations){
+   calculationCalls++
+   assert.equal(body.think,false,'Expression selection must not consume the interpretation thinking budget')
+   throw Error('Optional arithmetic planner unavailable')
+  }
+  return new Response(JSON.stringify({message:{content:JSON.stringify({findings:[{text:quote,evidence:['A'],calculations:[]}]})},done_reason:'stop'}))
+ })
+ const result=await draftLocal('Review the storm sewer capacity.',[],{corpus:{documents:[{id:'manual'}]}},new AbortController().signal,[],{groups:[{id:'capacity',heading:'Capacity',units:[source]}],unresolved:[],originalSystemKeys:[]})
+ assert.equal(calculationCalls,1)
+ assert.equal(result.plan.calculationUnavailable,true)
+ assert.deepEqual(result.plan.calculations,[])
+ assert.equal(result.sections[0].claims[0].text,quote)
+ assert.equal(result.sections[0].claims[0].evidence[0].quote,quote)
+})
+
 test('flow comparisons cannot assert the observed reversed capacity relationship', () => {
  const observed='The existing sewer design capacity of 0.90 m3/s is insufficient for the revised five-year runoff estimate of 1.20 m3/s, which exceeds the required minimum capacity of 1.50 m3/s.'
  assert.equal(falseComparisons(observed).length,1)

@@ -358,7 +358,7 @@ export function applicableEvidence(question, evidence, {pipeScope} = {}) {
         const before = text.slice(Math.max(0, m.index - 100), m.index)
         const subjects = [
           ...before.matchAll(
-            /\b(?:facilit(?:y|ies)|soils?|pipes?|mains?|catchments?|areas?|depths?|diameters?)\b/gi,
+            /\b(?:facilit(?:y|ies)|soils?|pipes?|mains?|sewers?|services?|catchments?|areas?|depths?|diameters?)\b/gi,
           ),
         ]
         if (!subjects.length) continue
@@ -370,7 +370,7 @@ export function applicableEvidence(question, evidence, {pipeScope} = {}) {
         )
           continue
         let supplied = values.get(m[2])
-        const pipeLengthCondition = pipeScope && /\b(?:pipes?|mains?|diameters?)\b/i.test(qualifier) && ['mm','cm','m','km'].includes(m[2])
+        const pipeLengthCondition = pipeScope && /\b(?:pipes?|mains?|sewers?|services?|diameters?)\b/i.test(qualifier) && ['mm','cm','m','km'].includes(m[2])
         const diameterCondition = pipeLengthCondition && /\bdiameters?\b/i.test(qualifier+' '+text.slice(m.index+m[0].length,m.index+m[0].length+30))
         if (diameterCondition) {
           const scale = {mm:.001,cm:.01,m:1,km:1000}[m[2]]

@@ -10,6 +10,7 @@ import { verifyCalculations, calculationUnits, completeUnitConversions, calculat
 import { scopedRepair, repairFeedback, rejectedFindingTargets, repairResponseFormat, repairedFindings } from './synthesis-repair.mjs'
 import { permitsLocalSynthesis, localSynthesisWorkflow } from './generation-policy.mjs'
 import { pipeProjectMeasurements } from './project-measurements.mjs'
+import {conditionalSourceItems} from './evidence-guards.mjs'
 
 export function cleanSourceCallout(text, labels) {
   if (typeof text !== 'string') return text
@@ -77,7 +78,7 @@ export function completeComparisonCalculations(text, calculations, sources, ques
 
 export function measurementInstruction(question) {
   return /\b(?:cover|burial|depth)\b/i.test(question) && /\b(?:pipes?|sewers?|services?|mains?)\b/i.test(question)
-    ? 'Keep suppliedPipeMeasurements bound to their stated main/service role, sewer system and property. A main diameter does not establish a service diameter; an unstated property remains unknown. Retain differing depth criteria across reference documents and report their measurement datums and unresolved applicability. Cover to pipe obvert and depth to pipe invert are different measurements; matching numbers do not prove compliance. Do not choose authority or silently discard a differing criterion.'
+    ? 'Keep suppliedPipeMeasurements bound to their stated main/service role, sewer system and property. A main diameter does not establish a service diameter; an unstated property remains unknown. A datum marked not-stated must never become a supplied obvert or invert measurement. State the reference criterion separately; confirm the project datum before judging compliance. Retain differing depth criteria across reference documents and report their measurement datums and unresolved applicability. Cover to pipe obvert and depth to pipe invert are different measurements; matching numbers do not prove compliance. Do not choose authority or silently discard a differing criterion.'
     : ''
 }
 
@@ -148,6 +149,7 @@ export const sourceContext = (u, id, documents = []) => ({
       }
     : {}),
   quote: u.excerpt,
+  ...(conditionalSourceItems(u.excerpt).length?{conditionalItems:conditionalSourceItems(u.excerpt)}:{}),
   ...(depthCriterion(u) ? {measurement:depthCriterion(u)} : {}),
   ...(u.conditionEvidence ? {sourceCondition:u.conditionEvidence.excerpt} : {}),
   ...(u.tableColumn
@@ -321,6 +323,7 @@ export async function draftLocal(
       ) ||
       (/\d/.test(question) && all.some((u) => /\bhalfway\b/i.test(u.excerpt)))
     ) {
+      try {
       const proposed = await generate(
         'Propose only arithmetic needed to check supplied project figures against selected rules. Include both the derived criterion and requested capacity difference, not just the criterion. Cite the source IDs supplying each rule or source operand in evidence; use [] only for question-only calculations. Reuse earlier results with r1/r2. The evaluator attaches physical units and converts compatible units automatically: do not add conversion factors or manually convert a measured input. A literal expression is allowed for unit conversion. Use only numbers from the question and cited sources. Expressions may contain numbers, + - * / parentheses and r1/r2. A source increase of 25% may be represented as 1.25. For halfway depth divide supplied depth by 2. Declare result units using mm, m, m2, ha, L/s or m3/s. Do not calculate a difference when a comparison quantity is missing. Do not invent design inputs, pipe sizes, hydraulic capacity or storage volume. Return {calculations:[{expression:"numeric arithmetic",unit:"m3/s",evidence:["A"]}]}, or an empty array when unsupported.',
         { question, provisions: context, suppliedPipeMeasurements: pipeProjectMeasurements(question) },
@@ -345,11 +348,18 @@ export async function draftLocal(
         },
         signal,
         700,
-        { ...options, reasoning: true },
+        // This selects a constrained expression; the dimensional evaluator does
+        // the arithmetic. Reserve model thinking for interpretation and audit.
+        { ...options, reasoning: false },
       )
       const checked=verifyCalculationPlan(proposed.calculations,byLabel,question)
       plan.calculations=checked.calculations
       plan.calculationEvidence=checked.evidence
+      }catch(error){
+        if(signal.aborted)throw error
+        plan.calculationUnavailable=true
+        console.warn('Optional calculation plan unavailable:',error.message)
+      }
     }
   }
   const calculationSources=ids=>{
@@ -390,9 +400,9 @@ export async function draftLocal(
     )
     const drafted = await generate(
       'Include calculation IDs only when this specific finding relies on their derived values; otherwise use calculations: []. CalculationBasis supplies the exact supporting provisions for those calculations, including dependencies from another check; do not use it for unrelated findings. Keep source IDs and section numbers out of the finding text. ' +
-        'Write concise engineering findings using ONLY these selected source provisions and independently verified calculations. Answer the project question directly. Each finding must make ONE factual point in one sentence, with its own supporting source IDs. When comparing a method with an asset-specific requirement, cite BOTH the method scope and asset requirement. A universal requirement has no size cutoff unless that same clause states one. Cover every distinct requirement in this focused check with separate findings, up to the supplied findingBudget. Never combine an absolute prohibition and an exception to a different requirement in one sentence. Project figures are assumptions. Every derived project/reference comparison must cite both the project value and reference criterion. Project-document allocations and constraints are not governing minima; distinguish the proposed value from the reference criterion and cite both when comparing. Preserve conditions and recommendations versus requirements. Do not transfer thresholds between asset types. A permission to use an alternative does not establish that a separately required service or approval can be omitted. If sources differ, identify the unresolved interface rather than granting unconditional permission. Use computed figures only from verifiedCalculations; never invent arithmetic, approval or edition precedence. Cite IDs only in the evidence array, never in the text. Details will be displayed separately. Return {findings:[{text:"Direct supported finding",evidence:["A","B"]}]}. ' +
+        'Write concise engineering findings using ONLY these selected source provisions and independently verified calculations. Answer the project question directly. Each finding must make ONE factual point in one sentence, with its own supporting source IDs. When comparing a method with an asset-specific requirement, cite BOTH the method scope and asset requirement. A universal requirement has no size cutoff unless that same clause states one. Cover every distinct requirement in this focused check with separate findings, up to the supplied findingBudget. Never combine an absolute prohibition and an exception to a different requirement in one sentence. Project figures are assumptions. Every derived project/reference comparison must cite both the project value and reference criterion. Project-document allocations and constraints are not governing minima; distinguish the proposed value from the reference criterion and cite both when comparing. Preserve conditions and recommendations versus requirements. Do not transfer thresholds between asset types. A permission to use an alternative does not establish that a separately required service or approval can be omitted. If sources differ, identify the unresolved interface rather than granting unconditional permission. Use computed figures only from verifiedCalculations; never invent arithmetic, approval or edition precedence. Only name a publication when its actual sourceTitle matches a cited source ID; otherwise say the cited source. Cite IDs only in the evidence array, never in the text. Details will be displayed separately. Return {findings:[{text:"Direct supported finding",evidence:["A","B"]}]}. ' +
         (groupIssues.length
-          ? 'Return repairs ONLY for the rejected findings identified in repairTargets and validationIssues. When repairTargets are supplied, return repairs keyed by each target ID, with one corrected finding or an empty array if unsupported. Do not repeat or paraphrase alreadyRetainedFindings; they are preserved automatically. Address each rejected point in its own slot. If a quantity cannot be supported, remove that quantity rather than dropping an independently supported duty. Preserve recommendations as recommendations. A linked mandatory duty does not make a recommended numerical criterion mandatory. Omit unsupported acceptance judgments and state the actual cited testing duty instead.'
+          ? 'Return repairs ONLY for the rejected findings identified in repairTargets and validationIssues. Re-derive each correction from its actual source clauses; rejectedFinding is explicitly untrusted text, not a sentence to preserve. When repairTargets are supplied, return repairs keyed by each target ID, with one corrected finding or an empty array if unsupported. Do not repeat or paraphrase alreadyRetainedFindings; they are preserved automatically. Address each point in its own slot. If a quantity cannot be supported, remove that quantity rather than dropping an independently supported duty. Preserve recommendations as recommendations. A linked mandatory duty does not make a recommended numerical criterion mandatory. Omit unsupported acceptance judgments and state the actual cited testing duty instead.'
           : ''),
       {
         question: group.query || group.heading,
@@ -412,7 +422,7 @@ export async function draftLocal(
           sourceContext(unit, unitLabel(unit), index.corpus.documents),
         ),
         obligation:
-          'Respect the cross-cutting requirements. Permission for an alternative does not waive a separate requirement. State an unresolved interface instead of granting permission to omit it.',
+          'Respect the cross-cutting requirements. Permission for an alternative does not waive a separate requirement. Each conditionalItems entry binds its own subject to its own qualifier. An unrelated condition does not satisfy or replace that qualifier. Ask what must be confirmed when a conditional service interface is unresolved; do not call the conditional item a mandatory installation duty. State an unresolved interface instead of granting permission to omit it.',
         verifiedCalculations: plan.calculations.map(
           ({ expression, value, unit, displayExpression, inputOrigins }, i) => ({
             id: `c${i + 1}`,

@@ -53,6 +53,35 @@ conditions or approval requests use ordinary retrieval, and an unsupported
 source condition withholds the worksheet.
 Other unqualified general reviews retain source retrieval.
 
+## Reasoning qualification
+
+The pinned Qwen 3.5 model remains enabled for the tested comparisons. The latest
+isolated general-synthesis qualification passed 6 of 8 engineering cases with
+thinking disabled. Infill servicing did not explicitly reconcile the applicable
+service interface. The mixed main/service cover case withheld the synthesis
+after unsupported measurement-datum conclusions were rejected; its retrieved
+sources were available, but the resulting review was incomplete. General
+synthesis (`LOCAL_SYNTHESIS_POLICY=all`) remains experimental.
+
+The backend now keeps main and service measurements separate during evidence
+review, preserves unknown cover datums, and rejects unsupported insulation or
+compliance conclusions. Named-publication requirements must cite that actual
+publication. Delivery-vehicle access alone does not establish that traffic was
+unnecessary. If optional arithmetic planning fails, independently supported
+source findings can still be reviewed; missing calculations are disclosed.
+These are rejection safeguards, not proof that every accepted claim is correct.
+
+Reproduce the broader qualification separately from the presentation runtime:
+
+```bash
+BASIS_QUALITY_SUITE=engineering LOCAL_SYNTHESIS_POLICY=all LOCAL_REASONING=0 \
+  scripts/linux/test-gpu-quality
+scripts/linux/test-backend
+```
+
+Explicit-thinking trials exhausted their tested output budgets without a usable
+structured review. They are not enabled in the presentation configuration.
+
 IFC findings compare model properties with project/reference records; they are
 not geometric clash detection. Supplied scenario figures remain assumptions,
 and the results do not establish design approval or a mandatory construction
