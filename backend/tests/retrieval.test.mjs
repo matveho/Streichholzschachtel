@@ -49,6 +49,19 @@ test('the worked capacity review reads live source rules and computes changed in
  assert.deepEqual(result.arithmeticReview.calculations.map(step=>step.value),[1.5,.6])
  assert.equal(result.arithmeticReview.applicabilityConfirmed,false)
  assert.equal(result.reviewExample.id,example.id)
+ for(const [question,expected] of [
+  [example.question.replace('1.20','1.60'),[2,1.1]],
+  [example.question.replace('1.20 m³/s','1200 L/s').replace('0.90 m³/s','900 L/s'),[1.5,.6]],
+  [example.question.replace('1.20 m³/s','1200 L/s').replace('0.90','1.70'),[1.5,-.2]],
+  [example.question.replace('0.90','1.50'),[1.5,0]],
+ ]){
+  const changed=await answer(question,scoped,{publicBase:'http://localhost',token:'test',signal:new AbortController().signal})
+  assert.equal(changed.mode,'verified_review',question)
+  assert.deepEqual(changed.arithmeticReview.calculations.map(step=>step.value),expected)
+ }
+ const boundary=await answer(example.question.replace('28 ha to 42 ha','20 ha to 30 ha'),scoped,{publicBase:'http://localhost',token:'test',signal:new AbortController().signal})
+ assert.equal(boundary.mode,'insufficient_evidence')
+ assert.equal(boundary.requiredInputs.kind,'worked_review_basis')
  config.provider='extractive';config.extractiveOnly=true
  const fallback=await answer(example.question,scoped,{publicBase:'http://localhost',token:'test',signal:new AbortController().signal})
  assert.notEqual(fallback.mode,'verified_review')

@@ -873,7 +873,7 @@ export function renderUnits(sections, corpus, publicBase, token, mode, notes) {
 async function answerFromUnits(
   question,
   searchIndex,
-  { publicBase, token, progress },
+  { publicBase, token, progress = () => {} },
 ) {
   const corpus = searchIndex.corpus
   const index = (searchIndex.unitIndex ??= new UnitIndex(corpus))

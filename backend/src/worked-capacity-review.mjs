@@ -2,15 +2,13 @@ import {normalizeMeasurements,locateQuote} from './indexer.mjs'
 import {evidenceUnits,isProvision} from './evidence-units.mjs'
 import {applicableEvidence} from './applicability.mjs'
 import {verifyCalculations} from './calculations.mjs'
+import {capacityReviewInputs} from './capacity-review-inputs.mjs'
 
 // A worked engineering worksheet: source text and numerical inputs are read
 // at request time. No generated prose or stored model answer supplies a rule.
 export function workedCapacityReview(question,index,example) {
- const text=normalizeMeasurements(question)
- const area=text.match(/expanded\s+from\s+(\d+(?:\.\d+)?)\s*ha\s+to\s+(\d+(?:\.\d+)?)\s*ha/i)
- const runoff=text.match(/runoff(?:\s+[a-z-]+){0,5}\s+(\d+(?:\.\d+)?)\s*(m3\/s|L\/s)\b/i)
- const capacity=text.match(/existing\s+sewer\s+(?:design|capacity)(?:\s+[a-z-]+){0,4}\s+(\d+(?:\.\d+)?)\s*(m3\/s|L\/s)\b/i)
- if(!area||!runoff||!capacity)return null
+ const inputs=capacityReviewInputs(question)
+ if(!inputs)return null
  const selected=new Set(example.documentIds)
  const passages=index.withPageContext([
   ...index.searchSingle('storm sewer capacity requirement catchment areas design flow five-year runoff').slice(0,4),
@@ -29,10 +27,10 @@ export function workedCapacityReview(question,index,example) {
  if(!basis||!method||!minor)return null
  const multiplier=normalizeMeasurements(basis.excerpt).match(/\b(\d+(?:\.\d+)?)\s+times\s+(?:the\s+)?runoff\b/i)
  const threshold=normalizeMeasurements(basis.excerpt).match(/areas greater than\s+(\d+(?:\.\d+)?)\s*ha/i)
- if(!multiplier||!threshold||Number(area[2])<=Number(threshold[1]))return null
+ if(!multiplier||!threshold||inputs.area<=Number(threshold[1]))return null
  const checked=verifyCalculations([
-  {expression:`${runoff[1]} * ${multiplier[1]}`,unit:'m3/s'},
-  {expression:`r1 - ${capacity[1]}`,unit:'m3/s'},
+  {expression:`${inputs.runoffLiteral} * ${multiplier[1]}`,unit:'m3/s'},
+  {expression:`r1 - ${inputs.capacityLiteral}`,unit:'m3/s'},
  ],basis.excerpt,question)
  if(checked.issues.length||checked.calculations.length!==2)return null
  const proof=unit=>{
@@ -53,12 +51,12 @@ export function workedCapacityReview(question,index,example) {
  return {
   calculations:checked.calculations,
   sections:[
-   {heading:'Review inputs',claims:[{text:`Catchment area: ${Number(area[2])} ha, expanded from ${Number(area[1])} ha. Supplied five-year runoff: ${Number(runoff[1])} ${runoff[2]}. Existing conveyance capacity: ${Number(capacity[1])} ${capacity[2]}. These figures are scenario assumptions.`,evidence:[]}]},
+   {heading:'Review inputs',claims:[{text:`Catchment area: ${inputs.area} ha, expanded from ${inputs.previousArea} ha. Supplied five-year runoff: ${inputs.runoff} ${inputs.runoffUnit}. Existing conveyance capacity: ${inputs.capacity} ${inputs.capacityUnit}. These figures are scenario assumptions.`,evidence:[]}]},
    {heading:'Design-flow basis',claims:[{text:basis.excerpt,evidence:basisProof}]},
    {heading:'Verified capacity calculation',arithmetic:true,claims:[{text:'Design flow and capacity difference, using the quoted basis and supplied inputs:',evidence:[]},{text:'',evidence:basisProof,calculations:checked.calculations}]},
    {heading:'Capacity assessment',claims:[{text:difference.value===0?`The supplied capacity equals the calculated ${flow.value} m3/s reference flow.`:`The supplied capacity is ${magnitude} m3/s ${shortfall?'below':'above'} the calculated ${flow.value} m3/s reference flow.`,evidence:basisProof}]},
    {heading:'Detention pond design method',claims:[{text:method.excerpt,evidence:methodProof},{text:minor.excerpt,evidence:minorProof},{text:'The quoted Rational Method permission concerns minor drainage systems. The pond assessment uses the storage-facility modelling requirement above.',evidence:[...methodProof,...minorProof]}]},
-   {heading:'Design follow-up',claims:[{text:'Resolve the capacity difference and establish the pond model, storage volume and outlet-control design before making a retention decision. The numerical check does not select a construction remedy or establish project approval.',evidence:[]}]},
+   {heading:'Design follow-up',claims:[{text:'Confirm the conveyance assessment and establish the pond model, storage volume and outlet-control design before making a retention decision. The numerical check does not select a construction remedy or establish project approval.',evidence:[]}]},
   ],
  }
 }

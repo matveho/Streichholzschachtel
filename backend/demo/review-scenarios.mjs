@@ -1,3 +1,5 @@
+import {capacityReviewInputs} from '../src/capacity-review-inputs.mjs'
+
 // Curated source-backed worked reviews, not stored answer text. Numerical
 // results and original source quotations are resolved at request time.
 export const demoReviews = [{
@@ -22,8 +24,7 @@ export const demoStories = [
   ...demoReviews,
 ]
 
-const canonical = text => text.normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim()
 export function findDemoReview(question, documents) {
   const available = new Set(documents.map(document=>document.id))
-  return demoReviews.find(review=>canonical(review.question)===canonical(question) && (review.documentIds||review.requiredDocumentIds).every(id=>available.has(id)))
+  return demoReviews.find(review=>review.id==='catchment-capacity-and-storage' && capacityReviewInputs(question) && (review.documentIds||review.requiredDocumentIds).every(id=>available.has(id)))
 }

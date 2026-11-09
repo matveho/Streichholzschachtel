@@ -34,8 +34,14 @@ Fresh comparison queries use the GPU model; saved results reopen quickly. The
 capacity example is a source-verified worksheet (`verified_review`), calculated
 from the question and source text at request time. It contains no stored model
 answer. Its reference scope and requested checks are curated for this scenario.
-Changing supplied values is not presented as generally qualified free-form
-design reasoning. Other unqualified general reviews retain source retrieval.
+For a live what-if, submit the same capacity question with `42 ha` changed to
+`55 ha` and `1.20 m³/s` changed to `1600 L/s`. The worksheet reads the source
+again and recalculates `2.00 m³/s` and a `1.10 m³/s` capacity difference. Areas
+and positive flow values are editable; both `m³/s` and `L/s` are supported.
+This remains a bounded worksheet with the same question structure and named
+references. Changed engineering conditions or additional tasks use ordinary
+retrieval, and an unsupported source condition withholds the worksheet.
+Other unqualified general reviews retain source retrieval.
 
 IFC findings compare model properties with project/reference records; they are
 not geometric clash detection. Supplied scenario figures remain assumptions,
