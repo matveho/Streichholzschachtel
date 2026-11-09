@@ -10,6 +10,7 @@ import {
   ExternalLink,
   FileText,
   Map,
+  Pin,
 } from 'lucide-react'
 import { useDocuments } from './DocumentContext'
 import type { DocId, Reference } from './data'
@@ -23,7 +24,13 @@ export function PdfPane({
   navigationKey,
   onSelectReferences,
   sourceReferences,
+  evidenceView = false,
+  pinnedSource = false,
+  onPinSource,
 }: {
+  evidenceView?: boolean
+  pinnedSource?: boolean
+  onPinSource?: () => void
   id: DocId
   active: Reference[]
   navigationKey: number
@@ -42,7 +49,7 @@ export function PdfPane({
   const canvas = useRef<HTMLCanvasElement>(null)
   const text = useRef<HTMLDivElement>(null)
   const scroll = useRef<HTMLDivElement>(null)
-  const [minimap, setMinimap] = useState(true)
+  const [minimap, setMinimap] = useState(!evidenceView)
   const [viewport, setViewport] = useState({ top: 0, height: 1 })
   const pendingJump = useRef<number | null>(null)
   const [jumpKey, setJumpKey] = useState(0)
@@ -69,7 +76,13 @@ export function PdfPane({
     return () => observer.disconnect()
   }, [])
   const [pageWidth, pageHeight] = doc.pageSizes?.[page] ?? [612, 792]
-  const scale = (width / pageWidth) * zoom
+  const focusRect =
+    evidenceView && targetPage === page ? targets[0]?.rect : undefined
+  const fitScale = focusRect
+    ? Math.min(1.8, width / (focusRect[2] + 16))
+    : width / pageWidth
+  const scale = fitScale * zoom
+  const focusCenter = focusRect ? focusRect[0] + focusRect[2] / 2 : undefined
   useEffect(() => {
     const el = scroll.current!
     let frame = 0
@@ -155,17 +168,52 @@ export function PdfPane({
     } else if (targetTop !== undefined && page === targetPage)
       el.scrollTo({
         top: Math.max(0, targetTop * scale - el.clientHeight * 0.28 + 24),
-        behavior: 'smooth',
+        left:
+          focusCenter === undefined
+            ? el.scrollLeft
+            : Math.max(
+                0,
+                (canvas.current?.parentElement?.offsetLeft ?? 28) +
+                  focusCenter * scale -
+                  el.clientWidth / 2,
+              ),
+        behavior: evidenceView ? 'instant' : 'smooth',
       })
     else el.scrollTo({ top: 0 })
-  }, [targetTop, targetPage, page, scale, navigationKey, jumpKey, pageHeight])
+  }, [
+    targetTop,
+    targetPage,
+    page,
+    scale,
+    navigationKey,
+    jumpKey,
+    pageHeight,
+    focusCenter,
+    evidenceView,
+  ])
   return (
     <section className="pdf-pane" aria-label={doc.title}>
       <div className="pane-title">
         <FileText size={14} />
         <strong>{doc.label}</strong>
         <span>{doc.title}</span>
-        <span className="edition">{doc.edition}</span>
+        {onPinSource ? (
+          <button
+            className="source-pin"
+            type="button"
+            aria-label={'Pin ' + doc.label}
+            aria-pressed={pinnedSource}
+            title={
+              pinnedSource ? 'Unpin this source' : 'Keep this source in view'
+            }
+            onClick={onPinSource}
+          >
+            <Pin size={13} />
+            {pinnedSource ? 'Pinned' : 'Pin'}
+          </button>
+        ) : (
+          <span className="edition">{doc.edition}</span>
+        )}
       </div>
       <div className="pdf-toolbar">
         <button
@@ -206,7 +254,9 @@ export function PdfPane({
         >
           <Minus />
         </button>
-        <span className="zoom-label">{Math.round(zoom * 100)}%</span>
+        <span className="zoom-label">
+          {Math.round(((scale * pageWidth) / width) * 100)}%
+        </span>
         <button
           title="Zoom in"
           aria-label={`Zoom in ${doc.title}`}
@@ -216,8 +266,8 @@ export function PdfPane({
           <Plus />
         </button>
         <button
-          title="Fit width"
-          aria-label={`Fit width ${doc.title}`}
+          title={focusRect ? 'Fit cited passage' : 'Fit width'}
+          aria-label={`${focusRect ? 'Fit cited passage' : 'Fit width'} ${doc.title}`}
           onClick={() => setZoom(1)}
         >
           <Scan />
@@ -242,6 +292,11 @@ export function PdfPane({
           <Map />
         </button>
       </div>
+      {focusRect && targets[0]?.excerpt && !status && (
+        <blockquote className="evidence-excerpt" aria-label="Cited passage">
+          {targets[0].excerpt}
+        </blockquote>
+      )}
       <div className="pdf-body">
         <div className="pdf-scroll" ref={scroll}>
           <div

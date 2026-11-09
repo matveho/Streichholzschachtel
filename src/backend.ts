@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Reference } from './data'
 import type { ReportBlock } from './QueryReport'
 export type DocumentRecord = {
+  category?: string
   model?: string
   label: string
   code: string

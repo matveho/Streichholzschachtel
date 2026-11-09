@@ -1490,3 +1490,29 @@ button,
     animation: none;
   }
 }
+.pane-title .source-pin {
+  margin-left: auto;
+  flex-shrink: 0;
+  gap: 4px;
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 6px;
+  color: var(--color-secondary);
+}
+.pane-title .source-pin[aria-pressed='true'] {
+  color: var(--color-text);
+  background: var(--surface-muted);
+}
+
+.evidence-excerpt {
+  margin: 0;
+  padding: 6px 12px;
+  color: var(--color-text);
+  border-inline-start: 3px solid var(--color-accent);
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+  line-height: 1.4;
+  max-height: 4.6em;
+  flex-shrink: 0;
+  overflow: auto;
+}

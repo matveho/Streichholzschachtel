@@ -50,6 +50,32 @@ test('recover the project connection and open cited evidence from project histor
         ],
       },
     }
+    const drawings = {
+      ...doc,
+      id: 'sheet',
+      category: 'design',
+      label: 'Drawing',
+    }
+    const brief = {
+      ...doc,
+      id: 'brief',
+      category: 'client',
+      label: 'Owner brief',
+    }
+    const sources = [doc, drawings, brief]
+    const review = {
+      ...job,
+      id: 'finding',
+      result: {
+        ...job.result,
+        documents: sources,
+        references: sources.map((d, i) => ({
+          ...job.result.references[0],
+          doc: d.id,
+          id: String(i + 1),
+        })),
+      },
+    }
     let submittedJob
     let available = false
     await page.route('**/*', async (route) => {
@@ -68,9 +94,18 @@ test('recover the project connection and open cited evidence from project histor
         return route.fulfill({
           json: {
             project,
-            documents: [doc],
+            documents: sources,
             queries: [job],
-            issues: [],
+            issues: [
+              {
+                id: 'check',
+                status: 'open',
+                verified: true,
+                title: 'Check design criterion',
+                queryId: 'finding',
+                citations: [],
+              },
+            ],
             comparison: {
               modelCount: 2,
               errors: [],
@@ -85,6 +120,8 @@ test('recover the project connection and open cited evidence from project histor
             collections: [],
           },
         })
+      if (path === '/local-api/v1/projects/review/queries/finding')
+        return route.fulfill({ json: review })
       if (path === '/local-api/v1/projects/review/queries/grade')
         return route.fulfill({ json: job })
       if (
@@ -125,6 +162,26 @@ test('recover the project connection and open cited evidence from project histor
     )
     await page.keyboard.press('Escape')
     await expect(scanButton).toBeFocused()
+    await page.getByText('Check design criterion', { exact: true }).click()
+    await page.getByRole('button', { name: 'Inspect evidence' }).click()
+    const visiblePanes = page.locator('.pdf-pane:visible')
+    await expect(visiblePanes).toHaveCount(2)
+    await expect(visiblePanes.locator('[data-reference="2"]')).toBeVisible()
+    await expect(visiblePanes.locator('[data-reference="1"]')).toBeVisible()
+    await page.getByRole('tab', { name: /Owner brief/ }).click()
+    await expect(visiblePanes.locator('[data-reference="2"]')).toBeVisible()
+    await expect(visiblePanes.locator('[data-reference="3"]')).toBeVisible()
+    await page.getByRole('button', { name: 'Pin Owner brief' }).click()
+    await page.getByRole('tab', { name: /Vol. 3-03/ }).click()
+    await expect(visiblePanes.locator('[data-reference="1"]')).toBeVisible()
+    await expect(visiblePanes.locator('[data-reference="3"]')).toBeVisible()
+    await page.setViewportSize({ width: 390, height: 844 })
+    await expect(visiblePanes).toHaveCount(1)
+    await page.setViewportSize({ width: 1366, height: 768 })
+    await page
+      .getByRole('link', { name: 'Project dashboard', exact: true })
+      .first()
+      .click()
     await page.getByRole('link', { name: /What is the upstream grade/ }).click()
     await page.locator('.citations button').first().click()
     const pane = page.locator('.pdf-pane:visible')

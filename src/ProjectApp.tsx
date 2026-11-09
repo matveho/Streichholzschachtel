@@ -855,6 +855,9 @@ function QueryReader({
       projectDocuments={projectDocumentMap(data.documents)}
       onRun={onRun}
       preloadedJob={job}
+      finding={data.issues.some(
+        (issue) => issue.queryId === job.id && issue.verified,
+      )}
       onNew={onNew}
       thread={thread}
       onUpload={

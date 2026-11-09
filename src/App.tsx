@@ -46,6 +46,7 @@ export function QueryWorkspace({
   draft,
   onDraftChange,
   thread = [],
+  finding = false,
   preloadedJob,
   onUpload,
 }: {
@@ -69,6 +70,7 @@ export function QueryWorkspace({
   /** Earlier questions asked in this query's tab. */
   thread?: ThreadTurn[]
   /** The finished job for this query, if already fetched. */
+  finding?: boolean
   preloadedJob?: QueryJob
   /** Opens the project's document upload; absent where uploads aren't possible. */
   onUpload?: () => void
@@ -91,18 +93,45 @@ export function QueryWorkspace({
     sourceIds.length === 0
   const datasetKey = live.data?.id ?? 'pending'
 
+  const cited = finding
+    ? references.filter(
+        (ref) =>
+          documents[ref.doc] &&
+          ref.rect?.length === 4 &&
+          ref.rect.every(Number.isFinite) &&
+          ref.rect[2] > 0 &&
+          ref.rect[3] > 0,
+      )
+    : []
+  const primary =
+    cited.find((ref) => documents[ref.doc].category === 'design') ?? cited[0]
+  const alternatives = cited.filter((ref) => ref.doc !== primary?.doc)
+  const other =
+    alternatives.find(
+      (ref) => projectDocuments?.[ref.doc]?.category === 'reference',
+    ) ?? alternatives[0]
+  const initialPair = primary && other ? [primary, other] : []
+  const initialDocs = initialPair.length
+    ? initialPair.map((ref) => ref.doc)
+    : sourceIds.slice(0, 2)
+  const [anchorId, setAnchorId] = useState<string | undefined>(
+    initialPair[0]?.id,
+  )
+  const anchor = cited.find((ref) => ref.id === anchorId)
   const narrow = useSyncExternalStore(
     subscribeViewerWidth,
     () => narrowViewer.matches,
   )
   const [preferredLayout, setLayout] = useState<'split' | 'tabs'>('split')
   const layout = narrow ? 'tabs' : preferredLayout
-  const [tab, setTab] = useState<DocId>(sourceIds[0] ?? '')
-  const [comparison, setComparison] = useState<DocId[]>(sourceIds.slice(0, 2))
-  const [opened, setOpened] = useState<DocId[]>(sourceIds.slice(0, 2))
+  const [tab, setTab] = useState<DocId>(initialDocs[0] ?? '')
+  const [comparison, setComparison] = useState<DocId[]>(initialDocs)
+  const [opened, setOpened] = useState<DocId[]>(initialDocs)
   const [focusedPane, setFocusedPane] = useState(0)
   const [hover, setHover] = useState<string[] | null>(null)
-  const [pinned, setPinned] = useState<string[]>([])
+  const [pinned, setPinned] = useState<string[]>(
+    initialPair.map((ref) => ref.id),
+  )
   const [navigationKey, setNavigationKey] = useState(0)
   const [busy, setBusy] = useState(false)
   const [pending, setPending] = useState('')
@@ -113,13 +142,27 @@ export function QueryWorkspace({
   const [previousDataset, setPreviousDataset] = useState(datasetKey)
   if (datasetKey !== previousDataset) {
     setPreviousDataset(datasetKey)
-    setTab(sourceIds[0] ?? '')
-    setComparison(sourceIds.slice(0, 2))
-    setOpened(sourceIds.slice(0, 2))
-    setPinned(references.slice(0, 2).map((r) => r.id))
+    setAnchorId(initialPair[0]?.id)
+    setTab(initialDocs[0] ?? '')
+    setComparison(initialDocs)
+    setOpened(initialDocs)
+    setPinned(
+      (initialPair.length ? initialPair : references.slice(0, 2)).map(
+        (r) => r.id,
+      ),
+    )
     setHover(null)
   }
-  const ids = hover ?? pinned
+  const preview =
+    anchor && hover
+      ? cited.find((r) => hover.includes(r.id) && r.doc !== anchor.doc)
+      : undefined
+  const displayedPair =
+    anchor && preview ? [anchor.doc, preview.doc] : comparison
+  const displayedTab = preview?.doc ?? tab
+  const ids = anchor
+    ? [anchor.id, ...(preview ? [preview.id] : pinned)]
+    : (hover ?? pinned)
   const active = references.filter((r) => ids.includes(r.id))
   // Off-topic, not found and other-jurisdiction results carry no source text.
   const nothingToCopy =
@@ -130,6 +173,7 @@ export function QueryWorkspace({
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        setAnchorId(undefined)
         setPinned([])
         setHover(null)
       }
@@ -143,6 +187,14 @@ export function QueryWorkspace({
     return () => window.removeEventListener('keydown', key)
   }, [])
   function selectDocument(id: DocId) {
+    if (initialPair.length) {
+      const ref = cited.find((r) => r.doc === id)
+      if (ref) {
+        if (id !== anchor?.doc) reveal([ref.id], true)
+        else setTab(id)
+        return
+      }
+    }
     setTab(id)
     setOpened((prev) => (prev.includes(id) ? prev : [...prev, id]))
     setComparison((prev) =>
@@ -153,7 +205,17 @@ export function QueryWorkspace({
   }
   function reveal(refs: string[], pin = false) {
     if (pin) {
-      setPinned(refs)
+      setPinned(
+        anchor &&
+          refs.every((id) => cited.find((r) => r.id === id)?.doc === anchor.doc)
+          ? [
+              ...pinned.filter(
+                (id) => cited.find((r) => r.id === id)?.doc !== anchor.doc,
+              ),
+              ...refs,
+            ]
+          : refs,
+      )
       setNavigationKey((k) => k + 1)
     } else setHover(refs)
     const first = references.find((r) => r.id === refs[0])
@@ -165,6 +227,24 @@ export function QueryWorkspace({
             .filter((id): id is DocId => !!id),
         ),
       ]
+      if (anchor) {
+        if (!pin) {
+          setOpened((prev) => [...new Set([...prev, ...citedDocs])])
+          return
+        }
+        const next = refs
+          .map((id) => cited.find((r) => r.id === id))
+          .find((r) => r && r.doc !== anchor.doc)
+        if (next) {
+          setTab(next.doc)
+          setComparison([anchor.doc, next.doc])
+          setOpened((prev) => [...new Set([...prev, anchor.doc, next.doc])])
+        } else {
+          setTab(first.doc)
+          if (pin && first.doc === anchor.doc) setAnchorId(first.id)
+        }
+        return
+      }
       setTab(first.doc)
       setOpened((prev) => [...new Set([...prev, ...citedDocs.slice(0, 2)])])
       setComparison((prev) =>
@@ -307,12 +387,15 @@ export function QueryWorkspace({
               role="tablist"
               aria-label="Source documents"
             >
-              {sourceIds.map((id) => (
+              {(initialPair.length
+                ? [...new Set(cited.map((r) => r.doc))]
+                : sourceIds
+              ).map((id) => (
                 <button
                   key={id}
                   role="tab"
-                  aria-selected={tab === id}
-                  className={`document-tab ${tab === id ? 'selected' : ''} ${active.some((r) => r.doc === id) ? 'has-source' : ''}`}
+                  aria-selected={displayedTab === id}
+                  className={`document-tab ${displayedTab === id ? 'selected' : ''} ${active.some((r) => r.doc === id) ? 'has-source' : ''}`}
                   title={documents[id].title}
                   onClick={() => selectDocument(id)}
                 >
@@ -324,7 +407,7 @@ export function QueryWorkspace({
             </div>
             {!narrow && (
               <div className="layout-controls">
-                {layout === 'split' && sourceIds.length > 2 && (
+                {!anchor && layout === 'split' && sourceIds.length > 2 && (
                   <select
                     className="compare-select"
                     aria-label="Compare document"
@@ -371,8 +454,8 @@ export function QueryWorkspace({
           <div className={`document-panes ${layout}`}>
             {sourceIds.map((id) => (
               <div
-                className={`pane-slot ${(layout === 'tabs' ? tab !== id : !comparison.includes(id)) ? 'hidden' : ''}`}
-                style={{ order: comparison.indexOf(id) }}
+                className={`pane-slot ${(layout === 'tabs' ? displayedTab !== id : !displayedPair.includes(id)) ? 'hidden' : ''}`}
+                style={{ order: displayedPair.indexOf(id) }}
                 onPointerDown={() => setFocusedPane(comparison.indexOf(id))}
                 onFocusCapture={() =>
                   setFocusedPane(Math.max(0, comparison.indexOf(id)))
@@ -382,8 +465,37 @@ export function QueryWorkspace({
                 {opened.includes(id) && (
                   <PdfPane
                     id={id}
+                    evidenceView={initialPair.length > 0}
+                    pinnedSource={anchor?.doc === id}
+                    onPinSource={
+                      initialPair.length && layout === 'split'
+                        ? () => {
+                            if (anchor?.doc === id) {
+                              setAnchorId(undefined)
+                              return
+                            }
+                            const ref =
+                              active.find((r) => r.doc === id) ??
+                              cited.find((r) => r.doc === id)
+                            if (!ref) return
+                            setAnchorId(ref.id)
+                            setPinned(
+                              comparison.flatMap((doc) => {
+                                const source =
+                                  active.find((r) => r.doc === doc) ??
+                                  cited.find((r) => r.doc === doc)
+                                return source ? [source.id] : []
+                              }),
+                            )
+                            setComparison([
+                              id,
+                              ...comparison.filter((doc) => doc !== id),
+                            ])
+                          }
+                        : undefined
+                    }
                     active={active}
-                    navigationKey={navigationKey}
+                    navigationKey={anchor?.doc === id ? 0 : navigationKey}
                     onSelectReferences={(refIds) => reveal(refIds, true)}
                     sourceReferences={references}
                   />
@@ -432,6 +544,7 @@ export function QueryWorkspace({
               {pinned.length > 0 && (
                 <button
                   onClick={() => {
+                    setAnchorId(undefined)
                     setPinned([])
                     setHover(null)
                   }}
