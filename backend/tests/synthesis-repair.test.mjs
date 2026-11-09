@@ -4,7 +4,24 @@ import {
   scopedRepair,
   mergeApprovedSynthesis,
   repairFeedback,
+  rejectedFindingTargets,
+  repairResponseFormat,
+  repairedFindings,
 } from '../src/synthesis-repair.mjs'
+
+test('each rejected finding receives a separate repair slot while approved findings stay outside the response budget', () => {
+ const cached=[{text:'Approved timing duty.'},{text:'Incorrect sampling depth.'},{text:'Incorrect QA quantity.'}]
+ const issues=[{claim:'Incorrect sampling depth.',reason:'Recommendation was made mandatory.'},{claim:'Incorrect QA quantity.',reason:'Unsupported quantity.'},{claim:'Incorrect QA quantity.',reason:'Missing arithmetic.'}]
+ const targets=rejectedFindingTargets(cached,issues)
+ assert.equal(targets.length,2)
+ assert.deepEqual(targets[1].reasons,['Unsupported quantity.','Missing arithmetic.'])
+ const format=repairResponseFormat({properties:{findings:{items:{type:'object'}}}},targets)
+ assert.deepEqual(format.properties.repairs.required,targets.map(target=>target.id))
+ assert.ok(Object.values(format.properties.repairs.properties).every(slot=>slot.maxItems===1))
+ const correct={text:'The QA check uses the adjacent test depth.'}
+ assert.deepEqual(repairedFindings({repairs:{'repair-0':[],'repair-1':[correct,{text:'An extra injected finding.'}],foreign:[{text:'An unrelated claim.'}]}},targets),[correct])
+ assert.deepEqual(repairedFindings({findings:cached},targets),[],'A legacy blanket response cannot bypass the named repair slots')
+})
 
 test('bounded repair feedback prioritizes rejected drafts over source-only diagnostics',()=>{
  const cached=[{text:'The rejected draft.'}]

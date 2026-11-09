@@ -306,7 +306,8 @@ export function applicableEvidence(question, evidence) {
     }
     const text = quantities(unit.excerpt)
     const checks = [],
-      evaluatedConditions = []
+      evaluatedConditions = [],
+      unresolvedConditions = []
     const dwellingFloor = unit.excerpt.match(
       /\b(\d+)[ -]plex\s+and\s+(?:larger|greater)\b/i,
     )
@@ -338,7 +339,10 @@ export function applicableEvidence(question, evidence) {
         )
           continue
         const supplied = values.get(m[2])
-        if (supplied?.size !== 1) continue // Multiple quantities need interpretation.
+        if (supplied?.size !== 1) {
+          unresolvedConditions.push({unit:m[2],sourceCondition:m[0]})
+          continue // Missing or multiple quantities need interpretation.
+        }
         const suppliedValue = [...supplied][0],
           matches = test(suppliedValue, Number(m[1]))
         checks.push(matches)
@@ -356,6 +360,7 @@ export function applicableEvidence(question, evidence) {
         ...unit,
         id: retained.length,
         ...(evaluatedConditions.length ? { evaluatedConditions } : {}),
+        ...(unresolvedConditions.length ? { unresolvedConditions } : {}),
         ...(checks.some((v) => !v) ? { mixedConditions: true } : {}),
       })
   }

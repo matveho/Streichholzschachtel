@@ -1,5 +1,30 @@
 const textKey = (text) => String(text).replace(/\s+/g, ' ').trim()
 
+export function rejectedFindingTargets(cached, issues) {
+  return cached.flatMap(finding => {
+    const failures = issues.filter(issue => textKey(issue.claim) === textKey(finding.text))
+    return failures.length ? [{ finding: finding.text, reasons: [...new Set(failures.map(issue => issue.reason))] }] : []
+  }).map((target, index) => ({ id: `repair-${index}`, ...target }))
+}
+
+// One named slot per rejected finding prevents retained facts from consuming
+// another finding's repair budget. An empty slot explicitly withholds a repair.
+export function repairResponseFormat(format, targets) {
+  if (!targets.length) return format
+  return { type: 'object', properties: { repairs: {
+    type: 'object', additionalProperties: false,
+    properties: Object.fromEntries(targets.map(target => [target.id, {
+      type: 'array', maxItems: 1, items: format.properties.findings.items,
+    }])),
+    required: targets.map(target => target.id),
+  } }, required: ['repairs'] }
+}
+
+export function repairedFindings(output, targets) {
+  if (!targets.length) return Array.isArray(output.findings) ? output.findings : []
+  return targets.flatMap(target => Array.isArray(output.repairs?.[target.id]) ? output.repairs[target.id].slice(0, 1) : [])
+}
+
 export function repairFeedback(cached, issues, limit = 8) {
   const draftKeys = new Set(cached.map(finding => textKey(finding.text)))
   const ownDrafts = issues.filter(issue => draftKeys.has(textKey(issue.claim)))

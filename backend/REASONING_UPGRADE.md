@@ -416,3 +416,59 @@ isolated project APIs, imports, isolation and restart persistence. Browser
 highlights, persistence, and the IFC workflow. GPU comparison browser
 `run-browser-JZM5DVlS` passed the derived width difference, both source PDF
 highlights, history reload, offline general review and automatic IFC findings.
+
+## Linked procedures, targeted repairs and unresolved conditions
+
+Source selection now retains up to eight companion provisions from a selected
+testing/inspection procedure in the same document, exact heading and scope,
+within one page. Applicable quantified criteria from the actual numbered parent
+subsection are retained for acceptance/condition checks. This does not infer a
+test plan or determine acceptance. Existing applicability filters run first;
+deep-soil branches cannot supply a shallow-soil requirement.
+
+Repairs use one named response slot per rejected finding. Previously, the model
+could repeat approved timing/method findings and consume all slots while losing
+QA or depth corrections. Each slot now contains one replacement or an explicit
+empty array. Approved findings remain separate, unknown slots are ignored, and
+all replacements still undergo citation validation and independent review.
+
+Actual corpus regressions preserve the adjacent QA/QC check, same-depth clause,
+preferred halfway depth and recommended compaction criterion with original PDF
+regions. Imperative requirements after an introductory colon now survive both
+selection and modality validation. Recommendations remain advisory. Hyphenated
+and nested table identifiers retain their full identity: `Table 1-1` cannot
+accidentally pull `Table 1-10` as an explicit match. Extraction and offline table
+lookup recognize the same identifiers.
+
+Numeric conditions with missing or ambiguous project inputs are now explicit
+in local source context. A conditional exemption cannot supply a zero-test
+answer when the required soil depth was never provided. The completeness check
+inspects citation conditions as well as the generated wording. Regression tests
+preserve the valid 250 mm exemption and reject the unknown-depth and 600 mm
+cases. The delivery-access guard also catches unsupported "unauthorized" and
+"violates" paraphrases of a necessary-traffic restriction, including a separate
+clause followed by a clarification request.
+
+Qualification remains incomplete. A targeted damaged-LID run
+`run-gpu-7N3XvvIe` passed its initial gates, but manual review found the unsupported
+access classification; the guard and gate were strengthened before release.
+The subsequent broad run `run-gpu-J1hmsLn9` passed 3/8 in 217 seconds. A later
+greedy-decoding experiment `run-gpu-WYPCcA5b` passed 4/8 in 217 seconds, after
+additional table/condition fixes. These are different source snapshots and do
+not establish a temperature improvement. The later exact-area boundary case
+correctly withheld a count. Infill decisions, frost-cover interpretation,
+qualified capacity arithmetic and complete damaged-LID interpretation remain
+unqualified. More source context and greedy decoding did not resolve them;
+production retains the pinned comparison configuration and its existing
+decoding settings.
+
+Final regression `run-zJzgI3DS` passed 262/262 unit tests, OCR, isolated project
+APIs, imports, isolation and restart persistence. Browser
+`run-browser-5tM15wvq` passed reference reconciliation, original PDF highlights,
+persisted reports and the IFC workflow. The quality runner accepts an explicit
+loopback `OLLAMA_URL` for isolated runtime experiments. Temporary tracing
+proxies used for diagnosis were stopped; no production model endpoint changed.
+Comparison capability run `run-gpu-qcUej7ds` passed all nine checks and rejected
+foreign-project document selection before inference. GPU browser
+`run-browser-OUQruygd` passed comparison submission, verified arithmetic, both
+original PDF highlights, reload/history, offline general review and IFC findings.

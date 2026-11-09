@@ -9,6 +9,8 @@ import { answer, validateSynthesis, relatedProvisions } from '../src/answer.mjs'
 import { config, root } from '../src/config.mjs'
 import { evidenceUnits } from '../src/evidence-units.mjs'
 import { draftLocal } from '../src/local-synthesis.mjs'
+import { linkedProcedureEvidence } from '../src/linked-procedures.mjs'
+import { applicableEvidence } from '../src/applicability.mjs'
 import {relatedCriteriaEvidence,depthCriterion} from '../src/related-criteria.mjs'
 import { UnitIndex, lookup } from '../src/lookup.mjs'
 import {
@@ -23,6 +25,21 @@ import {
 } from '../src/retrieval-plan.mjs'
 const corpus = await buildIndex(),
   search = new SearchIndex(corpus)
+
+test('the actual testing procedure retains applicable QA and preferred depth without importing deep-soil branches', () => {
+ const question='What testing is needed for acceptance of a 500 m² LID facility with 600 mm of soil?'
+ const passages=corpus.passages.filter(p=>p.doc==='doc-eb651c8aa7d3'&&p.page===97)
+ const units=applicableEvidence(question,evidenceUnits(passages,30000)).units
+ const selected=units.filter(u=>/minimum of two locations/.test(u.excerpt))
+ assert.ok(selected.length)
+ const added=linkedProcedureEvidence(selected,units,question)
+ assert.ok(added.some(u=>/QA\/QC.*within 3 m/.test(u.excerpt)))
+ assert.ok(added.some(u=>/same depth as the adjacent test/.test(u.excerpt)))
+ assert.ok(added.some(u=>/preferred.*halfway depth/.test(u.excerpt)))
+ assert.ok(added.some(u=>/recommended.*75%-85%/.test(u.excerpt)))
+ assert.ok(added.every(u=>!/^For facilities with soil deeper than 650/.test(u.excerpt)))
+ for(const unit of added) assert.deepEqual(locateQuote(unit.passage,unit.excerpt,unit.quoteStart).regions,unit.regions)
+})
 
 test('every failed check invalidates all its rejected drafts before bounded repair feedback',async(t)=>{
  const original={...config}
@@ -47,7 +64,9 @@ test('every failed check invalidates all its rejected drafts before bounded repa
    if(count===1)output={findings:Array.from({length:6},(_,i)=>({text:`The source requires a storm service diameter of ${9000+i} mm.`,evidence:[input.provisions[0].id],calculations:[]}))}
    else{
     retained.push({check:input.focusedCheck,findings:input.alreadyRetainedFindings,feedback:input.validationIssues})
-    output={findings:[{text:input.provisions[0].quote,evidence:[input.provisions[0].id],calculations:[]}]}
+    const finding={text:input.provisions[0].quote,evidence:[input.provisions[0].id],calculations:[]}
+    assert.equal(input.repairTargets.length,6,'Every rejected finding receives its own slot')
+    output={repairs:Object.fromEntries(input.repairTargets.map((target,i)=>[target.id,i===0?[finding]:[]]))}
    }
   }else if(system.startsWith('Use verifiedConditions'))output={verdicts:Object.fromEntries(input.claims.map(claim=>[String(claim.id),{reason:'The attached exact quote supports this scoped finding.',supported:true,relevant:true}]))}
   else throw Error('Unexpected model phase in repair regression')
@@ -144,6 +163,15 @@ test('conditional insulation duties retain their force when incorporating manufa
  assert.ok(locateQuote(passage,quote))
  const draft={answerable:true,sections:[{heading:'Finding',claims:[{text:'If this cover cannot be achieved, adequate pipe insulation must be provided to prevent freezing in accordance with the manufacturer’s recommended installation procedures.',evidence:[{passageId:passage.id,quote}]}]}]}
  const checked=validateSynthesis(draft,[passage],'Review storm main cover and insulation requirements.')
+ assert.equal(checked.sections.length,1,JSON.stringify(checked.issues))
+})
+
+test('an introductory colon retains the force of the actual sediment-basin prohibition',()=>{
+ const passage=corpus.passages.find(p=>/Do not use LID facilities as temporary sediment basins/.test(p.text))
+ assert.ok(passage)
+ const unit=evidenceUnits([passage],30000).find(u=>/Do not use LID facilities as temporary sediment basins/.test(u.excerpt))
+ assert.ok(unit)
+ const checked=validateSynthesis({sections:[{claims:[{text:'LID facilities must not be used as temporary sediment basins during construction.',evidence:[{passageId:passage.id,quote:unit.excerpt,quoteStart:unit.quoteStart}]}]}]},[passage],'Review a bioretention basin used as a sediment trap during construction.')
  assert.equal(checked.sections.length,1,JSON.stringify(checked.issues))
 })
 

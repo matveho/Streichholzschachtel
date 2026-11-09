@@ -410,7 +410,7 @@ export function validateSynthesis(output, passages, question, documents = [], {c
         !/\b(?:must|shall|required|mandatory|only|minimum|maximum|is to be limited)\b/i.test(
           sourceText,
         ) &&
-        !/(?:^|\bthen\s+|,\s*)(?:Conduct|Provide|Install|Maintain|Protect|Ensure|Keep|Use|Test|Inspect|Check|Submit|Obtain|Do not)\b/i.test(
+        !/(?:^|\bthen\s+|,\s*|[.!?:;]\s+)(?:Conduct|Provide|Install|Maintain|Protect|Ensure|Keep|Use|Test|Inspect|Check|Submit|Obtain|Do not)\b/i.test(
           sourceText,
         )
       ) {

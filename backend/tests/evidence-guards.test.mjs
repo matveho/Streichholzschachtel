@@ -24,6 +24,9 @@ test('falling short cannot select an ESAL-dependent minimum without design loadi
 test('necessary-traffic restrictions cannot classify an unexplained delivery as a violation',()=>{
  const source='Limit vehicular access near LID facilities to necessary traffic only during facility construction.'
  const claim='Crossing the facility with delivery vehicles constitutes unnecessary traffic.'
+ assert.match(issue('Allowing delivery vehicles to cross the facility constitutes unauthorized vehicular access contrary to the restriction.',source,'Delivery vehicles crossed the facility.'),/necessary-traffic restriction/)
+ assert.match(issue('Crossing the facility with delivery vehicles violates the necessary-traffic restriction.',source,'Delivery vehicles crossed the facility.'),/necessary-traffic restriction/)
+ assert.match(issue('Delivery vehicles violate the restriction; confirm whether the access was necessary.',source,'Delivery vehicles crossed the facility.'),/necessary-traffic restriction/)
  assert.match(issue(claim,source,'Delivery vehicles crossed the facility.'),/purpose of the access/)
  assert.equal(issue('Confirm whether the delivery was unnecessary traffic before reporting a violation.',source,'Delivery vehicles crossed the facility.'),null)
  assert.equal(issue('Limit vehicular access to necessary traffic only.',source,'Delivery vehicles crossed the facility.'),null)

@@ -82,7 +82,10 @@ export const engineeringScenarios = [
       /halfway|half.?depth/i,
       /compact|scarif|sediment/i,
     ],
-    forbidden: [/(?:growing media|LID soil).{0,50}(?:minimum of )?95%/i],
+    forbidden: [
+      /(?:growing media|LID soil).{0,50}(?:minimum of )?95%/i,
+      /delivery vehicles[^.!?]{0,160}(?:unauthori[sz]ed|constitutes unnecessary|violates?)/i,
+    ],
   },
   {
     id: 'shallow-soil-exemption',

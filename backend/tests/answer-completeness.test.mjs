@@ -2,6 +2,15 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { testingCountGap as gap } from '../src/answer-completeness.mjs'
 const sections = (...text) => [{ claims: text.map((text) => ({ text })) }]
+
+test('an exemption with an unknown soil depth cannot answer an area-specific count', () => {
+ const exemption='For facilities with a soil depth of 300 mm or less, Guelph Permeameter testing is not required.'
+ assert.ok(gap('How many Guelph Permeameter tests are required for exactly 1000 m2?',sections(exemption)))
+ assert.equal(gap('How many Guelph Permeameter tests are required with 250 mm soil depth?',sections(exemption)),null)
+ assert.ok(gap('How many Guelph Permeameter tests are required with 600 mm soil depth?',sections(exemption)))
+ const approved=[{claims:[{text:'Guelph Permeameter testing is not required.',evidence:[{excerpt:exemption,passage:{section:'Testing'}}]}]}]
+ assert.ok(gap('How many Guelph Permeameter tests are required for exactly 1000 m2?',approved),'Citation conditions also constrain an unconditional paraphrase')
+})
 test('a separate QC question cannot substitute a QC count for the requested field count', () => {
   const q = 'How many field tests are required and what QA/QC check is needed?'
   assert.ok(gap(q, sections('One QA/QC test is required.')))

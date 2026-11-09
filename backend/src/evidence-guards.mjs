@@ -23,9 +23,11 @@ export function evidenceInterpretationIssue(claim, source, question = '', {proje
       !/\b(?:confirm|unresolved|different datums|not directly comparable|cannot be compared)\b/i.test(claim))
     return 'Pipe cover and depth measured to the invert use different datums. Establish the project measurement datum before claiming that matching depths satisfy the criterion.'
   if (/\bnecessary (?:construction )?traffic only\b/i.test(source) &&
-      /\bunnecessary (?:construction )?traffic\b/i.test(claim) &&
+      claim.split(/[;!?]|\.(?=\s|$)/).some(clause =>
+        /\bunnecessary (?:construction )?traffic\b|\bunauthori[sz]ed\b[^.!?;]{0,60}\b(?:access|traffic|vehicles?)\b|\b(?:delivery|vehicles?|access|traffic)\b[^.!?;]{0,150}\b(?:violates?|violation|contravenes?|breaches?|noncompliant|contrary)\b/i.test(clause) &&
+        !/\b(?:if|whether|confirm|verify|assess|determine|unresolved)\b/i.test(clause)) &&
       !/\bunnecessary (?:construction )?traffic\b/i.test(projectBasis) &&
-      !/\b(?:if|whether|confirm|verify|assess|determine|unresolved)\b/i.test(claim))
+      !/\bunauthori[sz]ed\s+(?:vehicular\s+)?(?:access|traffic)\b/i.test(projectBasis))
     return 'A necessary-traffic restriction does not establish that a reported delivery was unnecessary. Confirm the purpose of the access before classifying it as a project violation.'
   if (/\bESALs?\b/i.test(source) &&
       (projectComparison.test(claim) || /\bgoverning\b/i.test(claim)) &&

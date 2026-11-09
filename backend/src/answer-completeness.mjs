@@ -1,5 +1,6 @@
 // Completeness is separate from entailment: a true related fact may not answer
 // the requested quantity. These checks can withhold an answer, never approve it.
+import { applicableEvidence } from './applicability.mjs'
 const stages = (text) =>
   new Set([
     ...(/\bFAC\b|\bfinal acceptance\b/i.test(text) ? ['final'] : []),
@@ -36,6 +37,11 @@ export function testingCountGap(question, sections) {
   const candidates = findings.flatMap((claim) =>
     claim.text.split(/;|\band\b/i).flatMap((text) => {
       if (!count.test(text) && !zeroRequired.test(text)) return []
+      const provisions = claim.evidence?.length
+        ? claim.evidence.map(proof=>({excerpt:proof.excerpt,heading:proof.passage?.section || ''}))
+        : [{excerpt:claim.text,heading:''}]
+      const applicability=applicableEvidence(question,provisions)
+      if(applicability.excluded.length || applicability.units.some(unit=>unit.unresolvedConditions?.length)) return []
       const ownStages = stages(text)
       return [
         {

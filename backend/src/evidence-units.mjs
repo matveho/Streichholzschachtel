@@ -21,7 +21,7 @@ export const evidenceUnitKey = (unit) => JSON.stringify([
 // context and displace the actual requirements.
 export function isProvision(unit) {
   const text = unit.excerpt
-  if (/^Table\s+\d+(?:\.\d+)*\s*:[^.!?\d]*$/i.test(text)) return false
+  if (/^Table\s+\d+(?:[.-]\d+)*\s*:[^.!?\d]*$/i.test(text)) return false
   if (
     /^(?:Refer to|See (?:Section|Table)|This (?:section|guide)|The emphasis of|General .*activities are outlined)/i.test(
       text,
@@ -35,7 +35,7 @@ export function isProvision(unit) {
   )
     return true
   if (
-    /^(?:Conduct|Install|Keep|Use|Avoid|Restrict|Prevent|Ensure|Protect|Limit|Submit|Inspect|Test|Obtain|Provide|Retain|Maintain|Do not)\b/i.test(
+      /(?:^|[.!?:;]\s+)(?:Conduct|Install|Keep|Use|Avoid|Restrict|Prevent|Ensure|Protect|Limit|Submit|Inspect|Test|Obtain|Provide|Retain|Maintain|Do not)\b/i.test(
       text,
     )
   )
@@ -107,7 +107,7 @@ function sourceBlocks(passage) {
       inTable = false
       continue
     }
-    if (/^Table\s+\d+(?:\.\d+)*\s*:/i.test(text)) {
+    if (/^Table\s+\d+(?:[.-]\d+)*\s*:/i.test(text)) {
       flush()
       heading = [sectionHeading, text].filter(Boolean).join(' · ')
       tableCaption = text

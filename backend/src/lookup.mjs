@@ -181,7 +181,7 @@ export class UnitIndex {
       if (
         wantsValue &&
         e.unit.type === 'text' &&
-        /\bTable \d+(?:\.\d+)* (?:shows|lists|gives|provides|summari[sz]es)\b/.test(
+        /\bTable \d+(?:[.-]\d+)* (?:shows|lists|gives|provides|summari[sz]es)\b/.test(
           e.unit.text,
         )
       )
@@ -728,7 +728,7 @@ export function lookup(question, index) {
   }
   // Prose that points at a table ("Table 1.2 shows...") brings the table rows.
   const tableRef =
-    top.unit.type === 'text' && top.unit.text.match(/\bTable (\d+(?:\.\d+)*)\b/)
+    top.unit.type === 'text' && top.unit.text.match(/\bTable (\d+(?:[.-]\d+)*)\b/)
   if (tableRef)
     all
       .filter(

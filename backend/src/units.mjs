@@ -209,7 +209,7 @@ function sentencesOf(cell) {
 // Section numbers start at 1; "0.14 For design..." is a value row, not a heading.
 // Titles start with a capital: "1.25 times the runoff..." is prose.
 const headingPattern =
-  /^(?:[1-9]\d*(?:\.\d+)+|[1-9]\d*\.0)\s+\p{Lu}|^Table \d+(?:\.\d+)*\s*:/u
+  /^(?:[1-9]\d*(?:\.\d+)+|[1-9]\d*\.0)\s+\p{Lu}|^Table \d+(?:[.-]\d+)*\s*:/u
 
 export function buildPageUnits(lines, meta, state) {
   const units = []

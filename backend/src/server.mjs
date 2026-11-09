@@ -55,6 +55,7 @@ const engineVersion = createHash('sha256')
       '../demo/reference-sources.mjs',
       'local-synthesis.mjs',
       'linked-tables.mjs',
+      'linked-procedures.mjs',
       'related-criteria.mjs',
       'evidence-guards.mjs',
       'answer-completeness.mjs',

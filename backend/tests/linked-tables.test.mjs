@@ -17,6 +17,15 @@ test('explicit table links work at a distance but similarly numbered tables do n
  const wrong=row('storm',50,'2.9.1 Coefficients','2.20','Coefficient 0.020')
  assert.deepEqual(linked([source],[wrong,correct]),[correct])
 })
+
+test('hyphenated and nested table identifiers retain their full identity', () => {
+ const source={...rule,excerpt:'Use Table 1-1 for the design criteria and Table 2.2 for coefficients.'}
+ const correct=row('storm',50,'3.1.1 Criteria','1-1','Design flow 25%')
+ const wrong=row('storm',50,'3.1.1 Criteria','1-10','Another flow 75%')
+ const nested=row('storm',50,'3.1.1 Criteria','2.2.1','Another coefficient 0.020')
+ assert.deepEqual(linked([source],[wrong,nested,correct]),[correct])
+ assert.deepEqual(linked([{...rule,excerpt:'Use Table 2.2.1 for coefficients.'}],[row('storm',50,'3.1.1 Criteria','2.2','Another coefficient 0.020')]),[])
+})
 test('bounded table evidence includes separate tables before additional rows',()=>{
  const rows=[row('storm',10,rule.heading,'2.2','First 0.013'),row('storm',10,rule.heading,'2.2','Second 0.015'),row('storm',10,rule.heading,'2.3','Diameter 300 mm')]
  assert.deepEqual(linked([rule],rows,2),[rows[0],rows[2]])

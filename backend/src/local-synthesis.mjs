@@ -1,12 +1,13 @@
 import { evidenceUnits, isProvision, evidenceUnitKey } from './evidence-units.mjs'
 import { applicableEvidence } from './applicability.mjs'
 import { linkedTableEvidence } from './linked-tables.mjs'
+import { linkedProcedureEvidence } from './linked-procedures.mjs'
 import { relatedCriteriaEvidence, depthCriterion } from './related-criteria.mjs'
 import { config } from './config.mjs'
 import { generate } from './model.mjs'
 import { tokens, rankProvisions } from './search.mjs'
 import { verifyCalculations } from './calculations.mjs'
-import { scopedRepair, repairFeedback } from './synthesis-repair.mjs'
+import { scopedRepair, repairFeedback, rejectedFindingTargets, repairResponseFormat, repairedFindings } from './synthesis-repair.mjs'
 import { permitsLocalSynthesis } from './generation-policy.mjs'
 
 export function cleanSourceCallout(text, labels) {
@@ -128,6 +129,7 @@ export const sourceContext = (u, id, documents = []) => ({
     ? { verifiedConditions: u.evaluatedConditions }
     : {}),
   ...(u.mixedConditions ? { mixedConditions: true } : {}),
+  ...(u.unresolvedConditions?.length ? { unresolvedConditions: u.unresolvedConditions } : {}),
 })
 
 export function labelEvidenceGroups(groups) {
@@ -237,7 +239,7 @@ export async function draftLocal(
         .slice(0, 12)
         .map((id) => byLabel.get(id))
       selectedTopics.set(topic.heading, selectedUnits.map(evidenceUnitKey))
-      const chosen = [...selectedUnits, ...linkedTableEvidence(selectedUnits, ranked), ...relatedCriteriaEvidence(selectedUnits, ranked, topic.scope || topic.query)]
+      const chosen = [...selectedUnits, ...linkedTableEvidence(selectedUnits, ranked), ...relatedCriteriaEvidence(selectedUnits, ranked, topic.scope || topic.query), ...linkedProcedureEvidence(selectedUnits, ranked, topic.scope || topic.query)]
         .filter((u) => {
           const key = evidenceUnitKey(u)
           if (topic.role === 'original-system') originalSystemKeys.add(key)
@@ -332,6 +334,7 @@ export async function draftLocal(
       continue
     }
     const groupIssues = repair.issues
+    const repairTargets = rejectedFindingTargets(cached, groupIssues)
     const sharedForCheck =
       /\breplace(?:ment)?\b|\bin lieu\b|\bsubstitut|\balternative\b/i.test(
         group.heading + ' ' + group.query,
@@ -345,7 +348,7 @@ export async function draftLocal(
       'Include calculation IDs only when this specific finding relies on their derived values; otherwise use calculations: []. Keep source IDs and section numbers out of the finding text. ' +
         'Write concise engineering findings using ONLY these selected source provisions and independently verified calculations. Answer the project question directly. Each finding must make ONE factual point in one sentence, with its own supporting source IDs. When comparing a method with an asset-specific requirement, cite BOTH the method scope and asset requirement. A universal requirement has no size cutoff unless that same clause states one. Cover every distinct requirement in this focused check with separate findings, up to the supplied findingBudget. Never combine an absolute prohibition and an exception to a different requirement in one sentence. Project figures are assumptions. Every derived project/reference comparison must cite both the project value and reference criterion. Project-document allocations and constraints are not governing minima; distinguish the proposed value from the reference criterion and cite both when comparing. Preserve conditions and recommendations versus requirements. Do not transfer thresholds between asset types. A permission to use an alternative does not establish that a separately required service or approval can be omitted. If sources differ, identify the unresolved interface rather than granting unconditional permission. Use computed figures only from verifiedCalculations; never invent arithmetic, approval or edition precedence. Cite IDs only in the evidence array, never in the text. Details will be displayed separately. Return {findings:[{text:"Direct supported finding",evidence:["A","B"]}]}. ' +
         (groupIssues.length
-          ? 'Repair the conclusion using the validation issues. Omit unsupported quantities and keep source wording for unverified arithmetic.'
+          ? 'Return repairs ONLY for the rejected findings identified in repairTargets and validationIssues. When repairTargets are supplied, return repairs keyed by each target ID, with one corrected finding or an empty array if unsupported. Do not repeat or paraphrase alreadyRetainedFindings; they are preserved automatically. Address each rejected point in its own slot. If a quantity cannot be supported, remove that quantity rather than dropping an independently supported duty. Preserve recommendations as recommendations. A linked mandatory duty does not make a recommended numerical criterion mandatory. Omit unsupported acceptance judgments and state the actual cited testing duty instead.'
           : ''),
       {
         question: group.query || group.heading,
@@ -356,6 +359,7 @@ export async function draftLocal(
         searchScope: group.query,
         instruction: [focusedInstruction(group.role, sharedForCheck.length > 0), measurementInstruction(group.query || group.heading)].filter(Boolean).join(' '),
         alreadyRetainedFindings: repair.retained.map((finding) => finding.text),
+        ...(repairTargets.length ? { repairTargets } : {}),
         provisions: focused,
         crossCuttingRequirements: sharedForCheck.map((unit) =>
           sourceContext(unit, unitLabel(unit), index.corpus.documents),
@@ -373,7 +377,7 @@ export async function draftLocal(
         unresolved: plan.unresolved,
         ...(groupIssues.length ? { validationIssues: repairFeedback(cached, groupIssues) } : {}),
       },
-      {
+      repairResponseFormat({
         type: 'object',
         properties: {
           findings: {
@@ -407,12 +411,12 @@ export async function draftLocal(
           },
         },
         required: ['findings'],
-      },
+      }, repairTargets),
       signal,
       1800,
       { ...options, reasoning: true },
     )
-    const revised = (drafted.findings || []).map((finding) => ({
+    const revised = repairedFindings(drafted, repairTargets).map((finding) => ({
       ...finding,
       text: cleanSourceCallout(finding.text, byLabel),
       check: group.id,

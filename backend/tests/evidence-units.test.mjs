@@ -1,11 +1,16 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { evidenceUnits } from '../src/evidence-units.mjs'
+import { evidenceUnits, isProvision } from '../src/evidence-units.mjs'
 import { locateQuote } from '../src/indexer.mjs'
 import { validateSynthesis, renderResult } from '../src/answer.mjs'
 
 const repeated = 'Storm pipes require a minimum cover of 2.0 m.'
 const source = (id, page, texts) => ({ id, doc: 'source', page, section: 'Storm pipes', text: texts.join(' '), lines: texts.map((text, index) => ({ text, rect: [50, 50 + index * 25, 500, 60 + index * 25] })) })
+
+test('an introductory phrase cannot hide an explicit imperative prohibition', () => {
+ assert.equal(isProvision({excerpt:'Guidelines, implement practices which safeguard LID facilities during construction: Do not use LID facilities as temporary sediment basins during construction'}),true)
+ assert.equal(isProvision({excerpt:'This section describes the document structure.'}),false)
+})
 
 test('source extraction retains repeated requirements on independent pages', () => {
   const units = evidenceUnits([source('p10', 10, [repeated]), source('p20', 20, [repeated])])
