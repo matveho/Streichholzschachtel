@@ -214,6 +214,24 @@ test('offline answers surface differing scoped reference criteria and honor a na
  assert.ok(explicit.references.every(r=>r.doc==='doc-dc122df73bce'))
 })
 
+test('offline mixed cover review retrieves both assets from the actual scoped engineering corpus',async()=>{
+ const ids=new Set(['doc-09e07f57e7a3','doc-dc122df73bce','doc-da424a924abd'])
+ const scoped=new SearchIndex({...corpus,documents:corpus.documents.filter(doc=>ids.has(doc.id)),passages:corpus.passages.filter(p=>ids.has(p.doc)),units:corpus.units.filter(u=>ids.has(u.doc))})
+ const question='Before excavation, review a 450 mm storm main with 1.7 m cover and a storm service with 2.0 m cover at the property line. Can we use these details without insulation or further approval?'
+ const result=await answer(question,scoped,{sourceOnly:true,publicBase:'http://localhost',token:'test'})
+ assert.equal(result.mode,'source_evidence')
+ assert.deepEqual(result.assetEvidence.map(check=>[check.role,check.status]),[['main','source_evidence'],['service','source_evidence']])
+ for(const check of result.assetEvidence)assert.ok(check.referenceIds.length&&check.referenceIds.every(id=>result.references.some(ref=>ref.id===id&&ref.regions.length)))
+ const mainIds=result.assetEvidence.find(check=>check.role==='main').referenceIds
+ assert.ok(result.references.some(ref=>mainIds.includes(ref.id)&&ref.doc==='doc-09e07f57e7a3'&&ref.page===11&&/all pipes smaller than 600 mm/.test(ref.excerpt)))
+ assert.match(JSON.stringify(result.report),/2\.4\s*m/)
+ assert.ok(result.references.every(ref=>ids.has(ref.doc)&&corpus.passages.some(p=>p.doc===ref.doc&&p.page===ref.page&&locateQuote(p,ref.excerpt))))
+ assert.deepEqual(result.requiredInputs.fields.map(field=>field.key),['storm_main_cover_datum','storm_service_cover_datum','storm_service_diameter'])
+ const empty=await answer(question,new SearchIndex({documents:[],passages:[],units:[]}),{sourceOnly:true,publicBase:'http://localhost',token:'test'})
+ assert.equal(empty.references.length,0)
+ assert.ok(empty.assetEvidence.every(check=>check.status==='not_found'))
+})
+
 test('decimal measurements attached to units retain their full value during source validation',()=>{
  const passage=corpus.passages.find(p=>p.doc==='doc-dc122df73bce'&&p.page===5&&p.text.includes('at least 2.4m'))
  assert.ok(passage)

@@ -32,12 +32,15 @@ try{
  assert.ok(!inputs.measurements.some(record=>record.role==='service'&&record.property==='diameter'))
  const missing=completed.result.requiredInputs
  assert.equal(missing.kind,'pipe_review_inputs')
- // This extractive response retrieves service-specific clauses, with no
- // diameter cutoff. Do not invent missing inputs for unreturned main rules.
- assert.deepEqual(missing.fields.map(field=>field.key),['storm_service_cover_datum'])
+ assert.deepEqual(missing.fields.map(field=>field.key),['storm_main_cover_datum','storm_service_cover_datum','storm_service_diameter'])
+ assert.deepEqual(completed.result.assetEvidence.map(check=>[check.role,check.status]),[['main','source_evidence'],['service','source_evidence']])
+ assert.ok(completed.result.assetEvidence.every(check=>check.referenceIds.length))
+ await report.getByRole('heading',{name:'Storm main cover · source evidence',exact:true}).waitFor()
+ await report.getByRole('heading',{name:'Storm service cover · source evidence',exact:true}).waitFor()
  assert.ok(missing.fields.every(field=>field.referenceIds.length&&field.referenceIds.every(id=>completed.result.references.some(reference=>reference.id===id&&reference.regions.length))))
  await report.getByRole('heading',{name:'Project inputs to confirm',exact:true}).waitFor()
  assert.match(await report.innerText(),/Storm service cover datum/)
+ assert.match(await report.innerText(),/Storm service diameter \(mm\)/)
  assert.equal(completed.result.assist.outcome,'partial')
  assert.match(await report.innerText(),/storm main · diameter: 450 mm/)
  assert.match(await report.innerText(),/storm main · cover: 1\.7 m/)

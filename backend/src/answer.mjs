@@ -7,6 +7,7 @@ import { attachReferenceCriteria, supplementaryReferenceCriteria } from './relat
 import { config } from './config.mjs'
 import { pipeProjectMeasurementIssue, pipeProjectMeasurements, attachProjectMeasurements } from './project-measurements.mjs'
 import { attachPipeReviewInputs } from './pipe-review-inputs.mjs'
+import { mixedPipeEvidence } from './pipe-evidence.mjs'
 import {findDemoReview,capacityReviewDefinition} from '../demo/review-scenarios.mjs'
 import {capacityReviewRequest} from './capacity-review-inputs.mjs'
 import {SearchIndex} from './search.mjs'
@@ -890,9 +891,19 @@ async function answerFromUnits(
   const corpus = searchIndex.corpus
   const index = (searchIndex.unitIndex ??= new UnitIndex(corpus))
   progress('Searching tables, provisions and document versions')
-  const found = lookup(question, index)
+  const ordinary = lookup(question, index)
+  const mixed = ordinary.mode === 'version_answer' ? null : mixedPipeEvidence(question, index)
+  const found = mixed || ordinary
   let { sections } = found
   const { mode, notes } = found
+  if (mixed) {
+    const selected = new Set(sections.flatMap(section=>section.sentences.flatMap(sentence=>(sentence.units || []).map(unit=>unit.id))))
+    // Preserve other retrieved source material without repeating the focused
+    // clauses or retaining a contradictory generic "not found" message.
+    sections = [...sections,...ordinary.sections.map(section=>({...section,
+      sentences:section.sentences.filter(sentence=>sentence.units?.length && sentence.units.some(unit=>!selected.has(unit.id))),
+    })).filter(section=>section.sentences.length)]
+  }
   const selectedCriteria = sections.flatMap(section=>section.sentences.flatMap(sentence=>(sentence.units || []).map(unit=>({excerpt:unit.text,heading:unit.heading,passage:{doc:unit.doc}}))))
   const related = supplementaryReferenceCriteria(question,selectedCriteria,searchIndex)
   if (related.length) sections = [...sections,{
@@ -904,7 +915,10 @@ async function answerFromUnits(
       })),
     })),
   }]
-  return renderUnits(sections, corpus, publicBase, token, mode, notes)
+  const result = renderUnits(sections, corpus, publicBase, token, mode, notes)
+  return mixed ? {...result,assetEvidence:mixed.checks.map(({units,...check})=>({...check,
+    referenceIds:result.references.filter(reference=>units.some(unit=>unit.doc===reference.doc && unit.page===reference.page && normalize(unit.text)===normalize(reference.excerpt))).map(reference=>reference.id),
+  }))} : result
 }
 
 export async function answer(question, searchIndex, options) {

@@ -75,10 +75,13 @@ Cover reviews also return a **Project inputs to confirm** checklist. Missing
 measurement datums and diameter-dependent inputs are bound to the individual
 main or service and linked to the actual returned source clauses. The checklist
 does not request a diameter when those clauses have no diameter condition, and
-does not turn source evidence into a compliance finding. A response that only
-retrieves service clauses remains incomplete for the main; its checklist is
-limited to those returned criteria. Reconcile the reference basis before
-applying a criterion, even after supplying its requested measurements.
+does not turn source evidence into a compliance finding. Mixed main/service
+cover reviews retrieve clauses separately for each asset. `assetEvidence`
+records each asset's source references or explicitly marks its evidence
+`not_found`; missing evidence never expands the selected document scope.
+Named references and document series remain restricted, and historical queries
+retain version-aware lookup. Reconcile the reference basis before applying a
+criterion, even after supplying its requested measurements.
 
 Reproduce the broader qualification separately from the presentation runtime:
 
