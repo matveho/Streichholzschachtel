@@ -55,8 +55,7 @@ logged in during the demonstration.
 Use `basis status`, `basis logs`, `basis restart`, or `basis reindex` through
 `scripts/linux/basis`. Wait for `basis health` to report ready with zero failures
 before querying. Run `scripts/linux/test-backend` for isolated API, OCR and
-persistence checks. See [demo workflows and recovery](DEMO.md) for browser
-rehearsal and the tested inference policy. For storage recovery, stop the backend
+persistence checks. For storage recovery, stop the backend
 during a maintenance window, make a private copy of `backend/state`, restore that
 directory to its original location, then start the services and check health.
 Never reset presentation storage to run tests.
