@@ -71,6 +71,13 @@ test('unresolved test counts show their specific missing input instead of generi
   assert.deepEqual(result.details, [action])
   assert.deepEqual(result.clarifications, [])
 })
+test('differing reference criteria request their design basis instead of unrelated search parameters',()=>{
+ const action='Confirm the applicable reference criteria and the project measurement datum.'
+ const result=assistQuery('What is the storm service depth?',searchIndex,{mode:'extractive_answer',requiredInputs:{kind:'reference_basis',action}})
+ assert.equal(result.outcome,'partial')
+ assert.deepEqual(result.details,[action])
+ assert.deepEqual(result.clarifications,[])
+})
 
 test('another municipality is reported as outside the collection', () => {
   const result = assist('What is the minimum storm sewer cover in Calgary?')

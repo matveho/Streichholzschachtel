@@ -1,8 +1,9 @@
 import { normalize, locateQuote, quantityUnits } from './indexer.mjs'
-import { evidenceInterpretationIssue } from './evidence-guards.mjs'
+import { evidenceInterpretationIssue, recommendationLanguage } from './evidence-guards.mjs'
 import { foreignJurisdiction } from './catalog.mjs'
 import { attachReviewCoverage } from './review-coverage.mjs'
 import { testingCountGap } from './answer-completeness.mjs'
+import { attachReferenceCriteria, supplementaryReferenceCriteria } from './related-criteria.mjs'
 import { config } from './config.mjs'
 import { permitsLocalSynthesis, hasPairedProjectComparison } from './generation-policy.mjs'
 import { mergeApprovedSynthesis } from './synthesis-repair.mjs'
@@ -13,6 +14,7 @@ import {
   falseComparisons,
   incompatibleLidAsset,
   incompatibleConveyanceEvidence,
+  incompatiblePipeRole,
   applicableEvidence,
   requiresOptionalComponent,
 } from './applicability.mjs'
@@ -93,7 +95,9 @@ function numericalTokens(text) {
     /\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/gi,
     (word) => String(words.indexOf(word.toLowerCase())),
   )
-  return [...expanded.matchAll(/\b\d+(?:\.\d+)?\b/g)].map((m) => Number(m[0]))
+  // PDFs commonly omit the space before a unit ("2.4m"). A trailing word
+  // boundary backtracked that decimal to "2", rejecting a valid 2.4 m claim.
+  return [...expanded.matchAll(/\b\d+(?:\.\d+)?(?![\d.])/g)].map((m) => Number(m[0]))
 }
 function supportedNumbers(claim, sources, question, calculations = []) {
   const available = new Set(numericalTokens(`${sources} ${question}`))
@@ -161,7 +165,16 @@ export function validateSynthesis(output, passages, question, documents = []) {
         const passage = byId.get(ev.passageId)
         if (!passage || typeof ev.quote !== 'string') continue
         const anchor = locateQuote(passage, ev.quote)
-        if (anchor) evidence.push({ passage, ...anchor })
+        if (anchor) {
+          const unit = evidenceUnits([passage], 30000).find(u => normalize(u.excerpt) === normalize(anchor.excerpt))
+          if (!incompatiblePipeRole(claim.text, unit || {excerpt:anchor.excerpt,heading:passage.section}))
+            evidence.push({ passage, ...anchor })
+        }
+      }
+      for (const entry of [...evidence]) {
+        const unit = evidenceUnits([entry.passage], 30000).find(u => normalize(u.excerpt) === normalize(entry.excerpt))
+        if (unit?.conditionEvidence && !evidence.some(e => e.passage.id === entry.passage.id && e.excerpt === unit.conditionEvidence.excerpt))
+          evidence.push({passage:entry.passage,...unit.conditionEvidence})
       }
       const verbatim = evidence.some(
         (e) => normalize(claim.text) === normalize(e.excerpt),
@@ -257,7 +270,7 @@ export function validateSynthesis(output, passages, question, documents = []) {
         })
         continue
       }
-      const advisory = /\b(?:should|preferred|recommend(?:ed|ation)?)\b/i
+      const advisory = {test: recommendationLanguage}
       if (strong.test(claim.text) && !advisory.test(claim.text)) {
         const sourceSentences = evidence.flatMap((e) =>
           [
@@ -379,7 +392,7 @@ export function validateSynthesis(output, passages, question, documents = []) {
         !/\b(?:must|shall|required|mandatory|only|minimum|maximum|is to be limited)\b/i.test(
           sourceText,
         ) &&
-        !/^(?:Conduct|Provide|Install|Maintain|Protect|Ensure|Keep|Use|Test|Inspect|Check|Submit|Obtain|Do not)\b/i.test(
+        !/(?:^|\bthen\s+|,\s*)(?:Conduct|Provide|Install|Maintain|Protect|Ensure|Keep|Use|Test|Inspect|Check|Submit|Obtain|Do not)\b/i.test(
           sourceText,
         )
       ) {
@@ -697,14 +710,14 @@ export function renderResult(
         file: `${publicBase}/v1/documents/${d.id}/file?token=${encodeURIComponent(token)}`,
       }
     })
-  return {
+  return attachReferenceCriteria({
     documents: docs,
     references,
     report,
     mode,
     notes,
     rejectedClaims: rejected,
-  }
+  })
 }
 
 // Unit sections ({heading, sentences: [{text, units}]}) in the renderer's shape.
@@ -807,6 +820,17 @@ async function answerFromUnits(
       console.warn('Claude synthesis:', error.message)
     }
   }
+  const selectedCriteria = sections.flatMap(section=>section.sentences.flatMap(sentence=>(sentence.units || []).map(unit=>({excerpt:unit.text,heading:unit.heading,passage:{doc:unit.doc}}))))
+  const related = supplementaryReferenceCriteria(question,selectedCriteria,searchIndex)
+  if (related.length) sections = [...sections,{
+    heading:'Additional reference criteria',
+    sentences:related.map(unit=>({
+      text:[unit.conditionEvidence?.excerpt,unit.excerpt].filter(Boolean).join(' '),
+      units:[...(unit.conditionEvidence ? [unit.conditionEvidence] : []),unit].map(source=>({
+        id:unit.passage.id+':criterion:'+source.excerpt,doc:unit.passage.doc,page:unit.passage.page,text:source.excerpt,regions:source.regions,heading:unit.heading,extraction:unit.passage.extraction,
+      })),
+    })),
+  }]
   return renderUnits(sections, corpus, publicBase, token, mode, notes)
 }
 

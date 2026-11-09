@@ -105,6 +105,24 @@ export function falseComparisons(text) {
 
 const stormAsset = /\bstorm(?:water)?(?:\s+and\s+sanitary)?\s+(?:sewers?|mains?|services?|drainage)\b|\bdetention ponds?\b/i
 const sanitaryAsset = /\bsanitary\b/i
+const serviceRole = /\b(?:storm|sanitary|water|sewer)\s+services?\b|\bservice\s+(?:connections?|pipes?|cover|depth)\b/i
+const mainRole = /\b(?:storm|sanitary|water|sewer)\s+mains?\b|\bmain\s+(?:pipes?|cover|depth)\b/i
+export function pipeRole(text) {
+  const service = serviceRole.exec(text || '')
+  const main = mainRole.exec(text || '')
+  if (/\bmains?\s+(?:and|or)\s+(?:\w+\s+)?services?\b|\bservices?\s+(?:and|or)\s+(?:\w+\s+)?mains?\b/i.test(text || '')) return null
+  return service && (!main || service.index < main.index) ? 'service' : main ? 'main' : null
+}
+export function incompatiblePipeRole(claim, unit) {
+  if (serviceRole.test(claim) && mainRole.test(claim)) return false
+  const asserted = pipeRole(claim)
+  if (!asserted) return false
+  for (const text of [unit.excerpt, unit.conditionEvidence?.excerpt, unit.heading, ...[...(unit.scope || [])].reverse()]) {
+    const source = pipeRole(text)
+    if (source) return source !== asserted
+  }
+  return false
+}
 export function conveyanceScope(unit) {
   for (const text of [unit.excerpt, unit.heading, ...[...(unit.scope || [])].reverse()]) {
     const storm = stormAsset.test(text || ''), sanitary = sanitaryAsset.test(text || '')

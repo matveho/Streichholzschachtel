@@ -147,6 +147,22 @@ export function constructionControlSearch(question, planned = []) {
   return {heading:'Construction site controls', role:'site-controls', query:'construction erosion sediment control inspection requirements'}
 }
 
+// Repeated passages from one publication must not crowd out another closely
+// ranked source. The caller searches its already scoped index; this never
+// widens document access or decides which publication governs.
+export function diversePassages(ranked, limit = 4) {
+  const candidates = ranked.filter(p => p.score >= ranked[0].score * 0.65)
+  const chosen = ranked.slice(0, limit), seen = new Set(chosen.map(p => p.id)), documents = new Set(chosen.map(p => p.doc))
+  for (const passage of candidates) {
+    if (chosen.length >= limit + 2) break
+    if (seen.has(passage.id) || documents.has(passage.doc)) continue
+    chosen.push(passage)
+    seen.add(passage.id)
+    documents.add(passage.doc)
+  }
+  return chosen
+}
+
 export function comparisonEvidence(question, index) {
   if (!/\b(?:compare|comparison|difference|versus|against|comply|conform)\b/i.test(question)) return []
   const documents = index.corpus.documents
@@ -251,7 +267,7 @@ export async function expandRetrieval(question, baseline, index, signal) {
               : []),
             ...comparison,
             ...passagesForSections(t.sections, catalog, index),
-            ...index.searchSingle(t.query).slice(0, 4),
+            ...diversePassages(index.searchSingle(t.query)),
           ]),
         ),
       }

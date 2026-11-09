@@ -184,7 +184,7 @@ export function assistQuery(question, searchIndex, result) {
 
   // Preserve the specific unresolved engineering input. Generic asset/system
   // prompts would obscure why otherwise relevant evidence did not answer.
-  if (result.requiredInputs?.kind === 'testing_count' &&
+  if (['testing_count','reference_basis'].includes(result.requiredInputs?.kind) &&
       typeof result.requiredInputs.action === 'string')
     return {
       outcome: 'partial',

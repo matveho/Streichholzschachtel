@@ -188,7 +188,7 @@ export function evidenceUnits(
               .some((s) => /^(?:If|When|For)\b/.test(s.segment.trim()))))
           ? [{ segment: block.text }]
           : sentences
-      for (const segment of segments) {
+      for (const [segmentIndex, segment] of segments.entries()) {
         const sentence = normalize(segment.segment)
           .replace(/^[•●▪‣]\s*/, '')
           .replace(/^(?:[ivxlcdm]+|[a-z]|\d+(?:\.\d+)*)[.),]\s+(?=[A-Z])/, '')
@@ -217,6 +217,13 @@ export function evidenceUnits(
             block.tableCaption && block.tableCaption !== quote
               ? locateQuote(passage, block.tableCaption)
               : null
+          // A following mitigation sentence can depend on the immediately
+          // preceding feasibility exception. Keep its immutable source anchor;
+          // a detached "if this cover..." must not create a universal criterion.
+          const previous = segmentIndex > 0 ? normalize(segments[segmentIndex - 1].segment) : ''
+          const condition = /^(?:If|When)\s+(?:this|that|the|a minimum)\b/i.test(quote) &&
+            /\b(?:when|if)\b[^!?]{0,120}\b(?:not practical|not feasible|impractical|unachievable)\b/i.test(previous)
+            ? locateQuote(passage, previous) : null
           seen.add(key)
           characters += quote.length
           units.push({
@@ -231,6 +238,7 @@ export function evidenceUnits(
                 }
               : {}),
             ...(caption ? { contextEvidence: caption } : {}),
+            ...(condition ? { conditionEvidence: condition } : {}),
             ...anchor,
           })
         }

@@ -253,3 +253,57 @@ persistence across a backend restart all passed. Browser verification
 both original PDF highlights, reload/history, extractive general-review routing,
 and automatic IFC findings. The model remained fully GPU-resident at 16K context
 (21,782,960,536 bytes reported by Ollama).
+
+## Reference criteria, source conditions and measurement datums
+
+Added a deterministic reference-reconciliation register shared by extractive
+and generated reports. Closely ranked independent publications supplement the
+original retrieval results instead of replacing them. Selected pipe-depth
+criteria retain bounded same-system/same-role alternatives from other references.
+The register lists original values, explicit measurement datums, source pages
+and citations with `review_required` status. Differing values, conditions or
+datums do not establish a document conflict or choose publication precedence.
+Ambiguous clauses containing several different length quantities remain literal
+source evidence rather than having a pipe diameter mislabelled as burial depth.
+
+Offline lookup also checks scoped reference alternatives when its first answer
+contains a classifiable depth criterion. It never passes an empty document list
+to unrestricted legacy search, never includes foreign project documents, and
+keeps an explicit named-publication request limited to that publication. The
+existing clarification UI receives `reference_basis` as the specific input
+needed; the report can be used without a language model. New fields
+`referenceInterfaces` and `requiredInputs` are additive API metadata.
+
+Source validation now handles decimal quantities attached to units (`2.4m` had
+incorrectly backtracked to the number `2`). A regression accepts the actual
+2.4 m clause and rejects invented 2.5 m and 2.0 m values. Manufacturer-recommended
+procedures do not turn an enclosing installation duty into an optional action;
+actual "should" recommendations remain advisory. Conditional imperative duties
+are recognized without dropping their conditions.
+
+Immediately adjacent feasibility conditions remain linked to mitigation clauses
+through source selection, validation, citations and the displayed source text.
+Main-pipe findings cannot use service-connection clauses as their proof, and
+matching numeric values cannot equate pipe cover with invert-to-curb depth.
+The helpers and metadata participate in engine fingerprinting.
+
+Frost-cover holdout `run-gpu-HT2iXnIL` passed in 22 seconds under a strengthened
+gate requiring the 2.4 m criterion in an actual finding, not just source text.
+Manual review confirmed the separate main insulation duty and retained service
+exception. The following eight-case snapshot `run-gpu-JjQ8nd2N` passed 5/8:
+minor system, frost cover, shallow exemption, exact-area boundary and the field
+test-count holdout. Infill retained source evidence but lost required interpreted
+findings; capacity still omitted the qualified derived flow comparison; damaged
+LID still omitted testing/corrective-work findings. General generation remains
+unqualified. These results precede the final offline supplementation/datum-label
+refinement and must not be presented as a full latest-model qualification.
+
+Reference browser `run-browser-JAqzCbvF` passed a real scoped project API query,
+the specific clarification, both original PDF highlights and report persistence
+after reload. It ran extractively with no model dependency. Comparison capability
+run `run-gpu-KYq33ECs` passed all nine cases, including missing pavement design
+bases, empty/foreign scope, and the real width/cover differences. Browser
+`run-browser-2SqWtsV5` passed UI comparison submission, arithmetic, both PDF
+highlights, reload/history, offline general review and automatic IFC findings
+after the final datum-label refinement. Default Linux browser checks now include
+the reference-reconciliation suite.

@@ -9,6 +9,7 @@ import { answer, validateSynthesis, relatedProvisions } from '../src/answer.mjs'
 import { config, root } from '../src/config.mjs'
 import { evidenceUnits } from '../src/evidence-units.mjs'
 import { draftLocal } from '../src/local-synthesis.mjs'
+import {relatedCriteriaEvidence,depthCriterion} from '../src/related-criteria.mjs'
 import { UnitIndex, lookup } from '../src/lookup.mjs'
 import {
   replacementRequirementSearch,
@@ -18,9 +19,84 @@ import {
   passagesForSections,
   expandRetrieval,
   constructionControlSearch,
+  diversePassages,
 } from '../src/retrieval-plan.mjs'
 const corpus = await buildIndex(),
   search = new SearchIndex(corpus)
+
+test('focused retrieval retains the competing connection criterion and its original anchor',()=>{
+ const selected=diversePassages(search.searchSingle('Storm service connection depth criteria'))
+ const units=evidenceUnits(search.withPageContext(selected),30000)
+ const connection=units.find(u=>u.passage.doc==='doc-dc122df73bce'&&/storm services.*2\.4m/i.test(u.excerpt))
+ assert.ok(connection,'The connection guide survives repeated design-manual hits')
+ assert.ok(locateQuote(connection.passage,connection.excerpt))
+ assert.ok(units.some(u=>/When this is not practical.*2\.0 m/i.test(u.excerpt)))
+ const selectedUnits=units.filter(u=>/When this is not practical.*2\.0 m/i.test(u.excerpt))
+ const retained=relatedCriteriaEvidence(selectedUnits,units,'storm service connection depth criteria')
+ assert.ok(retained.some(u=>u.excerpt===connection.excerpt),'The numeric criterion survives model selection omitting a different reference')
+ assert.equal(depthCriterion(connection).datum,'not-stated','Unspecified measurement datum is not inferred')
+})
+
+test('offline answers surface differing scoped reference criteria and honor a named publication',async()=>{
+ const ids=new Set(['doc-dc122df73bce','doc-da424a924abd'])
+ const scoped=new SearchIndex({...corpus,documents:corpus.documents.filter(d=>ids.has(d.id)),passages:corpus.passages.filter(p=>ids.has(p.doc)),units:corpus.units.filter(u=>ids.has(u.doc))})
+ const run=question=>answer(question,scoped,{sourceOnly:true,publicBase:'http://localhost',token:'test',signal:AbortSignal.timeout(10000)})
+ const result=await run('What is the minimum depth of a storm service at the property line?')
+ assert.equal(result.referenceInterfaces.length,1)
+ assert.equal(result.requiredInputs.kind,'reference_basis')
+ assert.ok(result.references.every(r=>ids.has(r.doc)&&r.regions.length>0))
+ assert.ok(result.report.some(block=>block.heading==='Reference criteria to reconcile'))
+ const explicit=await run('According to the Connection Guide, what is the minimum storm service depth?')
+ assert.equal(explicit.referenceInterfaces,undefined)
+ assert.ok(explicit.references.every(r=>r.doc==='doc-dc122df73bce'))
+})
+
+test('decimal measurements attached to units retain their full value during source validation',()=>{
+ const passage=corpus.passages.find(p=>p.doc==='doc-dc122df73bce'&&p.page===5&&p.text.includes('at least 2.4m'))
+ assert.ok(passage)
+ const quote='A Minimum of 1% slope for storm services from the property line to the crown of the public sewer main with at least 2.4m in depth (cover) at the property line.'
+ const run=value=>validateSynthesis({answerable:true,sections:[{heading:'Finding',claims:[{text:`Storm services require at least ${value} m depth (cover) at the property line.`,evidence:[{passageId:passage.id,quote}]}]}]},[passage],'What depth does the connection guide specify for storm services?')
+ assert.equal(run('2.4').sections.length,1,JSON.stringify(run('2.4').issues))
+ assert.equal(run('2.5').sections.length,0)
+ assert.equal(run('2.0').sections.length,0)
+})
+
+test('conditional insulation duties retain their force when incorporating manufacturer procedures',()=>{
+ const passage=corpus.passages.find(p=>p.doc==='doc-09e07f57e7a3'&&p.page===11&&p.text.includes('If this cover cannot be achieved then provide'))
+ assert.ok(passage)
+ const quote='If this cover cannot be achieved then provide adequate pipe insulation to prevent freezing in accordance with insulation manufacturer’s recommended installation procedures and as shown on the drawings.'
+ assert.ok(locateQuote(passage,quote))
+ const draft={answerable:true,sections:[{heading:'Finding',claims:[{text:'If this cover cannot be achieved, adequate pipe insulation must be provided to prevent freezing in accordance with the manufacturer’s recommended installation procedures.',evidence:[{passageId:passage.id,quote}]}]}]}
+ const checked=validateSynthesis(draft,[passage],'Review storm main cover and insulation requirements.')
+ assert.equal(checked.sections.length,1,JSON.stringify(checked.issues))
+})
+
+test('a detached mitigation quote cannot certify an unconditional service depth',()=>{
+ const passage=corpus.passages.find(p=>p.doc==='doc-09e07f57e7a3'&&p.page===17&&p.text.includes('If a minimum cover of 2.0 m is not achievable'))
+ const quote='If a minimum cover of 2.0 m is not achievable, then provide insulated pipe to prevent freezing.'
+ assert.ok(passage)
+ const unit=evidenceUnits([passage],30000).find(u=>u.excerpt===quote)
+ assert.match(unit.conditionEvidence.excerpt,/when this is not practical/)
+ assert.ok(locateQuote(passage,unit.conditionEvidence.excerpt))
+ const run=text=>validateSynthesis({answerable:true,sections:[{heading:'Finding',claims:[{text,evidence:[{passageId:passage.id,quote}]}]}]},[passage],'Review a storm service with 2.0 m cover at the property line.')
+ const rejected=run('While the storm service meets the depth requirement, the design guidelines require insulation if the minimum cover cannot be achieved.')
+ assert.equal(rejected.sections.length,0)
+ assert.ok(rejected.issues.some(i=>/feasibility exception/.test(i.reason)))
+ const conditional=run('Where the normal service depth is not practical, provide insulated pipe if a minimum cover of 2.0 m is not achievable.')
+ assert.equal(conditional.sections.length,1,JSON.stringify(conditional.issues))
+ assert.ok(conditional.sections[0].claims[0].evidence.some(e=>/when this is not practical/.test(e.excerpt)))
+})
+
+test('a main insulation finding cannot inherit an unrelated service feasibility exception',()=>{
+ const passage=corpus.passages.find(p=>p.doc==='doc-09e07f57e7a3'&&p.page===11&&p.text.includes('If this cover cannot be achieved then provide'))
+ const main='If this cover cannot be achieved then provide adequate pipe insulation to prevent freezing in accordance with insulation manufacturer’s recommended installation procedures and as shown on the drawings.'
+ const service='If this cover cannot be achieved, provide adequate pipe insulation to prevent freezing in accordance with insulation manufacturer’s recommended installation procedures and as shown on the drawings.'
+ const run=quotes=>validateSynthesis({answerable:true,sections:[{heading:'Finding',claims:[{text:'If the required cover cannot be achieved, the storm main requires adequate pipe insulation to prevent freezing.',evidence:quotes.map(quote=>({passageId:passage.id,quote}))}]}]},[passage],'Review a 450 mm storm main with 1.7 m cover.')
+ assert.equal(run([service]).sections.length,0,'Service mitigation cannot establish a main duty')
+ const result=run([main,service])
+ assert.equal(result.sections.length,1,JSON.stringify(result.issues))
+ assert.equal(result.sections[0].claims[0].evidence.length,1,'Unrelated service proof is excluded')
+})
 
 test('retrieval section numbers never become project inputs to selection or drafting', async (t) => {
   const original = { ...config }

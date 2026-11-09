@@ -24,7 +24,7 @@ throw new Error('Isolated browser backend not ready');
 JS
 # Refuse to test another process if either requested port was already occupied.
 kill -0 "$api_pid" "$gateway_pid"
-for suite in ${BASIS_BROWSER_SUITES:-projects project-editor project-packages ifc}; do
+for suite in ${BASIS_BROWSER_SUITES:-projects project-editor project-packages ifc reference-criteria}; do
  node "backend/tests/$suite.browser.mjs" > "$BASIS_STATE_DIR/$suite.log" 2>&1
  printf 'PASS %s browser suite\n' "$suite"
 done

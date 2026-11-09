@@ -2,6 +2,12 @@
 // These checks may withhold a claim; they never approve an engineering conclusion.
 const exemption = /\b(?:no\s+(?:mandatory|required)\b|not\s+(?:required|necessary|mandated)|does\s+not\s+require|exempt(?:ed|ion|s)?\b)/i
 const projectComparison = /\b(?:exceeds?|meets?|complies|greater than|less than|shortfall|falls? short|satisfies|adequate|sufficient|(?:is|are) (?:below|above)|(?:thicker|thinner) than|defici(?:t|ent))\b/i
+export function recommendationLanguage(text) {
+  // Incorporating a manufacturer's procedures does not make the enclosing
+  // installation duty optional. A "should" elsewhere remains advisory.
+  const modality = text.replace(/\b(?:manufacturer|supplier)(?:['’]s)?\s+recommended\s+(?:(?:installation|testing|maintenance)\s+)?(?:procedures?|instructions?|methods?)\b/gi, 'referenced procedures')
+  return /\b(?:should|preferred|recommend(?:ed|ation)?)\b/i.test(modality)
+}
 export function evidenceInterpretationIssue(claim, source, question = '', {projectEvidence = ''} = {}) {
   const precedence = /\b(?:overrides?|supersedes?|waives?|takes? precedence)\b/i
   if (!/\b(?:overrid\w*|supersed\w*|waiv\w*|precedence|notwithstanding)\b/i.test(source)) {
@@ -11,6 +17,11 @@ export function evidenceInterpretationIssue(claim, source, question = '', {proje
     }
   }
   const projectBasis = question + ' ' + projectEvidence
+  if (/\binvert(?:\s+elevation)?\s+to\b/i.test(source) &&
+      /\bcover\b/i.test(claim) && projectComparison.test(claim) &&
+      !/\b(?:depth|cover)\b[^.;!?]{0,45}\b(?:to|from)\s+(?:the\s+)?(?:pipe\s+)?invert\b/i.test(projectBasis) &&
+      !/\b(?:confirm|unresolved|different datums|not directly comparable|cannot be compared)\b/i.test(claim))
+    return 'Pipe cover and depth measured to the invert use different datums. Establish the project measurement datum before claiming that matching depths satisfy the criterion.'
   if (/\bnecessary (?:construction )?traffic only\b/i.test(source) &&
       /\bunnecessary (?:construction )?traffic\b/i.test(claim) &&
       !/\bunnecessary (?:construction )?traffic\b/i.test(projectBasis) &&
@@ -38,8 +49,9 @@ export function evidenceInterpretationIssue(claim, source, question = '', {proje
 
   const feasibility = /\b(?:when|if)\b[^!?]{0,120}\b(?:not practical|not feasible|impractical|unachievable)\b/i
   const established = /\b(?:is|are|was|were)\s+not\s+(?:practical|feasible)\s*[.;]/i.test(question)
+  const qualified = /\b(?:if|when|where|unless)\b[^.!?]{0,180}\b(?:not practical|not feasible|impractical|unachievable)\b|\b(?:conditional|subject|confirm|confirmation|unresolved)\b/i.test(claim)
   if (feasibility.test(source) && !established &&
-      !/\b(?:if|when|unless|conditional|subject|confirm|confirmation|unresolved)\b/i.test(claim))
+      !qualified)
     return 'This source provides a feasibility exception, not an unconditional requirement. Preserve the condition or establish that it applies to the project.'
 
   if (reversedBound(claim, source))

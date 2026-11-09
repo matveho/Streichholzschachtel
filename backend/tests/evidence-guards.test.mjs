@@ -1,6 +1,19 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {evidenceInterpretationIssue as issue} from '../src/evidence-guards.mjs'
+import {evidenceInterpretationIssue as issue, recommendationLanguage} from '../src/evidence-guards.mjs'
+test('matching numbers cannot equate pipe cover with invert-to-curb depth',()=>{
+ const source='The depth of a storm service pipe at the property line shall be 2.0 m from invert elevation to finished curb top grade.'
+ const claim='The project storm service cover of 2.0 m meets the requirement for 2.0 m from invert to curb grade.'
+ assert.match(issue(claim,source,'Review a storm service with 2.0 m cover.'),/different datums/)
+ assert.equal(issue('The specification sets a storm service depth of 2.0 m from invert elevation to finished curb top grade.',source),null)
+ assert.equal(issue(claim,source,'The project depth is measured from the pipe invert to the finished curb top grade.'),null)
+})
+test('referenced manufacturer procedures do not weaken a duty, while recommendations retain their force',()=>{
+ assert.equal(recommendationLanguage('If cover is insufficient then provide insulation in accordance with manufacturer’s recommended installation procedures.'),false)
+ assert.equal(recommendationLanguage('Insulation should follow the manufacturer’s recommended installation procedures.'),true)
+ assert.equal(recommendationLanguage('It is recommended that insulation be installed.'),true)
+ assert.equal(recommendationLanguage('Compaction is recommended at this density.'),true)
+})
 test('falling short cannot select an ESAL-dependent minimum without design loading',()=>{
  const source='Design ESALs (x10 [6]) Minimum Thickness of 1st Stage ACP > 10.0 120 mm'
  const claim='The project proposes a 110 mm PAV-ACP layer, which falls short of the minimum 120 mm requirement for Design ESALs greater than 10.0.'
@@ -49,6 +62,7 @@ test('feasibility exceptions do not become ordinary project requirements',()=>{
  assert.match(issue('The storm service meets the minimum cover requirement of 2.0 m.',source),/feasibility exception/)
  assert.equal(issue('If the normal arrangement is not practical, the exception permits 2.0 m cover.',source),null)
  assert.match(issue('The project uses the 2.0 m exception.',source),/feasibility exception/)
+ assert.match(issue('The normal arrangement is not practical, so the project uses the 2.0 m exception.',source),/feasibility exception/)
  assert.equal(issue('The project uses the 2.0 m exception.',source,'The normal arrangement is not practical.'),null)
 })
 

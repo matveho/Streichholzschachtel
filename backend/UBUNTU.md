@@ -83,7 +83,7 @@ protected project artifacts. The two duplicate standards retain filename aliases
 Indexing is READY with zero failures. User-local Tesseract 5.3.4 and PyMuPDF 1.26.7
 provide OCR, original word geometry and table extraction.
 
-- 202 Node tests pass, plus OCR, isolated project API/import/isolation/restart checks.
+- 232 Node tests pass, plus OCR, isolated project API/import/isolation/restart checks.
 - Nine comparison capability cases cover two real numeric comparisons, verified
   arithmetic, unsupported/missing design bases, foreign jurisdiction, empty and
   foreign document scopes, and extractive routing for general reviews.
@@ -94,6 +94,10 @@ provide OCR, original word geometry and table extraction.
   highlighted citations. IFC scanning still reports 13 potential Parkview issues.
 - Existing project/editor/package/IFC browser suites cover CRUD, collections,
   folder/PDF uploads, private imports, issue dismissal and model-register search.
+- Reference reconciliation works in offline lookup: differing service-depth
+  criteria are listed with their measurement datums and original PDF citations.
+  The browser suite checks both highlights, the required design-basis input and
+  persistence. A request naming one publication remains limited to that source.
 
 ```bash
 scripts/linux/test-backend
@@ -101,6 +105,14 @@ scripts/linux/test-browser
 scripts/linux/test-comparisons
 LOCAL_SYNTHESIS_POLICY=comparisons scripts/linux/test-reasoning-capabilities qwen3.5:35b-a3b-q4_K_M
 ```
+
+To check reference reconciliation alone, run
+`BASIS_BROWSER_SUITES=reference-criteria scripts/linux/test-browser`.
+For example, select the Connection Guide and Construction Specifications and ask
+"What is the minimum depth of a storm service at the property line?" The report
+separates the 2.4 m connection criterion from the 2.0 m invert-to-curb criterion;
+it requests a design-basis/datum decision instead of equating those values.
+This register identifies provisions to reconcile, not proven document conflicts.
 
 Test runners use disposable state under backend/state/verification. They reserve
 8810, 8814 or 8840/8842; do not run runners sharing a port concurrently. Browser

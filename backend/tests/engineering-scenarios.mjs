@@ -45,6 +45,7 @@ export const engineeringScenarios = [
     minSources: 2,
     findingTerms: [
       /1\.7\s*m|0\.3\s*m|300\s*mm/,
+      /2\.4\s*m/,
       /insulat|confirm|resolve|EPCOR|approv/i,
     ],
   },
