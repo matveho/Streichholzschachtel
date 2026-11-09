@@ -13,8 +13,6 @@ Built for natHacks 2026 by team Streichholzschachtel.
 1. **Ask a live question.** Open **Parkview Exchange Redevelopment -> New query**, enter “How long is sanitary pipe S1?” and select **Search**. Select citation **1** to verify the **43 m** length on PDF page **4** of the model register.
 2. **Check a finding across three documents.** Open **North Ridge Highway Intersection Upgrade**. Under **Potential issues**, expand **Crest sight distance is below the screening value** and select **Inspect evidence**. On a laptop, the pinned drawing shows **165 m** of available sight distance beside the provincial guide's **185 m** level-road value at 100 km/h. Select the **NRH-CR-001** document tab to see where the owner adopts 185 m for the initial check. On a narrow screen, select citations **2**, **1**, and **3** in turn to see the drawing, guide, and owner brief. The **20 m** difference gives the engineer a reason to check the survey and road grade.
 
-The built-in projects pair synthetic design records with published standards. The North Ridge review is prepared and can be reopened immediately. New queries run on the backend workstation and search only the active project’s files. The hosted app requires that workstation and its HTTPS tunnel to be online.
-
 ---
 
 ## Contents
