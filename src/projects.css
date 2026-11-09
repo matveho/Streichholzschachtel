@@ -1080,11 +1080,14 @@ button.query-files {
 .project-upload-button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border: 1px solid var(--line-strong);
+  gap: 5px;
+  padding: 6px 8px;
+  color: var(--color-secondary);
   font-size: 12px;
   white-space: nowrap;
+}
+.project-upload-button:hover {
+  color: var(--color-text);
 }
 .query-tab a.query-tab-name {
   display: flex;

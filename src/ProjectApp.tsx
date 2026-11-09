@@ -419,16 +419,6 @@ function ProjectDashboard({
               <h2>
                 Project documents <span>{documents.length}</span>
               </h2>
-              <button
-                type="button"
-                className="project-upload-button"
-                onClick={() => {
-                  setUploadOnly(true)
-                  setEditing(true)
-                }}
-              >
-                <Plus size={14} /> Upload documents
-              </button>
               <label className="project-filter">
                 <Search size={14} />
                 <input
@@ -438,6 +428,18 @@ function ProjectDashboard({
                   onChange={(e) => setFilter(e.target.value)}
                 />
               </label>
+              <button
+                type="button"
+                className="project-upload-button"
+                aria-label="Upload documents"
+                title="Upload documents"
+                onClick={() => {
+                  setUploadOnly(true)
+                  setEditing(true)
+                }}
+              >
+                <Plus size={14} /> Upload
+              </button>
             </div>
             <div
               className="document-category-filter"
