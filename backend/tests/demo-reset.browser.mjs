@@ -61,7 +61,7 @@ try {
     assert.ok(dialog.message().includes('will be deleted'))
     dialog.accept()
   })
-  await page.getByRole('button', { name: 'Reset demo', exact: true }).click()
+  await page.getByRole('button', { name: 'Reset workspace', exact: true }).click()
   await expect(
     page.getByRole('link').filter({ hasText: drop.name }),
   ).toHaveCount(0)
@@ -90,7 +90,7 @@ try {
   await page.locator('.project-card').nth(1).waitFor()
   await page.getByRole('button', { name: 'Settings', exact: true }).click()
   page.once('dialog', (dialog) => dialog.accept())
-  await page.getByRole('button', { name: 'Reset demo', exact: true }).click()
+  await page.getByRole('button', { name: 'Reset workspace', exact: true }).click()
   await expect(
     page.getByRole('link').filter({ hasText: keep.name }),
   ).toHaveCount(0)

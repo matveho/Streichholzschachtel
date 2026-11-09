@@ -20,7 +20,7 @@ export const demoProjects = [
   {
     id: 'demo-mill-creek',
     name: 'Mill Creek Corner Infill',
-    client: 'Rivermark Developments (fictional)',
+    client: 'Rivermark Developments',
     location: 'Bonnie Doon, Edmonton',
     discipline: 'Drainage & stormwater',
     description:
@@ -29,13 +29,14 @@ export const demoProjects = [
     documents: [
       {
         file: 'mill-creek-client-brief.pdf',
+        edition: 'P01, 6 November 2026',
         title: 'Client requirements and design brief',
         code: 'MC-CR-001',
         category: 'client',
         sections: [
           [
             'Project scope',
-            'Four side-by-side infill homes on a 20 m by 54 m corner parcel. Concept review only; this is not an issued-for-construction package. Rivermark Developments is a fictional demonstration client.',
+            'Four side-by-side infill homes on a 20 m by 54 m corner parcel. Concept review only; this is not an issued-for-construction package.',
           ],
           [
             'Architectural interface',
@@ -53,6 +54,7 @@ export const demoProjects = [
       },
       {
         file: 'mill-creek-concept-design.pdf',
+        edition: 'P01, 6 November 2026',
         title: 'Preliminary drainage layout and planter section',
         code: 'MC-DD-101',
         category: 'design',
@@ -72,19 +74,20 @@ export const demoProjects = [
           ],
           [
             'Drawing status',
-            'Revision P01, 6 November 2026. Synthetic demonstration drawing. Not for construction. All lengths and levels are concept assumptions; no municipal acceptance is represented.',
+            'Revision P01, 6 November 2026. Preliminary concept drawing. Not for construction. All lengths and levels are concept assumptions; no municipal acceptance is represented.',
           ],
         ],
       },
       {
         file: 'mill-creek-site-note.pdf',
+        edition: 'P01, 6 November 2026',
         title: 'Site constraints and preliminary drainage checks',
         code: 'MC-TN-002',
         category: 'report',
         sections: [
           [
             'Catchment accounting',
-            'Demonstration parcel area: 1,080 m². Combined roof catchment directed to P1/P2: 320 m². Other paved and landscaped areas are outside this preliminary planter check. Two 20 m by 0.4 m overall planter footprints total 16 m²; this is not a verified effective media area or treatment-volume calculation.',
+            'Parcel area: 1,080 m². Combined roof catchment directed to P1/P2: 320 m². Other paved and landscaped areas are outside this preliminary planter check. Two 20 m by 0.4 m overall planter footprints total 16 m²; this is not a verified effective media area or treatment-volume calculation.',
           ],
           [
             'Existing services',
@@ -157,8 +160,8 @@ export const demoProjects = [
   {
     id: 'demo-willow-creek',
     name: 'Willow Creek Bridge Renewal',
-    client: 'Prairie County Transportation (fictional)',
-    location: 'Rural Alberta - fictional site',
+    client: 'Prairie County Transportation',
+    location: 'Rural Alberta',
     discipline: 'Bridge & highway infrastructure',
     description:
       'Preliminary replacement of a 24 m single-span rural road bridge. Review deck drainage geometry and the approval basis before advancing the constrained approach profile.',
@@ -166,17 +169,18 @@ export const demoProjects = [
     documents: [
       {
         file: 'willow-creek-client-brief.pdf',
+        edition: 'P01, 6 November 2026',
         title: 'Owner brief and adopted design basis',
         code: 'WC-CR-001',
         category: 'client',
         sections: [
           [
             'Project scope',
-            'Replace a deteriorated rural crossing with a 24 m single-span steel-girder bridge and concrete deck. The proposed carriageway is 8.0 m wide within an 8.4 m deck. Prairie County Transportation and this site are fictional demonstration entities.',
+            'Replace a deteriorated rural crossing with a 24 m single-span steel-girder bridge and concrete deck. The proposed carriageway is 8.0 m wide within an 8.4 m deck.',
           ],
           [
             'Adopted references',
-            'For this demonstration contract, adopt Alberta Transportation Bridge Structures Design Criteria, Version 9.0, January 2022, including Section 4.2 for bridge deck geometry. The reference is a contract design basis; this brief does not establish the latest publication or statutory applicability.',
+            'For this contract, adopt Alberta Transportation Bridge Structures Design Criteria, Version 9.0, January 2022, including Section 4.2 for bridge deck geometry. The reference is a contract design basis; this brief does not establish the latest publication or statutory applicability.',
           ],
           [
             'Approach constraints',
@@ -190,6 +194,7 @@ export const demoProjects = [
       },
       {
         file: 'willow-creek-concept-design.pdf',
+        edition: 'P01, 6 November 2026',
         title: 'General arrangement and deck drainage geometry',
         code: 'WC-DD-101',
         category: 'design',
@@ -209,12 +214,13 @@ export const demoProjects = [
           ],
           [
             'Drawing status',
-            'Revision P01, 6 November 2026. Synthetic demonstration drawing. Not for construction. Geometry is for coordinated preliminary review only.',
+            'Revision P01, 6 November 2026. Preliminary concept drawing. Not for construction. Geometry is for coordinated preliminary review only.',
           ],
         ],
       },
       {
         file: 'willow-creek-drainage-note.pdf',
+        edition: 'P01, 6 November 2026',
         title: 'Deck drainage geometry and outstanding approvals',
         code: 'WC-TN-003',
         category: 'report',

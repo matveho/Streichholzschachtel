@@ -117,7 +117,7 @@ try {
     .click()
   await expect(page.locator('.project-query-row')).toHaveCount(1)
   await page.getByRole('button', { name: 'Settings', exact: true }).click()
-  await page.getByRole('button', { name: 'Reset demo', exact: true }).click()
+  await page.getByRole('button', { name: 'Reset workspace', exact: true }).click()
   await page.getByRole('heading', { name: 'Projects', exact: true }).waitFor()
   await page
     .getByRole('link')

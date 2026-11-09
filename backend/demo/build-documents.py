@@ -72,7 +72,7 @@ def footer(canvas, doc):
     w, h = A4
     canvas.setFillColor(TEAL); canvas.rect(0, h-29, w, 29, fill=1, stroke=0)
     canvas.setFillColor(colors.white); canvas.setFont('Helvetica-Bold', 8)
-    canvas.drawString(48, h-19, 'BASIS  /  SYNTHETIC PROJECT MATERIAL  /  DEMONSTRATION ONLY')
+    canvas.drawString(48, h-19, 'BASIS  /  PRELIMINARY DESIGN  /  ISSUED FOR REVIEW')
     canvas.setStrokeColor(colors.HexColor('#b4c6cf')); canvas.line(48, 42, w-48, 42)
     canvas.setFont('Helvetica', 7.5); canvas.setFillColor(INK)
     canvas.drawString(48, 28, f'{doc.doc_code}  |  P01  |  6 November 2026  |  Not for construction')
@@ -81,14 +81,16 @@ def footer(canvas, doc):
 
 for project in PROJECTS:
     for item in project['documents']:
+        if 'sections' not in item:
+            continue  # Other project packages use their own drawing and report generators.
         path = OUT / item['file']
         doc = SimpleDocTemplate(str(path), pagesize=A4, leftMargin=48, rightMargin=48, topMargin=61, bottomMargin=60,
-            title=f"{project['name']} - {item['title']} - synthetic demonstration", author='basis demonstration team')
+            title=f"{project['name']} - {item['title']}", author='Basis')
         doc.doc_code = item['code']
         story = [Paragraph(escape(project['name']), styles['ProjectTitle']), Paragraph(escape(item['title']), styles['DocTitle'])]
         facts = [[Paragraph('CLIENT / OWNER', styles['SmallNote']), Paragraph(escape(project['client']), styles['ProjectBody'])],
                  [Paragraph('DOCUMENT / REVISION', styles['SmallNote']), Paragraph(escape(item['code']+' / P01 - preliminary'), styles['ProjectBody'])],
-                 [Paragraph('LOCATION / STATUS', styles['SmallNote']), Paragraph(escape(project['location']+' / demonstration concept'), styles['ProjectBody'])]]
+                 [Paragraph('LOCATION / STATUS', styles['SmallNote']), Paragraph(escape(project['location']+' / concept review'), styles['ProjectBody'])]]
         table = Table(facts, colWidths=[125, 365])
         table.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,-1),LIGHT),('VALIGN',(0,0),(-1,-1),'TOP'),('LEFTPADDING',(0,0),(-1,-1),9),('RIGHTPADDING',(0,0),(-1,-1),9),('TOPPADDING',(0,0),(-1,-1),6),('BOTTOMPADDING',(0,0),(-1,-1),5)]))
         story.append(table)

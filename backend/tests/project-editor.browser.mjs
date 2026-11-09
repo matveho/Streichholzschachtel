@@ -53,13 +53,13 @@ try {
     .getByRole('heading', { name: 'Mill Creek Corner Infill', exact: true })
     .waitFor()
   await expect(
-    page.getByRole('button', { name: 'Reset demo', exact: true }),
+    page.getByRole('button', { name: 'Reset workspace', exact: true }),
   ).toHaveCount(0)
   await expect(
     page.getByText('Prepared findings', { exact: true }),
   ).toHaveCount(0)
   await page.getByRole('button', { name: 'Settings', exact: true }).click()
-  await page.getByRole('button', { name: 'Reset demo', exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Reset workspace', exact: true }).waitFor()
   await page.keyboard.press('Escape')
   if (process.env.BASIS_TEST_DEMO_EDITS !== '0') {
     await page
@@ -77,7 +77,7 @@ try {
       'Editable review scope',
     )
     await page.getByRole('button', { name: 'Settings', exact: true }).click()
-    await page.getByRole('button', { name: 'Reset demo', exact: true }).click()
+    await page.getByRole('button', { name: 'Reset workspace', exact: true }).click()
     await page.getByRole('heading', { name: 'Projects', exact: true }).waitFor()
     await page
       .getByRole('link')

@@ -57,7 +57,7 @@ export function WorkspaceSettings({
   async function reset() {
     if (
       !confirm(
-        'Reset the demo? Projects not marked “Keep on reset” will be deleted, including their imported files and query history. Built-in examples will be restored.',
+        'Reset the workspace? Projects not marked “Keep on reset” will be deleted, including their imported files and query history. Built-in examples will be restored.',
       )
     )
       return
@@ -121,7 +121,7 @@ export function WorkspaceSettings({
             </div>
           )}
           <button type="button" disabled={pending} onClick={() => void reset()}>
-            Reset demo
+            Reset workspace
           </button>
           {current && (
             <label
@@ -129,7 +129,7 @@ export function WorkspaceSettings({
               title={
                 current.protectedDemo
                   ? 'Built-in examples always persist'
-                  : 'Preserve this project when resetting the demo'
+                  : 'Preserve this project when resetting the workspace'
               }
             >
               <input
