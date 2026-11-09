@@ -15,6 +15,7 @@ export type DocumentRecord = {
   pageSizes?: Record<number, [number, number]>
 }
 export type LiveResult = {
+  searchStats?: SearchStats
   documents: Record<string, DocumentRecord>
   references: Reference[]
   report: ReportBlock[]
@@ -23,6 +24,18 @@ export type LiveResult = {
   id: string
   suggestions?: QuerySuggestion[]
   assist?: QueryAssist
+}
+export type SearchStats = {
+  version: number
+  scope: { documents:number; pages:number; passages:number; indexUnits:number }
+  index: { documents:number; pages:number; passages:number; indexUnits:number }
+  retrieval?: {kind:'passages'|'provisions';retainedCandidates:number}
+  evidence: {documents:number;pages:number;citations:number;highlightRegions:number;ocrPages:number}
+  method: string
+  model?: string
+  provider?: string
+  timing: {queueMs:number;processingMs:number;totalMs:number;stages:{name:string;ms:number}[]}
+  recordedAt: string
 }
 export type QueryOutcome =
   'answered' | 'vague' | 'partial' | 'not_found' | 'jurisdiction' | 'off_topic'

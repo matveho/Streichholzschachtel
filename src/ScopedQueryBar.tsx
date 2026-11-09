@@ -17,6 +17,7 @@ export function ScopedQueryBar({
   documentId,
   documentIds,
   onScopeChange,
+  onModeChange,
   busy = false,
   inputRef,
 }: {
@@ -27,6 +28,7 @@ export function ScopedQueryBar({
   documentId?: string
   documentIds: string[]
   onScopeChange: (ids: string[]) => void
+  onModeChange?: (mode: 'document' | 'project', ids: string[]) => void
   busy?: boolean
   inputRef?: RefObject<HTMLTextAreaElement | null>
 }) {
@@ -154,6 +156,7 @@ export function ScopedQueryBar({
                 setMode('document')
                 setChoosing(false)
                 onScopeChange([documentId])
+                onModeChange?.('document', [documentId])
               }}
             >
               <FileText size={13} />
@@ -166,7 +169,9 @@ export function ScopedQueryBar({
             aria-pressed={mode === 'project'}
             onClick={() => {
               setMode('project')
-              onScopeChange(projectSelection.filter((id) => !!documents[id]))
+              const ids=projectSelection.filter((id) => !!documents[id])
+              onScopeChange(ids)
+              onModeChange?.('project', ids)
             }}
           >
             <Files size={13} />

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
   Search,
   Columns2,
@@ -22,6 +22,7 @@ import { outcomeOf } from './assist'
 import type { ThreadTurn } from './assist'
 import { AppHeader } from './AppHeader'
 import { ScopedQueryBar } from './ScopedQueryBar'
+import { SearchDiagnostics } from './SearchDiagnostics'
 
 /** Where a new search came from, so the query tab can keep the thread. */
 export type RunContext = {
@@ -88,14 +89,17 @@ export function QueryWorkspace({
     entry.queryId,
     preloadedJob,
   )
-  const documents = live.data?.documents ?? projectDocuments ?? {}
+  const documents = useMemo(
+    () => ({...(projectDocuments ?? {}),...(live.data?.documents ?? {})}),
+    [projectDocuments,live.data?.documents],
+  )
   const report = live.data?.report ?? []
   const references = live.data?.references ?? []
-  const sourceIds = Object.keys(documents)
+  const sourceIds = [...new Set([...Object.keys(live.data?.documents ?? {}),...queryScope])].filter(id=>!!documents[id])
   const noAnswer =
     !!live.data &&
     ['no_evidence', 'insufficient_evidence'].includes(live.data.mode) &&
-    sourceIds.length === 0
+    Object.keys(live.data.documents).length === 0
   const datasetKey = live.data?.id ?? 'pending'
 
   const cited = finding
@@ -127,8 +131,8 @@ export function QueryWorkspace({
     subscribeViewerWidth,
     () => narrowViewer.matches,
   )
-  const [preferredLayout, setLayout] = useState<'split' | 'tabs'>('split')
-  const layout = narrow ? 'tabs' : preferredLayout
+  const [preferredLayout, setLayout] = useState<'split' | 'tabs'>(()=>queryScope.length===1?'tabs':'split')
+  const layout = preferredLayout
   const [tab, setTab] = useState<DocId>(initialDocs[0] ?? '')
   const [comparison, setComparison] = useState<DocId[]>(initialDocs)
   const [opened, setOpened] = useState<DocId[]>(initialDocs)
@@ -344,6 +348,18 @@ export function QueryWorkspace({
           documentId={tab || entry.documentIds?.[0]}
           documentIds={queryScope}
           onScopeChange={setQueryScope}
+          onModeChange={(mode, ids) => {
+            setLayout(mode==='document'?'tabs':'split')
+            setAnchorId(undefined)
+            setHover(null)
+            setExpanded(false)
+            const first=ids.includes(tab)?tab:ids[0]
+            if(!first)return
+            const pair=[...new Set([first,...comparison.filter(id=>ids.includes(id)),...ids])].slice(0,2)
+            setTab(first)
+            setComparison(pair)
+            setOpened(previous=>[...new Set([...previous,...pair])])
+          }}
           busy={busy || live.busy}
           inputRef={input}
           onSubmit={(question, documentIds) =>
@@ -425,7 +441,7 @@ export function QueryWorkspace({
               </div>
             )}
           </div>
-          <div className={`document-panes ${layout}`}>
+          <div className={`document-panes scope-document-panes ${layout}`}>
             {sourceIds.map((id) => (
               <div
                 className={`pane-slot ${(layout === 'tabs' ? displayedTab !== id : !displayedPair.includes(id)) ? 'hidden' : ''}`}
@@ -621,12 +637,7 @@ export function QueryWorkspace({
                   )}
               </>
             )}
-            {live.data?.notes?.length ? (
-              <details className="result-notes">
-                <summary>Source notes</summary>
-                <p>{live.data.notes.join(' ')}</p>
-              </details>
-            ) : null}
+            {live.data && <SearchDiagnostics result={live.data} onOpen={()=>setResultHeight(height=>Math.max(height,Math.min(480,window.innerHeight*0.6)))} />}
           </div>
         </section>
       </main>

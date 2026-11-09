@@ -12,7 +12,8 @@ import {
 import { resolve, sep, basename } from 'node:path'
 import { randomUUID, createHash } from 'node:crypto'
 import { compareIfcDocuments, readIfcProperties } from './ifc-comparison.mjs'
-import { root } from './config.mjs'
+import { root, config } from './config.mjs'
+import { queryTimer, searchDiagnostics } from './search-diagnostics.mjs'
 import { ProjectStore, problem } from './project-store.mjs'
 import { demoProjects } from '../demo/manifest.mjs'
 import { preparedEvidence, projectResult, ifcFindingEvidence } from './project-evidence.mjs'
@@ -411,6 +412,7 @@ export class ProjectApi {
     }
     this.active = job
     job.state = 'running'
+    const timer=queryTimer(job.createdAt), metrics={}
     try {
       const scope = this.scope(job.projectId, job.documentIds)
       const result = await answer(job.question, scope.index, {
@@ -418,10 +420,13 @@ export class ProjectApi {
         token: '',
         signal: job.controller.signal,
         sourceOnly: job.sourceOnly,
+        metrics,
         progress: (stage) => {
           job.stage = stage
+          timer.stage(stage)
         },
       })
+      timer.stage('Finalizing report and source metadata')
       if (
         ['no_evidence', 'related_evidence', 'insufficient_evidence'].includes(
           result.mode,
@@ -436,6 +441,7 @@ export class ProjectApi {
         result.references.some((r) => !allowed.has(r.doc))
       )
         throw new Error('Query returned evidence outside its project scope')
+      result.searchStats=searchDiagnostics(scope.corpus,result,metrics,timer.finish(),config)
       job.result = projectResult(result, job.projectId)
       job.state = 'completed'
       job.stage = 'Complete'

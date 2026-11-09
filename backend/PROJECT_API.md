@@ -26,6 +26,15 @@ query ID returns 410; a rerun must use a new ID. Project documents and findings
 are retained. Explicitly opening current issue evidence can create a fresh
 source report even after its old history entry was deleted.
 
+Newly executed project queries include optional `result.searchStats` (version 1).
+It records selected-scope and effective-index document/page/passage counts,
+retained retrieval candidates where measured, unique cited documents/pages,
+citation/highlight counts, OCR page counts, and queue/processing/stage durations
+in milliseconds. Server timings exclude network transfer and PDF rendering.
+Saved queries retain the original measurements and UTC recording timestamp;
+older prepared reports without measurements do not gain fabricated run times.
+Scope/index sizes describe eligible material, not documents proven compliant.
+
 Import and category edits accept `reference`, `client`, `design`, `report`, or
 `supporting`. Omitting `category` on import preserves filename guessing. For an
 uploaded document, `PATCH /v1/projects/:project/documents/:document` with

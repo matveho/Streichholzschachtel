@@ -10,6 +10,7 @@ import { attachPipeReviewInputs } from './pipe-review-inputs.mjs'
 import { mixedPipeEvidence } from './pipe-evidence.mjs'
 import { replacementInterfaceIssue } from './replacement-interface.mjs'
 import { sourceAttributes } from './source-attributes.mjs'
+import { scopeStatistics } from './search-diagnostics.mjs'
 import {findDemoReview,capacityReviewDefinition} from '../demo/review-scenarios.mjs'
 import {capacityReviewRequest} from './capacity-review-inputs.mjs'
 import {SearchIndex} from './search.mjs'
@@ -899,13 +900,14 @@ export function renderUnits(sections, corpus, publicBase, token, mode, notes) {
 async function answerFromUnits(
   question,
   searchIndex,
-  { publicBase, token, progress = () => {} },
+  { publicBase, token, progress = () => {}, metrics },
 ) {
   const corpus = searchIndex.corpus
   const index = (searchIndex.unitIndex ??= new UnitIndex(corpus))
   progress('Searching tables, provisions and document versions')
   const ordinary = lookup(question, index)
   const mixed = ordinary.mode === 'version_answer' ? null : mixedPipeEvidence(question, index)
+  if(metrics && !mixed && ordinary.candidates)metrics.retrieval={kind:'provisions',retainedCandidates:ordinary.candidates.length}
   const found = mixed || ordinary
   let { sections } = found
   const { mode, notes } = found
@@ -949,6 +951,7 @@ export async function answer(question, searchIndex, options) {
     const corpus=searchIndex.corpus
     searchIndex=new SearchIndex({...corpus,documents:corpus.documents.filter(document=>selected.has(document.id)),passages:corpus.passages.filter(passage=>selected.has(passage.doc)),units:(corpus.units||[]).filter(unit=>selected.has(unit.doc))})
   }
+  if(options.metrics)options.metrics.index=scopeStatistics(searchIndex.corpus)
   const worked=example?workedCapacityReview(question,searchIndex,example):null
   const response=worked?{...renderResult(worked.sections,searchIndex.corpus,options.publicBase,options.token,'verified_review',['Source-verified worked review. Supplied scenario figures are assumptions; source applicability and engineering approval require review.']),reviewInputs:worked.inputs}:example?{...await answerFromUnits(question,searchIndex,{...options,sourceOnly:true}),mode:'insufficient_evidence',requiredInputs:{kind:'worked_review_basis',action:'Confirm the worked review source documents and supplied inputs before completing this calculation.'}}:await answerCore(question,searchIndex,options)
   const result=attachPipeReviewInputs(attachProjectMeasurements(response,question),question)
@@ -958,10 +961,10 @@ export async function answer(question, searchIndex, options) {
 async function answerCore(
   question,
   searchIndex,
-  { publicBase, token, signal, sourceOnly = false, progress = () => {} },
+  { publicBase, token, signal, sourceOnly = false, progress = () => {}, metrics },
 ) {
   if (foreignJurisdiction(question, searchIndex.corpus.documents))
-    return answerFromUnits(question, searchIndex, { publicBase, token, signal, progress, sourceOnly: true })
+    return answerFromUnits(question, searchIndex, { publicBase, token, signal, progress, metrics, sourceOnly: true })
   if (sourceOnly || config.provider === 'extractive')
     return answerFromUnits(question, searchIndex, {
       publicBase,
@@ -969,12 +972,14 @@ async function answerCore(
       signal,
       progress,
       sourceOnly,
+      metrics,
     })
   if (config.localSynthesis && ['ollama', 'llamacpp'].includes(config.provider) &&
       !permitsLocalSynthesis(question, searchIndex.corpus.documents, config.localSynthesisPolicy))
-    return answerFromUnits(question, searchIndex, {publicBase, token, signal, progress, sourceOnly:true})
+    return answerFromUnits(question, searchIndex, {publicBase, token, signal, progress, metrics, sourceOnly:true})
   progress('Retrieving source passages')
   let passages = searchIndex.search(question)
+  if(metrics)metrics.retrieval={kind:'passages',retainedCandidates:passages.length}
   if (!passages.length) {
     const result = renderResult(
       [],
@@ -1020,6 +1025,7 @@ async function answerCore(
         signal,
       )
       passages = retrieval.passages
+      if(metrics)metrics.retrieval={kind:'passages',retainedCandidates:passages.length}
       progress('Applying source conditions and drafting findings')
       let draft = await draftLocal(
         question,
